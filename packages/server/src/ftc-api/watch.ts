@@ -13,6 +13,7 @@ export const LoadType = {
 export type LoadType = (typeof LoadType)[keyof typeof LoadType];
 
 export async function fetchPriorSeasons() {
+    return;
     for (let season of PAST_SEASONS) {
         console.info(`Checking load of season ${season}.`);
         if (!(await DataHasBeenLoaded.teamsHaveBeenLoaded(season))) {

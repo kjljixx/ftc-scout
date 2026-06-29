@@ -41,7 +41,9 @@ export async function loadAllAwards(season: Season, loadType: LoadType) {
 function fixJudgesChoice(awards: AwardFtcApi[]) {
     // For some reason the api sometimes reports the judges choice award as starting from 0 instead of 1.
     // We correct that here.
-    let hasZeroJudgesChoice = awards.some((a) => a.name == "Judges' Choice Award" && a.series == 0);
+    let hasZeroJudgesChoice = awards.some(
+        (a) => a.name == "Judges' Choice Award" && (a.series == 0 || a.series == 8)
+    );
     if (hasZeroJudgesChoice) {
         awards.forEach((a) => {
             if (a.name == "Judges' Choice Award") a.series++;
