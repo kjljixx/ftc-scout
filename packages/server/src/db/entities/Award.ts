@@ -94,7 +94,7 @@ export class Award extends BaseEntity {
 export function awardCodeFromFtcApi(award: AwardFtcApi): [AwardType, number] | null {
     switch (award.awardId) {
         case 1: // Judges Choice
-            return [AwardType.JudgesChoice, awardTop(award, 7)];
+            return [AwardType.JudgesChoice, awardTop(award, 8)];
         case 2: // Compass
             return [AwardType.Compass, awardTop(award, 3)];
         case 3: // Promote
