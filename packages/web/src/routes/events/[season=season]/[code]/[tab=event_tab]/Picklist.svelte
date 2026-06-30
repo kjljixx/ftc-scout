@@ -3,7 +3,8 @@
     import { DESCRIPTORS, getTepStatSet, SortDir, type Season } from "@ftc-scout/common";
     import LocalStatTableControls from "$lib/components/stats/LocalStatTableControls.svelte";
     import { faGripLines } from "@fortawesome/free-solid-svg-icons";
-    import Fa from "svelte-fa";
+
+    import StatCell from "$lib/components/stats/StatCell.svelte";
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -38,10 +39,10 @@
     let draggedIndex: number | null = null;
     let hoveredIndex: number | null = null;
 
-    // Maintain drag state in a local reactive state
+    // Maintain drag state in a local reactive state to prevent parent overrides
     let teamOrder: number[] = [];
 
-    // Sync teamOrder when the raw data changes (e.g. initial load or structural changes)
+    // Sync teamOrder when raw data changes
     $: {
         const currentNums = data.map((d) => d.team?.number).filter((n): n is number => n != null);
         const currentSet = new Set(currentNums);
@@ -74,6 +75,15 @@
     // Decouples table mutations from the drag-and-drop list's array reference
     $: tableData = [...orderedData];
 
+    // Wrap orderedData elements into the StatData structure required by StatCell
+    $: wrappedOrderedData = orderedData.map((team, index) => ({
+        filterRank: index + 1,
+        filterSkipRank: index + 1,
+        noFilterRank: index + 1,
+        noFilterSkipRank: index + 1,
+        data: team,
+    }));
+
     function handleDragStart(event: DragEvent, index: number) {
         draggedIndex = index;
         if (event.dataTransfer) {
@@ -105,28 +115,48 @@
 </script>
 
 <div class="reorder-container">
-    <div class="drag-instructions na">Drag and drop teams to manually reorder:</div>
-    <div class="team-list">
-        {#each orderedData as team, index (team.team?.number ?? index)}
-            <div
-                class="team-item"
-                class:dragging={draggedIndex === index}
-                class:hovered={hoveredIndex === index}
-                draggable="true"
-                on:dragstart={(e) => handleDragStart(e, index)}
-                on:dragover={(e) => handleDragOver(e, index)}
-                on:drop={(e) => handleDrop(e, index)}
-                on:dragend={resetDragState}
-            >
-                <span class="drag-handle">
-                    <Fa {faGripLines} scale="0.75x" />
-                </span>
-                <span class="team-number">#{team.team?.number ?? "Unknown"}</span>
-                {#if team.team?.name}
-                    <span class="team-name na">{team.team.name}</span>
-                {/if}
-            </div>
-        {/each}
+    <div class="table-scroll-container">
+        <table class="draggable-table">
+            <thead>
+                <tr>
+                    <th class="drag-handle-header" />
+                    {#each defaultStats as statId}
+                        {@const stat = stats.getStat(statId)}
+                        <th class={stat?.color ?? ""}>
+                            {stat?.shortName ?? stat?.name ?? statId}
+                        </th>
+                    {/each}
+                </tr>
+            </thead>
+            <tbody>
+                {#each wrappedOrderedData as wrapped, index (wrapped.data.team?.number ?? index)}
+                    <tr
+                        class="team-row"
+                        class:dragging={draggedIndex === index}
+                        class:hovered={hoveredIndex === index}
+                        draggable="true"
+                        on:dragstart={(e) => handleDragStart(e, index)}
+                        on:dragover={(e) => handleDragOver(e, index)}
+                        on:drop={(e) => handleDrop(e, index)}
+                        on:dragend={resetDragState}
+                    >
+                        <td class="drag-handle-cell">
+                            <span class="drag-handle">
+                                <svg
+                                    class="icon-svg"
+                                    viewBox="0 0 {faGripLines.icon[0]} {faGripLines.icon[1]}"
+                                >
+                                    <path fill="currentColor" d={faGripLines.icon[4]} />
+                                </svg>
+                            </span>
+                        </td>
+                        {#each defaultStats as statId}
+                            <StatCell data={wrapped} stat={stats.getStat(statId)} {focusedTeam} />
+                        {/each}
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -159,35 +189,53 @@
         font-weight: 500;
     }
 
-    .team-list {
-        display: flex;
-        flex-direction: column;
+    .table-scroll-container {
         max-height: 280px;
         overflow-y: auto;
-        padding-right: 0.25rem;
     }
 
-    .team-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: var(--md-pad);
+    .draggable-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+    }
+
+    .draggable-table th {
+        font-size: var(--sm-font-size, 0.875rem);
+        font-weight: bold;
+        color: #ffffff;
+        padding: var(--md-pad, 0.5rem);
+        text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .team-row {
         background-color: rgba(255, 255, 255, 0.03);
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        font-size: var(--sm-font-size, 0.875rem);
         transition: background-color 0.1s;
     }
 
-    .team-item:hover {
+    .team-row:hover {
         background-color: rgba(255, 255, 255, 0.08);
     }
 
-    .team-item.dragging {
+    .team-row.dragging {
         opacity: 0.3;
     }
 
-    .team-item.hovered {
+    .team-row.hovered {
         background-color: var(--blue-stat-bg-color);
+    }
+
+    .drag-handle-header {
+        width: 40px;
+        min-width: 40px;
+    }
+
+    .drag-handle-cell {
+        width: 40px;
+        min-width: 40px;
+        padding: var(--md-pad, 0.5rem);
     }
 
     .drag-handle {
@@ -209,33 +257,39 @@
         height: 100%;
     }
 
-    .team-number {
-        font-weight: bold;
-        min-width: 4.5rem;
-    }
-
     .na {
         color: var(--secondary-text-color);
         font-size: var(--sm-font-size);
     }
 
-    .team-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    /* Style copy targets matching StatCell colors */
+    .red {
+        background: var(--red-stat-bg-color);
+    }
+    .blue {
+        background: var(--blue-stat-bg-color);
+    }
+    .light-blue {
+        background: var(--light-blue-stat-bg-color);
+    }
+    .purple {
+        background: var(--purple-stat-bg-color);
+    }
+    .green {
+        background: var(--green-stat-bg-color);
     }
 
-    .team-list::-webkit-scrollbar {
+    .table-scroll-container::-webkit-scrollbar {
         width: 6px;
     }
-    .team-list::-webkit-scrollbar-track {
+    .table-scroll-container::-webkit-scrollbar-track {
         background: transparent;
     }
-    .team-list::-webkit-scrollbar-thumb {
+    .table-scroll-container::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.15);
         border-radius: 3px;
     }
-    .team-list::-webkit-scrollbar-thumb:hover {
+    .table-scroll-container::-webkit-scrollbar-thumb:hover {
         background: var(--secondary-text-color, rgba(255, 255, 255, 0.3));
     }
 </style>
