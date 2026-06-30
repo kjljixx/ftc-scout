@@ -27,7 +27,13 @@
     import { eventSorter } from "$lib/util/sorters";
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
-    import { ALL_SEASONS, CURRENT_SEASON, DESCRIPTORS, type Season } from "@ftc-scout/common";
+    import {
+        ALL_SEASONS,
+        CURRENT_SEASON,
+        DESCRIPTORS,
+        type Season,
+        longestCommonPrefix,
+    } from "@ftc-scout/common";
     import Award from "$lib/components/Award.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
     import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
@@ -157,6 +163,27 @@
         {#each sortedEvents as tep}
             {@const event = tep.event}
             {@const href = `/events/${event.season}/${event.code}/matches`}
+
+            {@const isFinalsDivision = (() => {
+                if (!event || !event.relatedEvents || event.relatedEvents.length === 0)
+                    return false;
+                const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
+                const prefix = longestCommonPrefix(names);
+                const sliced = event.name.slice(prefix.length).trim().replace(/\-\s*/, "");
+                const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
+                return mappedName === "Finals Division";
+            })()}
+
+            {@const matchTableTeams = isFinalsDivision
+                ? (event.relatedEvents ?? []).flatMap((re) =>
+                      (re.teams ?? []).map((t) => ({
+                          ...t,
+                          teamNumber: t.team.number,
+                          season: re.season,
+                          eventCode: re.code,
+                      }))
+                  )
+                : event.teams ?? []}
             <Card>
                 <h2 id={event.code}><a {href}>{event.name}</a></h2>
 
@@ -190,7 +217,7 @@
                     matches={tep.matches.map((m) => m.match)}
                     {event}
                     focusedTeam={team.number}
-                    eventTeams={event.teams}
+                    eventTeams={matchTableTeams}
                 />
             </Card>
         {:else}
