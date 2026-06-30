@@ -123,6 +123,12 @@
                         {event.name}
                     </a>
                 </h2>
+                <p>
+                    Latest Event -
+                    <a href="/teams/{data.homeTeam}" class="norm-link">
+                        Team {data.homeTeam}
+                    </a>
+                </p>
             </Card>
             {#if data.teamMatches?.length}
                 <Card>

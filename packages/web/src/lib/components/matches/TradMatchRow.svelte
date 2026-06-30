@@ -105,9 +105,13 @@
     <MatchScore {match} {timeZone} {showNonPenaltyScores} />
 
     <div class="opr">
-        <span class="red-opr">{redOprSum.toFixed(0)}</span>
+        <span class="red-opr" class:opr-winner={redOprSum >= blueOprSum}
+            >{redOprSum.toFixed(0)}</span
+        >
         <div>-</div>
-        <span class="blue-opr">{blueOprSum.toFixed(0)}</span>
+        <span class="blue-opr" class:opr-winner={redOprSum <= blueOprSum}
+            >{blueOprSum.toFixed(0)}</span
+        >
     </div>
 
     {#if isDoubleElim}
@@ -186,6 +190,10 @@
 
     .blue-opr {
         color: var(--blue-team-text-color);
+    }
+
+    .opr-winner {
+        font-weight: 800;
     }
 
     @media (max-width: 1000px) {
