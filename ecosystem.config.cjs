@@ -30,7 +30,7 @@ module.exports = {
     {
       name: "web-dev",
       script: "pm2-run.cjs",
-      args: ["web:dev", "--", "--host"],
+      args: ["web:start"],
       autorestart: true,
       env: {
         NODE_ENV: "development"

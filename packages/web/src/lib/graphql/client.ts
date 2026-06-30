@@ -1,4 +1,4 @@
-import { env } from "$env/dynamic/public";
+import { PUBLIC_SERVER_ORIGIN, PUBLIC_FRONTEND_CODE } from "$env/static/public";
 import {
     HttpLink,
     ApolloClient,
@@ -28,12 +28,12 @@ export function getClient(
 
     let httpLink = new HttpLink({
         uri: `${
-            env.PUBLIC_SERVER_ORIGIN.startsWith("http")
-                ? env.PUBLIC_SERVER_ORIGIN
-                : `http${s}://${env.PUBLIC_SERVER_ORIGIN}`
+            PUBLIC_SERVER_ORIGIN.startsWith("http")
+                ? PUBLIC_SERVER_ORIGIN
+                : `http${s}://${PUBLIC_SERVER_ORIGIN}`
         }/graphql`,
         credentials: "omit",
-        headers: { [env.PUBLIC_FRONTEND_CODE!]: "." },
+        headers: { [PUBLIC_FRONTEND_CODE!]: "." },
         fetch,
     });
 
@@ -49,9 +49,9 @@ export function getClient(
               new GraphQLWsLink(
                   createClient({
                       url: `${
-                          env.PUBLIC_SERVER_ORIGIN.startsWith("http")
-                              ? `wss://${env.PUBLIC_SERVER_ORIGIN.split("://")[1]}`
-                              : `ws${s}://${env.PUBLIC_SERVER_ORIGIN}`
+                          PUBLIC_SERVER_ORIGIN.startsWith("http")
+                              ? `wss://${PUBLIC_SERVER_ORIGIN.split("://")[1]}`
+                              : `ws${s}://${PUBLIC_SERVER_ORIGIN}`
                       }/graphql`,
                   })
               ),
