@@ -43,7 +43,7 @@ export const load: PageLoad = async ({ fetch, data }) => {
         return { home, homeTeam, latestSeason, latestEvent: null, teamMatches: null };
     }
 
-    let latestTep = [...team.events].sort(eventSorter)[0];
+    let latestTep = [...team.events.filter((e) => e.stats)].sort(eventSorter)[0];
     let { event } = latestTep;
 
     let latestEvent = await getData(getClient(fetch), EventPageDocument, {
