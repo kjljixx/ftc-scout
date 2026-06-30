@@ -20,7 +20,6 @@
     import IconSidebarItem from "./IconSidebarItem.svelte";
     import { EMAIL, DISCORD, STATUS, GITHUB, DONATIONS } from "../../constants";
     import { CURRENT_SEASON } from "@ftc-scout/common";
-    import Sponsor from "./Sponsor.svelte";
 </script>
 
 <b>
@@ -60,10 +59,6 @@
     <IconSidebarItem icon={faEnvelope} name="Email" link="mailto:{EMAIL}" />
     <IconSidebarItem icon={faServer} name="Status" link={STATUS} newTab />
 </div>
-
-<hr />
-
-<Sponsor />
 
 <style>
     hr,

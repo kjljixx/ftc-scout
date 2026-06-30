@@ -39,8 +39,6 @@ async function sitemap(_req: Request, res: Response) {
     urls.push("/blog");
     urls.push("/privacy");
     urls.push("/teams");
-    urls.push("/sponsors");
-    urls.push("/sponsors/info");
     urls.push("/first");
     urls.push("/");
 

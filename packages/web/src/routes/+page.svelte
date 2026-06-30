@@ -11,7 +11,6 @@
     import Head from "$lib/components/Head.svelte";
     import { createTippy } from "svelte-tippy";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
-    import Sponsor from "$lib/components/nav/Sponsor.svelte";
     import Select from "$lib/components/ui/form/Select.svelte";
     // import AlertBar from "$lib/components/nav/AlertBar.svelte";
 
@@ -131,12 +130,6 @@
                     <SkeletonRow header card={false} rows={2} />
                 {/if}
             </div>
-        </div>
-    </Card>
-
-    <Card vis={false}>
-        <div class="sponsor">
-            <Sponsor />
         </div>
     </Card>
 </WidthProvider>
@@ -325,15 +318,5 @@
 
     .help {
         font-size: calc(var(--md-font-size));
-    }
-
-    .sponsor {
-        display: none;
-    }
-
-    @media (max-width: 1500px) {
-        .sponsor {
-            display: block;
-        }
     }
 </style>
