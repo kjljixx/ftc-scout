@@ -4,7 +4,11 @@ import type { AfterNavigate } from "@sveltejs/kit";
 import { IS_DEV } from "../lib/constants";
 
 const s = IS_DEV ? "" : "s";
-const ANALYTICS_URL = `http${s}://${env.PUBLIC_SERVER_ORIGIN}/analytics`;
+const ANALYTICS_URL = `${
+    env.PUBLIC_SERVER_ORIGIN.startsWith("http")
+        ? env.PUBLIC_SERVER_ORIGIN
+        : `http${s}://${env.PUBLIC_SERVER_ORIGIN}`
+}/analytics`;
 
 let lastPath = "";
 let lastRest = "";

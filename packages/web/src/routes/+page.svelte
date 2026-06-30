@@ -470,10 +470,6 @@
         flex-direction: column;
     }
 
-    .wr-section + .wr-section {
-        margin-top: var(--lg-gap);
-    }
-
     .wr h2 {
         display: flex;
         align-items: center;
@@ -491,10 +487,6 @@
         font-weight: bold;
         display: block;
         margin-bottom: var(--md-gap);
-    }
-
-    .wr + .wr {
-        margin-top: var(--vl-gap);
     }
 
     .help {

@@ -17,4 +17,13 @@ export default defineConfig((mode) => ({
         __DEV__: (mode.mode == "development").toString(),
     },
     plugins: [sveltekit()],
+    server: {
+        port: 3000,
+        host: true,
+        hmr: {
+            host: "scout.kjljixx.com",
+            clientPort: 443,
+        },
+        allowedHosts: ["scout.kjljixx.com"],
+    },
 }));

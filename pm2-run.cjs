@@ -9,7 +9,11 @@ if (!scriptName) {
 
 console.log(`Spawning npm run ${scriptName} with windowsHide: true...`);
 
-const child = spawn('npm', ['run', scriptName], {
+args = ['run', scriptName];
+if (process.argv.length > 3) {
+  args = args.concat(process.argv.slice(3));
+}
+const child = spawn('npm', args, {
   shell: true,
   windowsHide: true,
   stdio: 'inherit'
