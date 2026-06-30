@@ -9,8 +9,8 @@
         faBolt,
         faChartLine,
         faHashtag,
-        faLightbulb,
-        faMedal,
+        faHouse,
+        faList,
         faQuestionCircle,
         faTrophy,
     } from "@fortawesome/free-solid-svg-icons";
@@ -26,14 +26,12 @@
     import { setContext } from "svelte";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
-    import { getMatchScores } from "$lib/components/stats/getMatchScores";
     import { isNonCompetition } from "$lib/util/event-type";
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import Rankings from "./events/[season=season]/[code]/[tab=event_tab]/Rankings.svelte";
-    import Awards from "./events/[season=season]/[code]/[tab=event_tab]/Awards.svelte";
-    import Insights from "./events/[season=season]/[code]/[tab=event_tab]/Insights.svelte";
     import Teams from "./events/[season=season]/[code]/[tab=event_tab]/Teams.svelte";
     import Preview from "./events/[season=season]/[code]/[tab=event_tab]/Preview.svelte";
+    import Picklist from "./events/[season=season]/[code]/[tab=event_tab]/Picklist.svelte";
     // import AlertBar from "$lib/components/nav/AlertBar.svelte";
 
     export let data;
@@ -53,7 +51,6 @@
     $: season = (data.latestSeason ?? CURRENT_SEASON) as Season;
 
     $: stats = event?.teams?.filter((t) => notEmpty(t.stats)) ?? [];
-    $: insights = event?.matches?.flatMap(getMatchScores) ?? [];
     type PreviewStat = {
         teamNumber: number;
         npOpr: number | null;
@@ -130,25 +127,20 @@
                     </a>
                 </p>
             </Card>
-            {#if data.teamMatches?.length}
-                <Card>
-                    <MatchTable
-                        matches={data.teamMatches}
-                        {event}
-                        focusedTeam={data.homeTeam}
-                        eventTeams={event.teams}
-                    />
-                </Card>
-            {/if}
 
             <TabbedCard
                 tabs={[
                     [faChartLine, "Preview", "preview", shouldShowPreviewTab],
-                    [faBolt, "Matches", "matches", (event?.matches?.length ?? 0) > 0],
+                    [
+                        faHouse,
+                        "Our Matches",
+                        "home_matches",
+                        (data?.teamMatches?.length ?? 0) > 0 && (event?.matches?.length ?? 0) > 0,
+                    ],
                     [faTrophy, "Rankings", "rankings", !!stats.length],
-                    [faLightbulb, "Insights", "insights", !!insights.length],
-                    [faMedal, "Awards", "awards", (event?.awards?.length ?? 0) > 0],
+                    [faList, "Picklist", "picklist", !!event.teams.length],
                     [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
+                    [faBolt, "All Matches", "matches", (event?.matches?.length ?? 0) > 0],
                 ]}
                 bind:selectedTab
             >
@@ -162,6 +154,15 @@
                         {/if}
                     </div>
                 </Card>
+
+                <TabContent name="home_matches">
+                    <MatchTable
+                        matches={data.teamMatches ?? []}
+                        {event}
+                        focusedTeam={data.homeTeam}
+                        eventTeams={event.teams}
+                    />
+                </TabContent>
 
                 <TabContent name="matches">
                     <MatchTable
@@ -193,18 +194,14 @@
                     />
                 </TabContent>
 
-                <TabContent name="insights">
-                    <Insights
+                <TabContent name="picklist">
+                    <Picklist
                         {season}
                         remote={event.remote}
                         eventName={event.name}
-                        data={insights}
+                        data={stats}
                         {focusedTeam}
                     />
-                </TabContent>
-
-                <TabContent name="awards">
-                    <Awards awards={event.awards} {season} eventCode={event.code} {focusedTeam} />
                 </TabContent>
 
                 <TabContent name="teams">
