@@ -6,8 +6,8 @@
 </script>
 
 <Head
-    title="API | FTCScout"
-    description="The developer API for FTCScout, providing access to all our statistics and data."
+    title="API | 2iLScout"
+    description="The developer API for 2iLScout, providing access to all our statistics and data."
 />
 
 <WidthProvider width="100ch">

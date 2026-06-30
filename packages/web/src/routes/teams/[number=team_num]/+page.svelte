@@ -61,7 +61,7 @@
 </script>
 
 <Head
-    title={!!team ? `${team.number} ${team.name} | FTCScout` : "Team Page | FtcScout"}
+    title={!!team ? `${team.number} ${team.name} | 2iLScout` : "Team Page | 2iLScout"}
     description={!!team
         ? `Information and matches for team ${team.number} ${team.name}.`
         : `Information and matches for team ${$page.params.number}`}

@@ -4,7 +4,7 @@
     import Head from "$lib/components/Head.svelte";
 </script>
 
-<Head title="OPR | FTCScout" description="What OPR is, how it works, and when to use it." />
+<Head title="OPR | 2iLScout" description="What OPR is, how it works, and when to use it." />
 
 <WidthProvider width={"1000px"}>
     <Card>
@@ -12,7 +12,7 @@
 
         <div class="rest">
             <p>
-                At the top of every team page on FTC<i>Scout</i> is a "Quick Stats" panel showing a
+                At the top of every team page on 2iL<i>Scout</i> is a "Quick Stats" panel showing a
                 team's "Best OPR" across several categories. But what exactly <i>is</i> OPR?
             </p>
 
@@ -125,7 +125,7 @@
 
             <h4>Do penalties affect OPR?</h4>
             <p>
-                Most often on FTC<i>Scout</i>, penalties are not calculated in OPR, which is why you
+                Most often on 2iL<i>Scout</i>, penalties are not calculated in OPR, which is why you
                 sometimes see it written as "npOPR" or "Total NP OPR". We do still make available a
                 penalty-inclusive OPR, which you can view on the
                 <a href="/records">Season Records</a> page by editing the displayed Statistics.
@@ -134,7 +134,7 @@
                 <img
                     class="statsimg"
                     src="/img/statsbutton.png"
-                    alt="A screenshot of FTCScout's Season Records page, with an orange arrow pointing to the statistics button."
+                    alt="A screenshot of 2iLScout's Season Records page, with an orange arrow pointing to the statistics button."
                 />
             </div>
         </div></Card

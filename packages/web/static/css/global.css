@@ -114,7 +114,7 @@ body {
 
     --modal-bg-color: rgba(0, 0, 0, 0.4);
 
-    --theme-color-vs: 44, 102, 110;
+    --theme-color-vs: 136, 77, 216;
     --theme-color-opacity: 0.75;
     --inline-theme-color: var(--theme-color);
 
@@ -185,9 +185,9 @@ body.dark {
 
     --modal-bg-color: rgba(78, 78, 78, 0.8);
 
-    --theme-color-vs: 31, 76, 82;
+    --theme-color-vs: 98, 32, 146;
     --theme-color-opacity: 0.3;
-    --inline-theme-color: #39848e;
+    --inline-theme-color: #af6ddf;
 
     --hover-color: #3a3a3a;
     --tab-hover-color: #232323;
@@ -269,9 +269,9 @@ body.dark .render-light {
 
         --modal-bg-color: rgba(78, 78, 78, 0.8);
 
-        --theme-color-vs: 31, 76, 82;
+        --theme-color-vs: 98, 32, 146;
         --theme-color-opacity: 0.3;
-        --inline-theme-color: #39848e;
+        --inline-theme-color: #af6ddf;
 
         --hover-color: #3a3a3a;
         --tab-hover-color: #232323;

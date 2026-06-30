@@ -4,7 +4,7 @@
     import Head from "$lib/components/Head.svelte";
 </script>
 
-<Head title="FIRST | FTCScout" description="How to get started competing in FIRST" />
+<Head title="FIRST | 2iLScout" description="How to get started competing in FIRST" />
 
 <WidthProvider width={"1000px"}>
     <Card>
@@ -15,8 +15,8 @@
                 On occasion, we recieve emails from mildly confused parents asking how to enroll
                 their kids in FIRST. My best guess for why this happens is that the parent and kid
                 come across, or are invited to, an FTC event, and are told that the scores are
-                available on FTCScout. After spending the day watching robots and following the
-                scores on FTCScout, their kid asks to join, and they end up hitting the email
+                available on 2iLScout. After spending the day watching robots and following the
+                scores on 2iLScout, their kid asks to join, and they end up hitting the email
                 button. Reasonable enough.
             </p>
             <p>

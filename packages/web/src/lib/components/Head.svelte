@@ -4,7 +4,7 @@
 
     export let title: string;
     export let description: string =
-        "FTCScout is a new way to track and scout FIRST Tech Challenge, providing advanced statistics and data on all aspects of FTC.";
+        "2iLScout is a new way to track and scout FIRST Tech Challenge, providing advanced statistics and data on all aspects of FTC.";
     export let image = "/head/banner.png";
     export let url: string | null = null;
     export let canonical: string | null = null;
@@ -25,10 +25,10 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/head/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/head/favicon-16x16.png" />
     <link rel="manifest" href="/head/site.webmanifest" />
-    <link rel="mask-icon" href="/head/safari-pinned-tab.svg" color="#2c666e" />
-    <meta name="msapplication-TileColor" content="#2c666e" />
+    <link rel="mask-icon" href="/head/safari-pinned-tab.svg" color="#884dd8" />
+    <meta name="msapplication-TileColor" content="#884dd8" />
     <meta name="theme-color" content="#ffffff" />
-    <meta property="og:site_name" content="FTCScout" />
+    <meta property="og:site_name" content="2iLScout" />
 
     <title>{IS_DEV ? "*" : ""}{title}</title>
     <meta name="description" content={description} />
@@ -37,7 +37,7 @@
     <meta property="og:description" content={description} />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#2c666e" />
+    <meta name="theme-color" content="#884dd8" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="620" />
     <meta property="og:image:type" content="image/png" />

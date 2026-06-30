@@ -12,7 +12,7 @@
     $: computedMessage = message ?? $page?.error?.message;
 </script>
 
-<Head title="FTCScout" />
+<Head title="2iLScout" />
 
 <WidthProvider width="800px">
     <Card vis={false}>

@@ -21,8 +21,8 @@
 </script>
 
 <Head
-    title="The Scouting Report | FTCScout"
-    description="The Scouting Report, FTCScout's blog highlighting interesting facts and statistics about FIRST Tech Challenge."
+    title="The Scouting Report | 2iLScout"
+    description="The Scouting Report, 2iLScout's blog highlighting interesting facts and statistics about FIRST Tech Challenge."
 />
 
 <WidthProvider width="90ch">

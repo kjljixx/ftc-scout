@@ -51,7 +51,7 @@
     }
 </script>
 
-<Head title="Teams | FTCScout" description="Find and search for FTC teams." />
+<Head title="Teams | 2iLScout" description="Find and search for FTC teams." />
 
 <WidthProvider>
     <Card>

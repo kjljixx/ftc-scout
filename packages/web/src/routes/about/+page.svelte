@@ -7,17 +7,17 @@
 </script>
 
 <Head
-    title="About | FTCScout"
-    description="About FTCScout, a way to track and scout FIRST Tech Challenge."
+    title="About | 2iLScout"
+    description="About 2iLScout, a way to track and scout FIRST Tech Challenge."
 />
 
 <WidthProvider width={"1000px"}>
     <Card>
-        <h1 class="head">About FTC<em>Scout</em></h1>
+        <h1 class="head">About 2iL<em>Scout</em></h1>
 
         <div class="rest">
             <p>
-                FTC<em>Scout</em> was developed by alumni from
+                2iL<em>Scout</em> was developed by alumni from
                 <a href="/teams/16321">16321 X Drive</a>, and it is FOSS (<a
                     href="https://en.wikipedia.org/wiki/Free_and_open-source_software"
                     target="_blank"
@@ -26,7 +26,7 @@
                 <a href={GITHUB} target="_blank" rel="noreferrer">on our Github</a>.
             </p>
             <p>
-                We also have <b>501(c)(3) non-profit status</b>, so if you find FTC<em>Scout</em>
+                We also have <b>501(c)(3) non-profit status</b>, so if you find 2iL<em>Scout</em>
                 useful, or just like tax deductions,
                 <a href="https://donate.ftcscout.org" target="_blank">please consider donating</a>.
                 Our finances are
@@ -47,7 +47,7 @@
                 </div>
                 <img
                     src="/img/filter_example.jpg"
-                    alt="A screenshot of FTCScout's filtering system, showing a filter for teams that have caused less then 2 penalty points, and have either an OPR above or equal to 55, or an Auto average above or equal to 30."
+                    alt="A screenshot of 2iLScout's filtering system, showing a filter for teams that have caused less then 2 penalty points, and have either an OPR above or equal to 55, or an Auto average above or equal to 30."
                 />
             </div>
             <div class="feature-container revsort">
@@ -56,13 +56,13 @@
                     <p>
                         You can find and sort by almost any metric you like. The number of times a
                         team has been in a tie? Sure. The standard deviation of their Endgame
-                        points? Absolutely. FTC<em>Scout</em> provides more statistics than any other
+                        points? Absolutely. 2iL<em>Scout</em> provides more statistics than any other
                         FTC score tracker, so you can focus less on stats, and more on scouting.
                     </p>
                 </div>
                 <img
                     src="/img/stats_example.jpg"
-                    alt="A screenshot of FTCScout's statistics config menu, showing the various stats available to view."
+                    alt="A screenshot of 2iLScout's statistics config menu, showing the various stats available to view."
                 />
             </div>
             <div class="feature-container">

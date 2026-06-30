@@ -6,17 +6,17 @@
 </script>
 
 <Head
-    title="API | FTCScout"
-    description="The developer APIs for FTCScout providing access to all our statistics and data."
+    title="API | 2iLScout"
+    description="The developer APIs for 2iLScout providing access to all our statistics and data."
 />
 
 <WidthProvider width="100ch">
     <Card>
-        <h1 class="head">FTC<em>Scout</em> APIs</h1>
+        <h1 class="head">2iL<em>Scout</em> APIs</h1>
 
         <div class="rest">
             <p>
-                FTC<em>Scout</em> has two APIs for you to choose between: a fully featured GraphQL API
+                2iL<em>Scout</em> has two APIs for you to choose between: a fully featured GraphQL API
                 and a simple to use REST API.
             </p>
 
@@ -28,7 +28,7 @@
 
             <h2>GraphQL</h2>
             <p>
-                The FTC<em>Scout</em> GraphQL API provides access to all of the FTC<em>Scout</em>'s
+                The 2iL<em>Scout</em> GraphQL API provides access to all of the 2iL<em>Scout</em>'s
                 data and statistics. It is used internally by the website.
             </p>
             <p>
@@ -64,7 +64,7 @@
 <div class="maybe-hide">
     <WidthProvider width="1600px">
         <Card>
-            <iframe src="https://api.ftcscout.org/graphql" title="FTCScout API Playground" />
+            <iframe src="https://api.ftcscout.org/graphql" title="2iLScout API Playground" />
         </Card>
     </WidthProvider>
 </div>

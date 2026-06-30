@@ -4,7 +4,7 @@
     import WidthProvider from "$lib/components/WidthProvider.svelte";
 </script>
 
-<Head title="Privacy Policy | FTCScout" description="The Privacy Policy for FTCScout." />
+<Head title="Privacy Policy | 2iLScout" description="The Privacy Policy for 2iLScout." />
 
 <WidthProvider width={"100ch"}>
     <Card>
@@ -15,8 +15,8 @@
 
         <div class="rest">
             <p>
-                By your continued use of the FTC<em>Scout</em> Website, you agree to the privacy
-                policy located on this page, including any amendments that FTC<em>Scout</em> makes in
+                By your continued use of the 2iL<em>Scout</em> Website, you agree to the privacy
+                policy located on this page, including any amendments that 2iL<em>Scout</em> makes in
                 the future.
             </p>
 
@@ -62,7 +62,7 @@
                 <li>Total visitor count</li>
                 <li>Visitor count by country</li>
                 <li>User counts by platform (mobile vs desktop, etc)</li>
-                <li>Times of day people use FTCScout the most</li>
+                <li>Times of day people use 2iLScout the most</li>
             </ul>
 
             <h3>The information we store cannot be used to:</h3>

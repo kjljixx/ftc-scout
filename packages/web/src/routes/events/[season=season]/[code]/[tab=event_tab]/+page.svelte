@@ -187,7 +187,7 @@
 </script>
 
 <Head
-    title={!!event ? `${event.name} | FTCScout` : "Event Page | FtcScout"}
+    title={!!event ? `${event.name} | 2iLScout` : "Event Page | 2iLScout"}
     description={!!event
         ? `Matches, awards, and statistics for the ${new Date(event.start).getFullYear()} ${
               event.name

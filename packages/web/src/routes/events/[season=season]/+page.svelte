@@ -122,7 +122,7 @@
 </script>
 
 <Head
-    title="Events | FTCScout"
+    title="Events | 2iLScout"
     description="Find and search for FTC events in the {$page.params.season} season."
 />
 

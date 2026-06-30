@@ -29,7 +29,7 @@
     let wrMode = "wo-penalties";
 </script>
 
-<Head title="FTCScout" />
+<Head title="2iLScout" />
 
 <!-- <AlertBar
     message="Watch the FTC World Championships live on YouTube!"
@@ -39,7 +39,7 @@
 <WidthProvider>
     <Card vis={false}>
         <div class="title">
-            <h1>FTC<em>Scout</em></h1>
+            <h1>2iL<em>Scout</em></h1>
             <p>A new way to track and scout <em>FIRST</em> Tech Challenge</p>
         </div>
 
