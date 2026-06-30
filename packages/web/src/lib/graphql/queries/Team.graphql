@@ -67,6 +67,11 @@ query Team($number: Int!, $season: Int!) {
                         ...FullStats
                     }
                 }
+                relatedEvents {
+                    season
+                    code
+                    name
+                }
             }
             matches {
                 season

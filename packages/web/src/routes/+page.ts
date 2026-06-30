@@ -6,7 +6,7 @@ import {
 } from "$lib/graphql/generated/graphql-operations";
 import { getData } from "$lib/graphql/getData";
 import { eventSorter } from "$lib/util/sorters";
-import { CURRENT_SEASON, type Season } from "@ftc-scout/common";
+import { CURRENT_SEASON, type Season, longestCommonPrefix } from "@ftc-scout/common";
 import { get } from "svelte/store";
 import type { PageLoad } from "./$types";
 
@@ -43,7 +43,16 @@ export const load: PageLoad = async ({ fetch, data }) => {
         return { home, homeTeam, latestSeason, latestEvent: null, teamMatches: null };
     }
 
-    let latestTep = [...team.events.filter((e) => e.stats)].sort(eventSorter)[0];
+    let allEventNames = team.events.map((e) => [e.event.name, ...e.event.relatedEvents.map((re) => re.name)]);
+    let mainEventNames = allEventNames.map(longestCommonPrefix);
+    function mapName(mainEventName: string, name: string): string {
+      let sliced = name.slice(mainEventName.length).trim().replace(/\-\s*/, "");
+      return sliced.length == 0 ? "Finals Division" : sliced;
+    }
+
+    let latestTep = [...team.events.filter((e, i) =>
+      e.event.relatedEvents.length == 0 || mapName(mainEventNames[i], e.event.name) !== "Finals Division")
+    ].sort(eventSorter)[0];
     let { event } = latestTep;
 
     let latestEvent = await getData(getClient(fetch), EventPageDocument, {

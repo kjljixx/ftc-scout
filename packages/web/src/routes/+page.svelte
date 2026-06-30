@@ -117,13 +117,15 @@
                 <FocusedTeam team={focusedTeamData} remote={event.remote} />
             {/if}
 
+            <Card>
+                <h2>
+                    <a href="/events/{event.season}/{event.code}/matches" class="norm-link">
+                        {event.name}
+                    </a>
+                </h2>
+            </Card>
             {#if data.teamMatches?.length}
                 <Card>
-                    <h2>
-                        <a href="/events/{event.season}/{event.code}/matches" class="norm-link">
-                            {event.name}
-                        </a>
-                    </h2>
                     <MatchTable
                         matches={data.teamMatches}
                         {event}
