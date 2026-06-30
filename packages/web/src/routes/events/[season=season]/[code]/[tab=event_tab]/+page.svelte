@@ -1,7 +1,7 @@
 <script lang="ts">
     import RelatedEvents from "./RelatedEvents.svelte";
 
-    import { DESCRIPTORS, Season, notEmpty } from "@ftc-scout/common";
+    import { DESCRIPTORS, Season, notEmpty, longestCommonPrefix } from "@ftc-scout/common";
     import ErrorPage from "$lib/components/ErrorPage.svelte";
     import Loading from "$lib/components/Loading.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
@@ -184,6 +184,29 @@
     $: if ($page.url) {
         showAllLivestreams = false;
     }
+
+    $: isFinalsDivision = (() => {
+        if (!event || !event.relatedEvents || event.relatedEvents.length === 0) return false;
+        const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
+        const prefix = longestCommonPrefix(names);
+        const sliced = event.name.slice(prefix.length).trim().replace(/\-\s*/, "");
+        const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
+        return mappedName === "Finals Division";
+    })();
+
+    $: matchTableTeams = isFinalsDivision
+        ? (event?.relatedEvents ?? []).flatMap((re) =>
+              (re.teams ?? []).map((t) => ({
+                  ...t,
+                  teamNumber: t.team.number,
+                  season: re.season,
+                  eventCode: re.code,
+              }))
+          )
+        : event?.teams ?? [];
+    $: console.log(isFinalsDivision);
+    $: console.log(event);
+    $: console.log(matchTableTeams);
 </script>
 
 <Head
@@ -332,7 +355,7 @@
                     matches={event.matches}
                     {event}
                     {focusedTeam}
-                    eventTeams={event.teams}
+                    eventTeams={matchTableTeams}
                 />
             </TabContent>
 

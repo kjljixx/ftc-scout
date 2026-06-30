@@ -40,14 +40,18 @@
     $: redOprSum = redTeams
         .map((rt) => {
             const matchEventTeam = eventTeams.find((et) => et.team.number === rt.teamNumber);
-            return matchEventTeam?.stats?.opr?.[npStat] ?? 0;
+            return !rt.noShow && !rt.dq && rt.onField
+                ? matchEventTeam?.stats?.opr?.[npStat] ?? 0
+                : 0;
         })
         .reduce((a, b) => a + b, 0);
 
     $: blueOprSum = blueTeams
         .map((bt) => {
             const matchEventTeam = eventTeams.find((et) => et.team.number === bt.teamNumber);
-            return matchEventTeam?.stats?.opr?.[npStat] ?? 0;
+            return !bt.noShow && !bt.dq && bt.onField
+                ? matchEventTeam?.stats?.opr?.[npStat] ?? 0
+                : 0;
         })
         .reduce((a, b) => a + b, 0);
 
