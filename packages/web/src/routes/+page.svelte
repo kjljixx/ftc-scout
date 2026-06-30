@@ -93,7 +93,7 @@
         !eventHasPassedScheduledDate;
 
     let selectedTab = "rankings";
-    let focusedTeam: number | null = data.homeTeam;
+    let focusedTeam: number | null = null;
     $: focusedTeamData =
         event?.teams?.find((t) => t.teamNumber == focusedTeam) ??
         event?.awards?.find((a) => a.teamNumber == focusedTeam)!;
