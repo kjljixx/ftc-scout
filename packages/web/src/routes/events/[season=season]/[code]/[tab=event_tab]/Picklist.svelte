@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
-    import { DESCRIPTORS, getTepStatSet, SortDir, type Season } from "@ftc-scout/common";
-    import LocalStatTableControls from "$lib/components/stats/LocalStatTableControls.svelte";
+    import { DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
     import { faGripLines } from "@fortawesome/free-solid-svg-icons";
+    import Fa from "svelte-fa";
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
 
@@ -17,32 +17,13 @@
     $: descriptor = DESCRIPTORS[season];
     $: stats = getTepStatSet(season, remote);
     $: totalPoints = descriptor.pensSubtract || remote ? "totalPoints" : "totalPointsNp";
-    $: defaultStats = [
-        "eventRank",
-        "team",
-        "rankingScore",
-        "tb1",
-        "played",
-        totalPoints + "Avg",
-        ...(remote ? [] : [totalPoints + "Opr"]),
-        totalPoints + "Max",
-    ];
+    $: defaultStats = ["team", ...(remote ? [] : [totalPoints + "Opr"]), "eventRank"];
 
-    $: saveId = `eventPageTep${season}${remote ? "Remote" : "Trad"}`;
-
-    $: underscoreEventName = eventName.replace(" ", "_");
-    $: filename = `${season}_${underscoreEventName}_Team_Stats`;
-    $: title = `${season} ${eventName} Team Stats`;
-    $: csv = { filename, title };
-
-    // --- Drag and Drop State ---
     let draggedIndex: number | null = null;
     let hoveredIndex: number | null = null;
 
-    // Maintain drag state in a local reactive state to prevent parent overrides
     let teamOrder: number[] = [];
 
-    // Sync teamOrder when raw data changes
     $: {
         const currentNums = data.map((d) => d.team?.number).filter((n): n is number => n != null);
         const currentSet = new Set(currentNums);
@@ -58,7 +39,6 @@
         }
     }
 
-    // Sort the teams list according to the tracked custom order
     $: orderedData = (() => {
         if (teamOrder.length === 0) return data;
         const orderMap = new Map(teamOrder.map((num, i) => [num, i]));
@@ -72,10 +52,6 @@
         });
     })();
 
-    // Decouples table mutations from the drag-and-drop list's array reference
-    $: tableData = [...orderedData];
-
-    // Wrap orderedData elements into the StatData structure required by StatCell
     $: wrappedOrderedData = orderedData.map((team, index) => ({
         filterRank: index + 1,
         filterSkipRank: index + 1,
@@ -92,7 +68,7 @@
     }
 
     function handleDragOver(event: DragEvent, index: number) {
-        event.preventDefault(); // Required to allow dropping
+        event.preventDefault();
         hoveredIndex = index;
     }
 
@@ -114,109 +90,144 @@
     }
 </script>
 
-<div class="reorder-container">
-    <div class="table-scroll-container">
-        <table class="draggable-table">
-            <thead>
-                <tr>
-                    <th class="drag-handle-header" />
+<div class="table-scroll-container">
+    <table class="draggable-table">
+        <thead>
+            <tr>
+                <th class="drag-handle-header empty" />
+                {#each defaultStats as statId}
+                    {@const stat = stats.getStat(statId)}
+                    <th class={stat?.color ?? ""} class:expand={stat?.shouldExpand()}>
+                        {stat?.columnName ?? statId}
+                    </th>
+                {/each}
+            </tr>
+        </thead>
+        <tbody>
+            {#each wrappedOrderedData as wrapped, index (wrapped.data.team?.number ?? index)}
+                <tr
+                    class="team-row"
+                    class:dragging={draggedIndex === index}
+                    class:hovered={hoveredIndex === index}
+                    draggable="true"
+                    on:dragstart={(e) => handleDragStart(e, index)}
+                    on:dragover={(e) => handleDragOver(e, index)}
+                    on:drop={(e) => handleDrop(e, index)}
+                    on:dragend={resetDragState}
+                >
+                    <td class="drag-handle-cell">
+                        <span class="drag-handle">
+                            <Fa {faGripLines} scale="0.75x" />
+                        </span>
+                    </td>
                     {#each defaultStats as statId}
-                        {@const stat = stats.getStat(statId)}
-                        <th class={stat?.color ?? ""}>
-                            {stat?.shortName ?? stat?.name ?? statId}
-                        </th>
+                        <StatCell data={wrapped} stat={stats.getStat(statId)} {focusedTeam} />
                     {/each}
                 </tr>
-            </thead>
-            <tbody>
-                {#each wrappedOrderedData as wrapped, index (wrapped.data.team?.number ?? index)}
-                    <tr
-                        class="team-row"
-                        class:dragging={draggedIndex === index}
-                        class:hovered={hoveredIndex === index}
-                        draggable="true"
-                        on:dragstart={(e) => handleDragStart(e, index)}
-                        on:dragover={(e) => handleDragOver(e, index)}
-                        on:drop={(e) => handleDrop(e, index)}
-                        on:dragend={resetDragState}
-                    >
-                        <td class="drag-handle-cell">
-                            <span class="drag-handle">
-                                <svg
-                                    class="icon-svg"
-                                    viewBox="0 0 {faGripLines.icon[0]} {faGripLines.icon[1]}"
-                                >
-                                    <path fill="currentColor" d={faGripLines.icon[4]} />
-                                </svg>
-                            </span>
-                        </td>
-                        {#each defaultStats as statId}
-                            <StatCell data={wrapped} stat={stats.getStat(statId)} {focusedTeam} />
-                        {/each}
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
+            {/each}
+        </tbody>
+    </table>
 </div>
 
-<LocalStatTableControls
-    {saveId}
-    data={tableData}
-    {focusedTeam}
-    {stats}
-    {defaultStats}
-    defaultSort={{ id: "eventRank", dir: SortDir.Asc }}
-    hideRankStats={[
-        "eventRank",
-        "rankingScore",
-        ...(descriptor.rankings.rp == "Record" ? ["record"] : ["totalPointsAvg", "totalPointsTot"]),
-    ]}
-    {csv}
-/>
-
 <style>
-    .reorder-container {
-        margin-bottom: 1.5rem;
-        padding: var(--md-pad);
-        background-color: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 0.375rem;
-    }
-
     .drag-instructions {
         margin-bottom: 0.75rem;
         font-weight: 500;
     }
 
     .table-scroll-container {
-        max-height: 280px;
+        flex-grow: 1;
         overflow-y: auto;
     }
 
     .draggable-table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: center;
+        border-spacing: 0;
+        border: 1px solid var(--sep-color);
+        border-radius: 8px;
+
+        display: block;
+        min-width: 100%;
+        width: min-content;
+        max-width: 100%;
+        position: relative;
+        background-color: var(--fg-color);
+    }
+
+    .draggable-table :global(thead:not(.sticking) th:first-child) {
+        border-top-left-radius: 7px;
+    }
+    .draggable-table :global(thead:not(.sticking) th:last-child) {
+        border-top-right-radius: 7px;
+    }
+    .draggable-table tbody :global(tr:last-child td:first-child) {
+        border-bottom-left-radius: 7px;
+    }
+    .draggable-table tbody :global(tr:last-child td:last-child) {
+        border-bottom-right-radius: 7px;
     }
 
     .draggable-table th {
-        font-size: var(--sm-font-size, 0.875rem);
+        padding: var(--lg-pad);
         font-weight: bold;
-        color: #ffffff;
-        padding: var(--md-pad, 0.5rem);
-        text-transform: uppercase;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        text-align: center;
+        white-space: nowrap;
+        user-select: none;
+        color: var(--stat-text-color);
+    }
+
+    @media (max-width: 600px) {
+        .draggable-table th {
+            padding: var(--lg-pad) var(--sm-pad);
+        }
+    }
+
+    .expand {
+        width: 100%;
+    }
+
+    .empty {
+        cursor: inherit;
+    }
+
+    .white {
+        color: var(--text-color);
+        box-shadow: rgb(0 0 0 / 14%) 0px -4px 4px -2px inset;
+        background: var(--fg-color);
+    }
+    .red {
+        background: var(--red-stat-color);
+    }
+    .blue {
+        background: var(--blue-stat-color);
+    }
+    .light-blue {
+        background: var(--light-blue-stat-color);
+    }
+    .purple {
+        background: var(--purple-stat-color);
+    }
+    .green {
+        background: var(--green-stat-color);
     }
 
     .team-row {
-        background-color: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        transition: background-color 0.1s;
+        outline: transparent 2px solid;
+        outline-offset: -2px;
+        transition: outline 0.12s ease 0s;
+        cursor: grab;
+    }
+
+    .team-row:active {
+        cursor: grabbing;
+    }
+
+    .draggable-table tbody :global(tr:nth-child(even)) {
+        background-color: var(--zebra-stripe-opacity);
     }
 
     .team-row:hover {
-        background-color: rgba(255, 255, 255, 0.08);
+        outline: 2px solid var(--neutral-team-color);
+        z-index: var(--focused-row-zi);
     }
 
     .team-row.dragging {
@@ -224,7 +235,8 @@
     }
 
     .team-row.hovered {
-        background-color: var(--blue-stat-bg-color);
+        outline: 2px solid var(--blue-stat-color);
+        background-color: rgba(59, 130, 246, 0.12);
     }
 
     .drag-handle-header {
@@ -235,7 +247,8 @@
     .drag-handle-cell {
         width: 40px;
         min-width: 40px;
-        padding: var(--md-pad, 0.5rem);
+        text-align: center;
+        vertical-align: middle;
     }
 
     .drag-handle {
@@ -260,23 +273,6 @@
     .na {
         color: var(--secondary-text-color);
         font-size: var(--sm-font-size);
-    }
-
-    /* Style copy targets matching StatCell colors */
-    .red {
-        background: var(--red-stat-bg-color);
-    }
-    .blue {
-        background: var(--blue-stat-bg-color);
-    }
-    .light-blue {
-        background: var(--light-blue-stat-bg-color);
-    }
-    .purple {
-        background: var(--purple-stat-bg-color);
-    }
-    .green {
-        background: var(--green-stat-bg-color);
     }
 
     .table-scroll-container::-webkit-scrollbar {
