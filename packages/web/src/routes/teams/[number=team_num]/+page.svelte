@@ -72,8 +72,6 @@
         invalidateAll();
     }
 
-    $: isHomeTeam = homeTeam === team?.number;
-
     const toSeason = (n: number) => n as Season;
 
     export let data;
@@ -82,6 +80,8 @@
     $: team = $teamStore?.data?.teamByNumber!;
     $: activeSeasons = team?.activeSeasons ?? [];
     $: inactiveSeasons = ALL_SEASONS.filter((s) => !activeSeasons.includes(s));
+
+    $: isHomeTeam = homeTeam === team?.number;
 
     $: sortedEvents = [...(team?.events ?? [])].sort(eventSorter);
 
