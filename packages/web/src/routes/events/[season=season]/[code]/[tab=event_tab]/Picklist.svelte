@@ -94,6 +94,7 @@
     <table class="draggable-table">
         <thead>
             <tr>
+                <th class="rank-header">#</th>
                 <th class="drag-handle-header empty" />
                 {#each defaultStats as statId}
                     {@const stat = stats.getStat(statId)}
@@ -115,9 +116,12 @@
                     on:drop={(e) => handleDrop(e, index)}
                     on:dragend={resetDragState}
                 >
+                    <td class="rank-cell">
+                        {index + 1}
+                    </td>
                     <td class="drag-handle-cell">
                         <span class="drag-handle">
-                            <Fa {faGripLines} scale="0.75x" />
+                            <Fa icon={faGripLines} scale="1.0x" />
                         </span>
                     </td>
                     {#each defaultStats as statId}
@@ -208,6 +212,20 @@
     }
     .green {
         background: var(--green-stat-color);
+    }
+
+    .rank-header {
+        width: 20px;
+        min-width: 20px;
+    }
+
+    .rank-cell {
+        width: 20px;
+        min-width: 20px;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        color: var(--stat-text-color);
     }
 
     .team-row {
