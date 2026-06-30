@@ -38,6 +38,41 @@
     import { setContext } from "svelte";
     import { SHOW_REMOTE_FOCUS_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import QuickStats from "./QuickStats.svelte";
+    import Button from "$lib/components/ui/Button.svelte";
+    import { serialize, parse } from "cookie";
+    import { HOME_TEAM_COOKIE_AGE, HOME_TEAM_COOKIE_NAME } from "$lib/constants";
+    import { browser } from "$app/environment";
+    import { invalidateAll } from "$app/navigation";
+    import { faHouse, faHouseCircleCheck } from "@fortawesome/free-solid-svg-icons";
+
+    function getHomeTeam(): number | null {
+        if (!browser) return null;
+        let val = parse(document.cookie)[HOME_TEAM_COOKIE_NAME];
+        return val ? +val : null;
+    }
+
+    let homeTeam: number | null = getHomeTeam();
+
+    function setHomeTeam() {
+        document.cookie = serialize(HOME_TEAM_COOKIE_NAME, String(team.number), {
+            path: "/",
+            maxAge: HOME_TEAM_COOKIE_AGE,
+            httpOnly: false,
+        });
+        homeTeam = team.number;
+    }
+
+    function clearHomeTeam() {
+        document.cookie = serialize(HOME_TEAM_COOKIE_NAME, "", {
+            path: "/",
+            maxAge: 0,
+            httpOnly: false,
+        });
+        homeTeam = null;
+        invalidateAll();
+    }
+
+    $: isHomeTeam = homeTeam === team?.number;
 
     const toSeason = (n: number) => n as Season;
 
@@ -76,7 +111,15 @@
         </ErrorPage>
 
         <Card>
-            <h1>{team.number} - {team.name}</h1>
+            <div class="header">
+                <h1>{team.number} - {team.name}</h1>
+                <Button
+                    icon={isHomeTeam ? faHouseCircleCheck : faHouse}
+                    on:click={isHomeTeam ? clearHomeTeam : setHomeTeam}
+                >
+                    {isHomeTeam ? "Clear Home Team" : "Set as Home Team"}
+                </Button>
+            </div>
 
             <InfoIconRow icon={faSchool}>{team.schoolName}</InfoIconRow>
 
@@ -165,6 +208,20 @@
 </WidthProvider>
 
 <style>
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--lg-gap);
+        flex-wrap: wrap;
+        margin-top: var(--sm-gap);
+        margin-bottom: var(--lg-gap);
+    }
+
+    .header h1 {
+        margin: 0;
+    }
+
     h1,
     h2 {
         margin-top: var(--sm-gap);
