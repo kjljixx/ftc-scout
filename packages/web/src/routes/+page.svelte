@@ -124,7 +124,12 @@
                             {event.name}
                         </a>
                     </h2>
-                    <MatchTable matches={data.teamMatches} {event} focusedTeam={data.homeTeam} />
+                    <MatchTable
+                        matches={data.teamMatches}
+                        {event}
+                        focusedTeam={data.homeTeam}
+                        eventTeams={event.teams}
+                    />
                 </Card>
             {/if}
 
@@ -151,7 +156,12 @@
                 </Card>
 
                 <TabContent name="matches">
-                    <MatchTable matches={event.matches} {event} {focusedTeam} />
+                    <MatchTable
+                        matches={event.matches}
+                        {event}
+                        {focusedTeam}
+                        eventTeams={event.teams}
+                    />
                 </TabContent>
 
                 <TabContent name="preview">

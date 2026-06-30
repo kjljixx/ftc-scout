@@ -35,6 +35,7 @@
     export let focusedTeam: number | null = null;
     export let showNonPenaltyScores = false;
     export let showHeartLegend = true;
+    export let eventTeams: any[] = [];
 
     $: timeZone = event.timezone;
     $: remote = event.remote;
@@ -121,6 +122,7 @@
                         zebraStripe={i % 2 == 1}
                         {teamCount}
                         {showNonPenaltyScores}
+                        {eventTeams}
                     />
                 {/each}
                 {#if finals.length}
@@ -135,6 +137,7 @@
                         {focusedTeam}
                         zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
+                        {eventTeams}
                     />
                 {/each}
                 {#if semis.length}
@@ -149,6 +152,7 @@
                         {focusedTeam}
                         zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
+                        {eventTeams}
                     />
                 {/each}
                 {#if quals.length && (finals.length || semis.length || doubleElim.length)}
@@ -163,6 +167,7 @@
                         {focusedTeam}
                         zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
+                        {eventTeams}
                     />
                 {/each}
             {/if}

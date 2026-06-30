@@ -50,6 +50,23 @@ query Team($number: Int!, $season: Int!) {
             }
             event {
                 ...BasicEventInfo
+                teams {
+                    season
+                    eventCode
+                    teamNumber
+                    team {
+                        number
+                        name
+                        location {
+                            city
+                            state
+                            country
+                        }
+                    }
+                    stats {
+                        ...FullStats
+                    }
+                }
             }
             matches {
                 season

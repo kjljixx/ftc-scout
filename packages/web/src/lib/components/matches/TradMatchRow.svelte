@@ -18,6 +18,7 @@
     export let zebraStripe: boolean;
     export let teamCount = 0;
     export let showNonPenaltyScores = false;
+    export let eventTeams: any[] = [];
 
     $: teams = match.teams;
     $: redTeams = teams.filter((t) => t.alliance == Alliance.Red);
@@ -32,6 +33,23 @@
     $: isNewRound = isDoubleElim && checkIsNewRound(match.series, match.matchNum, teamCount);
 
     $: winner = computeWinner(match.scores);
+
+    $: useNp = true;
+    $: npStat = useNp ? ("totalPointsNp" as const) : ("totalPoints" as const);
+
+    $: redOprSum = redTeams
+        .map((rt) => {
+            const matchEventTeam = eventTeams.find((et) => et.team.number === rt.teamNumber);
+            return matchEventTeam?.stats?.opr?.[npStat] ?? 0;
+        })
+        .reduce((a, b) => a + b, 0);
+
+    $: blueOprSum = blueTeams
+        .map((bt) => {
+            const matchEventTeam = eventTeams.find((et) => et.team.number === bt.teamNumber);
+            return matchEventTeam?.stats?.opr?.[npStat] ?? 0;
+        })
+        .reduce((a, b) => a + b, 0);
 
     function hasAlreadyLost(series: number, teamCount: number, alliance: Alliance): boolean {
         if (teamCount <= 10) {
@@ -86,6 +104,12 @@
 <tr class:zebraStripe class:isDoubleElim class:new-round={isNewRound}>
     <MatchScore {match} {timeZone} {showNonPenaltyScores} />
 
+    <div class="opr">
+        <span class="red-opr">{redOprSum.toFixed(0)}</span>
+        <div>-</div>
+        <span class="blue-opr">{blueOprSum.toFixed(0)}</span>
+    </div>
+
     {#if isDoubleElim}
         <DeLives
             alliance={Alliance.Red}
@@ -136,26 +160,41 @@
 <style>
     tr {
         display: grid;
-        grid-template-columns: 10.75em repeat(12, 1fr);
+        grid-template-columns: 10.75em 5.5em repeat(12, 1fr);
 
         min-height: 28px;
     }
 
     tr.isDoubleElim {
-        grid-template-columns: 10.75em auto repeat(6, 1fr) auto repeat(6, 1fr);
+        grid-template-columns: 10.75em 5.5em auto repeat(6, 1fr) auto repeat(6, 1fr);
     }
 
     tr.new-round {
         border-top: 1px solid var(--sep-color);
     }
 
+    .opr {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--sm-gap);
+    }
+
+    .red-opr {
+        color: var(--red-team-text-color);
+    }
+
+    .blue-opr {
+        color: var(--blue-team-text-color);
+    }
+
     @media (max-width: 1000px) {
         tr {
-            grid-template-columns: 9.75em repeat(12, 1fr);
+            grid-template-columns: 9.75em 4.75em repeat(12, 1fr);
         }
 
         tr.isDoubleElim {
-            grid-template-columns: 9.75em auto repeat(6, 1fr) auto repeat(6, 1fr);
+            grid-template-columns: 9.75em 4.75em auto repeat(6, 1fr) auto repeat(6, 1fr);
         }
     }
 

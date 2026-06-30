@@ -190,6 +190,7 @@
                     matches={tep.matches.map((m) => m.match)}
                     {event}
                     focusedTeam={team.number}
+                    eventTeams={event.teams}
                 />
             </Card>
         {:else}

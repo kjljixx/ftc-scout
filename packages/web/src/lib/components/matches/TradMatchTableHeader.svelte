@@ -3,7 +3,11 @@
         <th class="s">
             <div>Match</div>
             <div>Score</div>
-        </th><th class="r">Red Alliance</th>
+        </th>
+        <th>
+            <div>OPR</div>
+        </th>
+        <th class="r">Red Alliance</th>
         <th class="b">Blue Alliance</th>
     </tr>
 </thead>
@@ -15,12 +19,12 @@
 
     tr {
         display: grid;
-        grid-template-columns: 10.75em 1fr 1fr;
+        grid-template-columns: 10.75em 5.5em 1fr 1fr;
     }
 
     @media (max-width: 1000px) {
         tr {
-            grid-template-columns: 9.75em 1fr 1fr;
+            grid-template-columns: 9.75em 4.75em 1fr 1fr;
         }
     }
 

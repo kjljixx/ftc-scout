@@ -12,13 +12,13 @@
 <style>
     tr {
         display: grid;
-        grid-template-columns: 10.75em 1fr 1fr;
+        grid-template-columns: 10.75em 5.5em 1fr 1fr;
         height: calc(var(--xl-gap) * 1.5);
     }
 
     @media (max-width: 1000px) {
         tr {
-            grid-template-columns: 9.75em 1fr 1fr;
+            grid-template-columns: 9.75em 4.75em 1fr 1fr;
         }
     }
 
@@ -29,12 +29,12 @@
     .red {
         background: var(--red-team-bg-color);
         grid-row: 1 / 1;
-        grid-column: 2 / 3;
+        grid-column: 3 / 4;
     }
     .blue {
         background: var(--blue-team-bg-color);
         grid-row: 1 / 1;
-        grid-column: 3 / 4;
+        grid-column: 4 / 5;
     }
     .name {
         display: flex;
@@ -42,7 +42,7 @@
         justify-content: center;
 
         grid-row: 1 / 1;
-        grid-column: 2 / 4;
+        grid-column: 3 / 5;
     }
     .name span {
         background: var(--fg-color);

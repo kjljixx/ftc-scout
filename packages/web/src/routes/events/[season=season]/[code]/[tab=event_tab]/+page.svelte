@@ -328,7 +328,12 @@
             </Card>
 
             <TabContent name="matches">
-                <MatchTable matches={event.matches} {event} {focusedTeam} />
+                <MatchTable
+                    matches={event.matches}
+                    {event}
+                    {focusedTeam}
+                    eventTeams={event.teams}
+                />
             </TabContent>
 
             <TabContent name="preview">
