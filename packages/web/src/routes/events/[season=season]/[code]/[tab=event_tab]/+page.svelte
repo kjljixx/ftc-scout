@@ -16,6 +16,7 @@
         faHashtag,
         faLightbulb,
         faLink,
+        faList,
         faLocationDot,
         faMedal,
         faTrophy,
@@ -33,6 +34,7 @@
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import Teams from "./Teams.svelte";
+    import Picklist from "./Picklist.svelte";
     import Rankings from "./Rankings.svelte";
     import Awards from "./Awards.svelte";
     import Preview from "./Preview.svelte";
@@ -333,6 +335,7 @@
                 [faChartLine, "Preview", "preview", shouldShowPreviewTab],
                 [faBolt, "Matches", "matches", (event?.matches?.length ?? 0) > 0],
                 [faTrophy, "Rankings", "rankings", !!stats.length],
+                [faList, "Picklist", "picklist", !!event.teams.length],
                 [faLightbulb, "Insights", "insights", !!insights.length],
                 [faMedal, "Awards", "awards", (event?.awards?.length ?? 0) > 0],
                 [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
@@ -375,6 +378,16 @@
                     {season}
                     remote={event.remote}
                     eventName={event.name}
+                    data={stats}
+                    {focusedTeam}
+                />
+            </TabContent>
+
+            <TabContent name="picklist">
+                <Picklist
+                    {season}
+                    remote={event.remote}
+                    eventCode={event.code}
                     data={stats}
                     {focusedTeam}
                 />

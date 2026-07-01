@@ -198,7 +198,7 @@
                     <Picklist
                         {season}
                         remote={event.remote}
-                        eventName={event.name}
+                        eventCode={event.code}
                         data={previewTeams.filter((t) => t.teamNumber != data.homeTeam)}
                         {focusedTeam}
                     />

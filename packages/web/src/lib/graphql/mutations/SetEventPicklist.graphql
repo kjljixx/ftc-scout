@@ -1,0 +1,5 @@
+mutation SetEventPicklist($season: Int!, $eventCode: String!, $teamOrder: [Int!]!) {
+    setEventPicklist(season: $season, eventCode: $eventCode, teamOrder: $teamOrder) {
+        teamOrder
+    }
+}

@@ -1,8 +1,16 @@
 <script lang="ts">
-    import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
+    import {
+        EventPicklistDocument,
+        SetEventPicklistDocument,
+        PicklistUpdatedDocument,
+        type EventPageQuery,
+    } from "$lib/graphql/generated/graphql-operations";
     import { DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
     import { faGripLines } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
+    import { onDestroy, onMount } from "svelte";
+    import { browser } from "$app/environment";
+    import { getClient } from "$lib/graphql/client";
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
 
@@ -10,7 +18,7 @@
 
     export let season: Season;
     export let remote: boolean;
-    export let eventName: string;
+    export let eventCode: string;
     export let data: DataTy[];
     export let focusedTeam: number | null;
 
@@ -26,6 +34,62 @@
 
     let touchStartIdx: number | null = null;
     let touchTargetIdx: number | null = null;
+
+    let lastSyncedOrder: number[] | null = null;
+    let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    let subscription: ReturnType<
+        ReturnType<typeof getClient>["subscribe"]
+    >["subscribe"] extends never
+        ? never
+        : any;
+
+    onMount(async () => {
+        if (!browser) return;
+
+        let result = await getClient().query({
+            query: EventPicklistDocument,
+            variables: { season, eventCode },
+            fetchPolicy: "no-cache",
+        });
+        let savedOrder = result.data?.eventPicklist?.teamOrder;
+        if (savedOrder) {
+            lastSyncedOrder = savedOrder;
+            teamOrder = savedOrder;
+        }
+
+        subscription = getClient()
+            .subscribe({ query: PicklistUpdatedDocument, variables: { season, eventCode } })
+            .subscribe((result) => {
+                let updatedOrder = result.data?.picklistUpdated?.teamOrder;
+                if (!updatedOrder || sameOrder(updatedOrder, lastSyncedOrder)) return;
+                lastSyncedOrder = updatedOrder;
+                teamOrder = updatedOrder;
+            });
+    });
+
+    onDestroy(() => {
+        subscription?.unsubscribe();
+        if (saveTimeout) clearTimeout(saveTimeout);
+    });
+
+    function sameOrder(a: number[], b: number[] | null): boolean {
+        return !!b && a.length === b.length && a.every((n, i) => n === b[i]);
+    }
+
+    function queuePicklistSave(order: number[]) {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => savePicklist(order), 600);
+    }
+
+    async function savePicklist(order: number[]) {
+        lastSyncedOrder = order;
+        console.log(eventCode);
+        await getClient().mutate({
+            mutation: SetEventPicklistDocument,
+            variables: { season, eventCode, teamOrder: order },
+        });
+    }
 
     $: sortedData = remote
         ? data
@@ -98,6 +162,7 @@
         updatedOrder.splice(index, 0, movedItem);
 
         teamOrder = updatedOrder;
+        queuePicklistSave(updatedOrder);
         resetDragState();
     }
 
@@ -140,6 +205,7 @@
             updatedOrder.splice(touchTargetIdx, 0, movedItem);
 
             teamOrder = updatedOrder;
+            queuePicklistSave(updatedOrder);
         }
         touchStartIdx = null;
         touchTargetIdx = null;

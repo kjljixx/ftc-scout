@@ -1,0 +1,5 @@
+query EventPicklist($season: Int!, $eventCode: String!) {
+    eventPicklist(season: $season, eventCode: $eventCode) {
+        teamOrder
+    }
+}

@@ -1,0 +1,5 @@
+subscription PicklistUpdated($season: Int!, $eventCode: String!) {
+    picklistUpdated(season: $season, eventCode: $eventCode) {
+        teamOrder
+    }
+}
