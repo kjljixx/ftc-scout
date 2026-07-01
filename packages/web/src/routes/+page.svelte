@@ -199,7 +199,7 @@
                         {season}
                         remote={event.remote}
                         eventName={event.name}
-                        data={stats.filter((t) => t.teamNumber != data.homeTeam)}
+                        data={previewTeams.filter((t) => t.teamNumber != data.homeTeam)}
                         {focusedTeam}
                     />
                 </TabContent>
