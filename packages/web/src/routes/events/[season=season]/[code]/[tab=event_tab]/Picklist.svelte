@@ -27,8 +27,22 @@
     let touchStartIdx: number | null = null;
     let touchTargetIdx: number | null = null;
 
+    $: sortedData = remote
+        ? data
+        : [...data].sort((a, b) => {
+              const stat = stats.getStat(totalPoints + "Opr");
+              const av = stat?.getNonRankValueDistilled(a) ?? -Infinity;
+              const bv = stat?.getNonRankValueDistilled(b) ?? -Infinity;
+              if (av == null && bv == null) return 0;
+              if (av == null) return 1;
+              if (bv == null) return -1;
+              return (bv as any) - (av as any);
+          });
+
     $: {
-        const currentNums = data.map((d) => d.team?.number).filter((n): n is number => n != null);
+        const currentNums = sortedData
+            .map((d) => d.team?.number)
+            .filter((n): n is number => n != null);
         const currentSet = new Set(currentNums);
         const orderSet = new Set(teamOrder);
 
@@ -43,9 +57,9 @@
     }
 
     $: orderedData = (() => {
-        if (teamOrder.length === 0) return data;
+        if (teamOrder.length === 0) return sortedData;
         const orderMap = new Map(teamOrder.map((num, i) => [num, i]));
-        return [...data].sort((a, b) => {
+        return [...sortedData].sort((a, b) => {
             const aNum = a.team?.number;
             const bNum = b.team?.number;
             if (aNum == null || bNum == null) return 0;

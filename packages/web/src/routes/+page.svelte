@@ -133,7 +133,7 @@
                     [faChartLine, "Preview", "preview", shouldShowPreviewTab],
                     [
                         faHouse,
-                        "Our Matches",
+                        "Your Matches",
                         "home_matches",
                         (data?.teamMatches?.length ?? 0) > 0 && (event?.matches?.length ?? 0) > 0,
                     ],
@@ -199,7 +199,7 @@
                         {season}
                         remote={event.remote}
                         eventName={event.name}
-                        data={stats}
+                        data={stats.filter((t) => t.teamNumber != data.homeTeam)}
                         {focusedTeam}
                     />
                 </TabContent>
