@@ -84,7 +84,6 @@
 
     async function savePicklist(order: number[]) {
         lastSyncedOrder = order;
-        console.log(eventCode);
         await getClient().mutate({
             mutation: SetEventPicklistDocument,
             variables: { season, eventCode, teamOrder: order },

@@ -206,9 +206,6 @@
               }))
           )
         : event?.teams ?? [];
-    $: console.log(isFinalsDivision);
-    $: console.log(event);
-    $: console.log(matchTableTeams);
 </script>
 
 <Head
@@ -388,7 +385,7 @@
                     {season}
                     remote={event.remote}
                     eventCode={event.code}
-                    data={stats}
+                    data={previewTeams}
                     {focusedTeam}
                 />
             </TabContent>
