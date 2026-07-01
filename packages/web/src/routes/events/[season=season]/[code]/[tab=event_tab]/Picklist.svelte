@@ -24,6 +24,9 @@
 
     let teamOrder: number[] = [];
 
+    let touchStartIdx: number | null = null;
+    let touchTargetIdx: number | null = null;
+
     $: {
         const currentNums = data.map((d) => d.team?.number).filter((n): n is number => n != null);
         const currentSet = new Set(currentNums);
@@ -88,6 +91,46 @@
         draggedIndex = null;
         hoveredIndex = null;
     }
+
+    function handleTouchStart(event: TouchEvent, index: number) {
+        const target = event.target as HTMLElement;
+        if (!target.closest(".drag-handle")) return;
+
+        event.preventDefault();
+        touchStartIdx = index;
+        draggedIndex = index;
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+        if (touchStartIdx === null) return;
+        event.preventDefault();
+
+        const touch = event.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        const row = element?.closest(".team-row") as HTMLElement | null;
+
+        if (row && row.dataset.index !== undefined) {
+            const index = parseInt(row.dataset.index, 10);
+            hoveredIndex = index;
+            touchTargetIdx = index;
+        } else {
+            hoveredIndex = null;
+            touchTargetIdx = null;
+        }
+    }
+
+    function handleTouchEnd() {
+        if (touchStartIdx !== null && touchTargetIdx !== null && touchStartIdx !== touchTargetIdx) {
+            const updatedOrder = [...teamOrder];
+            const [movedItem] = updatedOrder.splice(touchStartIdx, 1);
+            updatedOrder.splice(touchTargetIdx, 0, movedItem);
+
+            teamOrder = updatedOrder;
+        }
+        touchStartIdx = null;
+        touchTargetIdx = null;
+        resetDragState();
+    }
 </script>
 
 <div class="table-scroll-container">
@@ -110,11 +153,15 @@
                     class="team-row"
                     class:dragging={draggedIndex === index}
                     class:hovered={hoveredIndex === index}
+                    data-index={index}
                     draggable="true"
                     on:dragstart={(e) => handleDragStart(e, index)}
                     on:dragover={(e) => handleDragOver(e, index)}
                     on:drop={(e) => handleDrop(e, index)}
                     on:dragend={resetDragState}
+                    on:touchstart|nonpassive={(e) => handleTouchStart(e, index)}
+                    on:touchmove|nonpassive={handleTouchMove}
+                    on:touchend={handleTouchEnd}
                 >
                     <td class="rank-cell">
                         {index + 1}
