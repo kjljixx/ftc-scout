@@ -215,6 +215,7 @@
 
                 <MatchTable
                     matches={tep.matches.map((m) => m.match)}
+                    allMatches={event.matches ?? []}
                     {event}
                     focusedTeam={team.number}
                     eventTeams={matchTableTeams}

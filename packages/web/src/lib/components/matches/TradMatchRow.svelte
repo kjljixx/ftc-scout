@@ -11,6 +11,7 @@
     import PlaceholderMatchTeam from "./PlaceholderMatchTeam.svelte";
 
     export let match: FullMatchFragment;
+    export let allMatches: FullMatchFragment[] = [];
     export let eventCode: string;
     export let season: number;
     export let timeZone: string;
@@ -37,21 +38,41 @@
     $: useNp = true;
     $: npStat = useNp ? ("totalPointsNp" as const) : ("totalPoints" as const);
 
+    function matchesPlayedSoFar(teamNumber: number): number {
+        return allMatches.filter(
+            (m) =>
+                m.tournamentLevel === TournamentLevel.Quals &&
+                m.scores !== null &&
+                m.teams.some((t) => t.teamNumber === teamNumber && !t.noShow && !t.dq && t.onField)
+        ).length;
+    }
+
+    function weightedOpr(teamNumber: number): number {
+        const matchEventTeam = eventTeams.find((et) => et.team.number === teamNumber);
+        const previousBestOpr = matchEventTeam?.previousBestOpr ?? null;
+        const currentOpr = matchEventTeam?.stats?.opr?.[npStat] ?? null;
+        if (currentOpr !== null && previousBestOpr == null) return currentOpr;
+        if (currentOpr == null && previousBestOpr !== null) return previousBestOpr;
+        if (currentOpr == null && previousBestOpr == null) return 0;
+
+        const currentWeight =
+            allMatches.filter((m) => m.tournamentLevel === TournamentLevel.Quals).length > 0
+                ? Math.min(matchesPlayedSoFar(teamNumber) / 5, 1)
+                : 1;
+        return currentWeight * currentOpr + (1 - currentWeight) * previousBestOpr;
+    }
+
     $: redOprSum = redTeams
         .map((rt) => {
-            const matchEventTeam = eventTeams.find((et) => et.team.number === rt.teamNumber);
-            return !rt.noShow && !rt.dq && rt.onField
-                ? matchEventTeam?.stats?.opr?.[npStat] ?? 0
-                : 0;
+            if (rt.noShow || rt.dq || !rt.onField) return 0;
+            return weightedOpr(rt.teamNumber);
         })
         .reduce((a, b) => a + b, 0);
 
     $: blueOprSum = blueTeams
         .map((bt) => {
-            const matchEventTeam = eventTeams.find((et) => et.team.number === bt.teamNumber);
-            return !bt.noShow && !bt.dq && bt.onField
-                ? matchEventTeam?.stats?.opr?.[npStat] ?? 0
-                : 0;
+            if (bt.noShow || bt.dq || !bt.onField) return 0;
+            return weightedOpr(bt.teamNumber);
         })
         .reduce((a, b) => a + b, 0);
 

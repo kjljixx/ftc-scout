@@ -1,4 +1,4 @@
-import { IntTy, Season, StrTy, list, nn } from "@ftc-scout/common";
+import { DESCRIPTORS, FloatTy, IntTy, Season, StrTy, list, nn, nullTy } from "@ftc-scout/common";
 import { GraphQLObjectType } from "graphql";
 import { dataLoaderResolverList, dataLoaderResolverSingle } from "../utils";
 import { TeamEventParticipation } from "../../db/entities/dyn/team-event-participation";
@@ -23,6 +23,38 @@ export const TeamEventParticipationGQL = new GraphQLObjectType({
         stats: {
             type: TepStatsUnionGQL,
             resolve: (tep) => (tep.hasStats ? addTypename(tep) : null),
+        },
+
+        previousBestOpr: {
+            type: nullTy(FloatTy).type,
+            resolve: async (tep: TeamEventParticipation) => {
+                let thisEvent = await Event.findOneBy({ season: tep.season, code: tep.eventCode });
+                if (!thisEvent) return null;
+
+                let descriptor = DESCRIPTORS[tep.season];
+                let getOpr = (t: TeamEventParticipation) =>
+                    descriptor.pensSubtract
+                        ? t.opr?.totalPoints ?? null
+                        : t.opr?.totalPointsNp ?? t.opr?.totalPoints ?? null;
+
+                let candidates = await TeamEventParticipation[tep.season]
+                    .createQueryBuilder("t")
+                    .innerJoin(Event, "e", "e.season = t.season AND e.code = t.eventCode")
+                    .where("t.teamNumber = :teamNumber", { teamNumber: tep.teamNumber })
+                    .andWhere("t.eventCode <> :eventCode", { eventCode: tep.eventCode })
+                    .andWhere("NOT t.isRemote")
+                    .andWhere("t.hasStats")
+                    .andWhere("NOT e.modified_rules")
+                    .andWhere("e.start < :start", { start: thisEvent.start })
+                    .getMany();
+
+                let best = candidates
+                    .map(getOpr)
+                    .filter((v): v is number => v != null)
+                    .reduce((a, b) => Math.max(a, b), -Infinity);
+
+                return best === -Infinity ? null : best;
+            },
         },
 
         event: {

@@ -29,6 +29,7 @@ query EventPage($season: Int!, $code: String!) {
             stats {
                 ...FullStats
             }
+            previousBestOpr
         }
         previewStats {
             teamNumber
@@ -77,6 +78,7 @@ query EventPage($season: Int!, $code: String!) {
                 stats {
                     ...FullStats
                 }
+                previousBestOpr
             }
         }
     }

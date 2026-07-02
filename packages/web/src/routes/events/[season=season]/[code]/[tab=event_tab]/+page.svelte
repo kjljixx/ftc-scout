@@ -353,6 +353,7 @@
             <TabContent name="matches">
                 <MatchTable
                     matches={event.matches}
+                    allMatches={event.matches ?? []}
                     {event}
                     {focusedTeam}
                     eventTeams={matchTableTeams}

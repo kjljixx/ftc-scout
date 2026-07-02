@@ -158,6 +158,7 @@
                 <TabContent name="home_matches">
                     <MatchTable
                         matches={data.teamMatches ?? []}
+                        allMatches={event.matches ?? []}
                         {event}
                         focusedTeam={data.homeTeam}
                         eventTeams={event.teams}
@@ -167,6 +168,7 @@
                 <TabContent name="matches">
                     <MatchTable
                         matches={event.matches}
+                        allMatches={event.matches ?? []}
                         {event}
                         {focusedTeam}
                         eventTeams={event.teams}

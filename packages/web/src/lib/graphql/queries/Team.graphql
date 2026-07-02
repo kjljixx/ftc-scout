@@ -89,6 +89,9 @@ query Team($number: Int!, $season: Int!) {
                         }
                     }
                 }
+                matches {
+                    ...FullMatch
+                }
             }
             matches {
                 season

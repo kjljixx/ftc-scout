@@ -24,6 +24,7 @@
     import Fa from "svelte-fa";
 
     export let matches: FullMatchFragment[];
+    export let allMatches: FullMatchFragment[] = [];
     export let event: {
         season: number;
         code: string;
@@ -115,6 +116,7 @@
                 {#each doubleElim as match, i}
                     <TradMatchRow
                         {match}
+                        {allMatches}
                         {eventCode}
                         {season}
                         {timeZone}
@@ -131,6 +133,7 @@
                 {#each finals as match, i}
                     <TradMatchRow
                         {match}
+                        {allMatches}
                         {eventCode}
                         {season}
                         {timeZone}
@@ -146,6 +149,7 @@
                 {#each semis as match, i}
                     <TradMatchRow
                         {match}
+                        {allMatches}
                         {eventCode}
                         {season}
                         {timeZone}
@@ -161,6 +165,7 @@
                 {#each quals as match, i}
                     <TradMatchRow
                         {match}
+                        {allMatches}
                         {eventCode}
                         {season}
                         {timeZone}
