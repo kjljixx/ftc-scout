@@ -332,7 +332,7 @@
                 [faChartLine, "Preview", "preview", shouldShowPreviewTab],
                 [faBolt, "Matches", "matches", (event?.matches?.length ?? 0) > 0],
                 [faTrophy, "Rankings", "rankings", !!stats.length],
-                [faList, "Picklist", "picklist", !!event.teams.length],
+                [faList, "Picklist", "picklist", !!event.teams.length && !isFinalsDivision],
                 [faLightbulb, "Insights", "insights", !!insights.length],
                 [faMedal, "Awards", "awards", (event?.awards?.length ?? 0) > 0],
                 [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
