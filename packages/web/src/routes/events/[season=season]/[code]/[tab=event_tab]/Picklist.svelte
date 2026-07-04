@@ -34,6 +34,10 @@
 
     let touchStartIdx: number | null = null;
     let touchTargetIdx: number | null = null;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    let content = document.getElementById("content");
 
     let lastSyncedOrder: number[] | null = null;
     let saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -179,12 +183,8 @@
         draggedIndex = index;
     }
 
-    function handleTouchMove(event: TouchEvent) {
-        if (touchStartIdx === null) return;
-        event.preventDefault();
-
-        const touch = event.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    function updateHoveredItem() {
+        const element = document.elementFromPoint(lastTouchX, lastTouchY);
         const row = element?.closest(".team-row") as HTMLElement | null;
 
         if (row && row.dataset.index !== undefined) {
@@ -195,6 +195,34 @@
             hoveredIndex = null;
             touchTargetIdx = null;
         }
+    }
+
+    function handleAutoScroll() {
+        const threshold = 100;
+        const maxSpeed = 15;
+        const rect = content?.getBoundingClientRect();
+        if (!rect) return;
+        const topBound = rect.top + threshold;
+        const bottomBound = rect.bottom - threshold;
+
+        if (lastTouchY < topBound) {
+            const ratio = (topBound - lastTouchY) / threshold;
+            content?.scrollBy(0, -Math.max(2, Math.round(ratio * maxSpeed)));
+        } else if (lastTouchY > bottomBound) {
+            const ratio = (lastTouchY - bottomBound) / threshold;
+            content?.scrollBy(0, Math.max(2, Math.round(ratio * maxSpeed)));
+        }
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+        if (touchStartIdx === null) return;
+
+        const touch = event.touches[0];
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+
+        handleAutoScroll();
+        updateHoveredItem();
     }
 
     function handleTouchEnd() {
