@@ -3,6 +3,9 @@
         EventPicklistDocument,
         SetEventPicklistDocument,
         PicklistUpdatedDocument,
+        AddCustomFieldDocument,
+        RemoveCustomFieldDocument,
+        SetCustomFieldValueDocument,
         type EventPageQuery,
     } from "$lib/graphql/generated/graphql-operations";
     import { DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
@@ -42,6 +45,33 @@
     let lastSyncedOrder: number[] | null = null;
     let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
+    type CustomFieldTy = { id: string; name: string; type: string };
+    type CustomValueTy = { teamNumber: number; fieldId: string; value: string | number | boolean };
+
+    let customFields: CustomFieldTy[] = [];
+    let customValues: Record<number, Record<string, string | number | boolean>> = {};
+    let pendingValueKeys = new Set<string>();
+    let valueSaveTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+
+    let newFieldName = "";
+    let newFieldType: string = "string";
+
+    function valueKey(fieldId: string, teamNumber: number) {
+        return `${fieldId}:${teamNumber}`;
+    }
+
+    function applyRemoteValues(flat: CustomValueTy[]) {
+        let newMap: Record<number, Record<string, string | number | boolean>> = {};
+        for (let v of flat) {
+            let key = valueKey(v.fieldId, v.teamNumber);
+            newMap[v.teamNumber] = newMap[v.teamNumber] ?? {};
+            newMap[v.teamNumber][v.fieldId] = pendingValueKeys.has(key)
+                ? customValues[v.teamNumber]?.[v.fieldId] ?? v.value
+                : v.value;
+        }
+        customValues = newMap;
+    }
+
     let subscription: ReturnType<
         ReturnType<typeof getClient>["subscribe"]
     >["subscribe"] extends never
@@ -61,20 +91,30 @@
             lastSyncedOrder = savedOrder;
             teamOrder = savedOrder;
         }
+        customFields = result.data?.eventPicklist?.customFields ?? [];
+        applyRemoteValues(result.data?.eventPicklist?.customValues ?? []);
 
         subscription = getClient()
             .subscribe({ query: PicklistUpdatedDocument, variables: { season, eventCode } })
             .subscribe((result) => {
                 let updatedOrder = result.data?.picklistUpdated?.teamOrder;
-                if (!updatedOrder || sameOrder(updatedOrder, lastSyncedOrder)) return;
-                lastSyncedOrder = updatedOrder;
-                teamOrder = updatedOrder;
+                if (updatedOrder && !sameOrder(updatedOrder, lastSyncedOrder)) {
+                    lastSyncedOrder = updatedOrder;
+                    teamOrder = updatedOrder;
+                }
+                if (result.data?.picklistUpdated?.customFields) {
+                    customFields = result.data.picklistUpdated.customFields;
+                }
+                if (result.data?.picklistUpdated?.customValues) {
+                    applyRemoteValues(result.data.picklistUpdated.customValues);
+                }
             });
     });
 
     onDestroy(() => {
         subscription?.unsubscribe();
         if (saveTimeout) clearTimeout(saveTimeout);
+        Object.values(valueSaveTimeouts).forEach(clearTimeout);
     });
 
     function sameOrder(a: number[], b: number[] | null): boolean {
@@ -91,6 +131,79 @@
         await getClient().mutate({
             mutation: SetEventPicklistDocument,
             variables: { season, eventCode, teamOrder: order },
+        });
+    }
+
+    async function addCustomField() {
+        let name = newFieldName.trim();
+        if (!name) return;
+        let result = await getClient().mutate({
+            mutation: AddCustomFieldDocument,
+            variables: { season, eventCode, name, fieldType: newFieldType },
+        });
+        customFields = result.data?.addCustomField?.customFields ?? customFields;
+        newFieldName = "";
+    }
+
+    async function removeCustomField(fieldId: string) {
+        let result = await getClient().mutate({
+            mutation: RemoveCustomFieldDocument,
+            variables: { season, eventCode, fieldId },
+        });
+        customFields = result.data?.removeCustomField?.customFields ?? customFields;
+
+        let newValues: Record<number, Record<string, string | number | boolean>> = {};
+        for (let [teamNumber, fields] of Object.entries(customValues)) {
+            let { [fieldId]: _removed, ...rest } = fields;
+            newValues[+teamNumber] = rest;
+        }
+        customValues = newValues;
+    }
+
+    function onCustomCellInput(teamNumber: number, field: CustomFieldTy, e: Event) {
+        let rawValue = (e.target as HTMLInputElement).value;
+        customValues = {
+            ...customValues,
+            [teamNumber]: { ...(customValues[teamNumber] ?? {}), [field.id]: rawValue },
+        };
+
+        let key = valueKey(field.id, teamNumber);
+        pendingValueKeys.add(key);
+        if (valueSaveTimeouts[key]) clearTimeout(valueSaveTimeouts[key]);
+        valueSaveTimeouts[key] = setTimeout(
+            () => saveCustomCellValue(teamNumber, field, rawValue),
+            600
+        );
+    }
+
+    async function saveCustomCellValue(teamNumber: number, field: CustomFieldTy, rawValue: string) {
+        let key = valueKey(field.id, teamNumber);
+        let value: string | number | boolean = rawValue;
+        if (field.type === "float") {
+            let parsed = parseFloat(rawValue);
+            if (Number.isNaN(parsed)) {
+                pendingValueKeys.delete(key);
+                return;
+            }
+            value = parsed;
+        }
+
+        await getClient().mutate({
+            mutation: SetCustomFieldValueDocument,
+            variables: { season, eventCode, teamNumber, fieldId: field.id, value },
+        });
+        pendingValueKeys.delete(key);
+    }
+
+    async function toggleCheckbox(teamNumber: number, field: CustomFieldTy, e: Event) {
+        let checked = (e.target as HTMLInputElement).checked;
+        customValues = {
+            ...customValues,
+            [teamNumber]: { ...(customValues[teamNumber] ?? {}), [field.id]: checked },
+        };
+        await getClient().mutate({
+            mutation: SetCustomFieldValueDocument,
+            variables: { season, eventCode, teamNumber, fieldId: field.id, value: checked },
         });
     }
 
@@ -240,6 +353,22 @@
     }
 </script>
 
+<div class="custom-fields-manager">
+    <input
+        class="new-field-name"
+        type="text"
+        placeholder="New field name"
+        bind:value={newFieldName}
+        on:keydown={(e) => e.key === "Enter" && addCustomField()}
+    />
+    <select bind:value={newFieldType}>
+        <option value="string">Text</option>
+        <option value="float">Number</option>
+        <option value="boolean">Checkbox</option>
+    </select>
+    <button class="add-field-btn" on:click={addCustomField}>Add Field</button>
+</div>
+
 <div class="table-scroll-container">
     <table class="draggable-table">
         <thead>
@@ -250,6 +379,21 @@
                     {@const stat = stats.getStat(statId)}
                     <th class={stat?.color ?? ""} class:expand={stat?.shouldExpand()}>
                         {stat?.columnName ?? statId}
+                    </th>
+                {/each}
+                {#each customFields as field (field.id)}
+                    <th
+                        class="custom-field-header"
+                        class:number-header={field.type === "float" || field.type === "boolean"}
+                    >
+                        <span class="custom-field-name">{field.name}</span>
+                        <button
+                            class="remove-field-btn"
+                            title="Remove field"
+                            on:click={() => removeCustomField(field.id)}
+                        >
+                            ×
+                        </button>
                     </th>
                 {/each}
             </tr>
@@ -281,6 +425,31 @@
                     {#each defaultStats as statId}
                         <StatCell data={wrapped} stat={stats.getStat(statId)} {focusedTeam} />
                     {/each}
+                    {#each customFields as field (field.id)}
+                        {@const teamNumber = wrapped.data.team?.number}
+                        <td
+                            class="custom-field-cell"
+                            class:number-cell={field.type === "float" || field.type === "boolean"}
+                        >
+                            {#if teamNumber != null}
+                                {#if field.type === "boolean"}
+                                    <input
+                                        type="checkbox"
+                                        checked={!!customValues[teamNumber]?.[field.id]}
+                                        on:change={(e) => toggleCheckbox(teamNumber, field, e)}
+                                    />
+                                {:else}
+                                    <input
+                                        type={field.type === "float" ? "number" : "text"}
+                                        step={field.type === "float" ? "any" : undefined}
+                                        value={customValues[teamNumber]?.[field.id] ?? ""}
+                                        on:input={(e) => onCustomCellInput(teamNumber, field, e)}
+                                        on:focus={(e) => e.currentTarget.select()}
+                                    />
+                                {/if}
+                            {/if}
+                        </td>
+                    {/each}
                 </tr>
             {/each}
         </tbody>
@@ -288,11 +457,6 @@
 </div>
 
 <style>
-    .drag-instructions {
-        margin-bottom: 0.75rem;
-        font-weight: 500;
-    }
-
     .table-scroll-container {
         flex-grow: 1;
         overflow-y: auto;
@@ -303,7 +467,6 @@
         border: 1px solid var(--sep-color);
         border-radius: 8px;
 
-        display: block;
         min-width: 100%;
         width: min-content;
         max-width: 100%;
@@ -385,7 +548,6 @@
     .team-row {
         outline: transparent 2px solid;
         outline-offset: -2px;
-        transition: outline 0.12s ease 0s;
         cursor: grab;
     }
 
@@ -437,16 +599,6 @@
         cursor: grabbing;
     }
 
-    .icon-svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    .na {
-        color: var(--secondary-text-color);
-        font-size: var(--sm-font-size);
-    }
-
     .table-scroll-container::-webkit-scrollbar {
         width: 6px;
     }
@@ -459,5 +611,114 @@
     }
     .table-scroll-container::-webkit-scrollbar-thumb:hover {
         background: var(--secondary-text-color, rgba(255, 255, 255, 0.3));
+    }
+
+    .custom-fields-manager {
+        display: flex;
+        align-items: center;
+        gap: var(--sm-gap);
+        margin-bottom: var(--md-gap);
+    }
+
+    .new-field-name {
+        padding: var(--sm-pad);
+        border: 1px solid var(--sep-color);
+        border-radius: 4px;
+        background: var(--fg-color);
+        color: var(--text-color);
+        cursor: text;
+        font: inherit;
+    }
+
+    .custom-fields-manager select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        padding: var(--sm-pad) 2rem var(--sm-pad) var(--sm-pad);
+        min-width: 6.5rem;
+        border: 1px solid var(--sep-color);
+        border-radius: 4px;
+        background: var(--fg-color)
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
+            no-repeat right 0.6rem center;
+        background-size: 0.7rem;
+        color: var(--text-color);
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .add-field-btn {
+        padding: var(--sm-pad) var(--md-pad);
+        border: 1px solid var(--sep-color);
+        border-radius: 4px;
+        background: var(--fg-color);
+        color: var(--text-color);
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .custom-field-header {
+        position: relative;
+        min-width: 100px;
+    }
+
+    .custom-field-header.number-header {
+        min-width: 60px;
+    }
+
+    .remove-field-btn {
+        background: none;
+        border: none;
+        color: var(--secondary-text-color);
+        cursor: pointer;
+        margin-left: 0.4rem;
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .custom-field-cell {
+        text-align: center;
+        padding: var(--sm-pad);
+        position: relative;
+    }
+
+    .custom-field-cell.number-cell {
+        width: 60px;
+        max-width: 60px;
+    }
+
+    .custom-field-cell input {
+        width: 100%;
+        min-width: 70px;
+        box-sizing: border-box;
+        padding: var(--sm-pad);
+        border: 1px solid var(--sep-color);
+        border-radius: 4px;
+        background: var(--fg-color);
+        color: var(--text-color);
+        text-align: center;
+        font: inherit;
+    }
+
+    .custom-field-cell input[type="number"] {
+        min-width: 50px;
+    }
+
+    .custom-field-cell input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        min-width: unset;
+        cursor: pointer;
+    }
+
+    .custom-field-cell input[type="text"]:focus {
+        position: absolute;
+        z-index: 20;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 180px;
+        min-width: 100%;
+        max-width: 400px;
     }
 </style>

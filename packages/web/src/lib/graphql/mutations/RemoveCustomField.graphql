@@ -1,6 +1,5 @@
-query EventPicklist($season: Int!, $eventCode: String!) {
-    eventPicklist(season: $season, eventCode: $eventCode) {
-        teamOrder
+mutation RemoveCustomField($season: Int!, $eventCode: String!, $fieldId: String!) {
+    removeCustomField(season: $season, eventCode: $eventCode, fieldId: $fieldId) {
         customFields {
             id
             name

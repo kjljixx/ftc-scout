@@ -1,5 +1,15 @@
 subscription PicklistUpdated($season: Int!, $eventCode: String!) {
     picklistUpdated(season: $season, eventCode: $eventCode) {
         teamOrder
+        customFields {
+            id
+            name
+            type
+        }
+        customValues {
+            teamNumber
+            fieldId
+            value
+        }
     }
 }

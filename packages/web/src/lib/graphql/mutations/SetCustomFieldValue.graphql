@@ -1,0 +1,21 @@
+mutation SetCustomFieldValue(
+    $season: Int!
+    $eventCode: String!
+    $teamNumber: Int!
+    $fieldId: String!
+    $value: JSON!
+) {
+    setCustomFieldValue(
+        season: $season
+        eventCode: $eventCode
+        teamNumber: $teamNumber
+        fieldId: $fieldId
+        value: $value
+    ) {
+        customValues {
+            teamNumber
+            fieldId
+            value
+        }
+    }
+}

@@ -1,0 +1,9 @@
+mutation AddCustomField($season: Int!, $eventCode: String!, $name: String!, $fieldType: String!) {
+    addCustomField(season: $season, eventCode: $eventCode, name: $name, fieldType: $fieldType) {
+        customFields {
+            id
+            name
+            type
+        }
+    }
+}
