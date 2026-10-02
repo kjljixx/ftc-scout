@@ -106,6 +106,13 @@ body {
 
     --stat-transparency: 0.15;
     --stat-text-color: var(--team-text-color);
+
+    --navbar-bg-color: var(--theme-color);
+    --logo-accent-color: var(--theme-text-color);
+    --red-team-header-bg-color: var(--red-team-color);
+    --blue-team-header-bg-color: var(--blue-team-color);
+    --red-team-focus-bg-color: var(--red-team-color);
+    --blue-team-focus-bg-color: var(--blue-team-color);
 }
 
 body {
@@ -180,54 +187,54 @@ body .render-dark {
 }
 
 body.dark {
-    --fg-color-vs: 45, 45, 45;
-    --bg-color: #161616;
+    --fg-color-vs: 25, 22, 29;
+    --bg-color: hsl(265, 14%, 7%);
 
-    --modal-bg-color: rgba(78, 78, 78, 0.8);
+    --modal-bg-color: rgba(75, 69, 84, 0.8);
 
-    --theme-color-vs: 98, 32, 146;
+    --theme-color-vs: 60, 30, 103;
     --theme-color-opacity: 0.3;
-    --inline-theme-color: #af6ddf;
+    --inline-theme-color: hsl(265, 90%, 78%);
 
-    --hover-color: #3a3a3a;
-    --tab-hover-color: #232323;
+    --hover-color: hsl(265, 10%, 17%);
+    --tab-hover-color: hsl(265, 12%, 12%);
 
-    --sep-color: #4a4e51;
-    --sep-hover-color: #595d61;
+    --sep-color: hsl(265, 10%, 22%);
+    --sep-hover-color: hsl(265, 10%, 26%);
 
-    --zebra-stripe-color: #353535;
+    --zebra-stripe-color: hsl(265, 10%, 15%);
     --zebra-stripe-opacity: rgba(255, 255, 255, 0.041);
 
     --fade-shadow: rgba(255, 255, 255, 0.15);
 
     --alert-bar-color: rgb(169, 109, 18);
 
-    --text-color: #dfe2e6;
-    --secondary-text-color: #b7b7b8;
-    --grayed-out-text-color: #a0a0a0;
+    --text-color: hsl(265, 20%, 94%);
+    --secondary-text-color: hsl(265, 8%, 64%);
+    --grayed-out-text-color: hsl(265, 6%, 55%);
     --theme-text-color: #ffffff;
     --sidebar-text-color: var(--text-color);
 
-    --inverse-bg-color: #202020;
+    --inverse-bg-color: hsl(265, 14%, 8%);
     --inverse-text-color: var(--text-color);
     --inverse-secondary-text-color: var(--secondary-text-color);
 
-    --form-bg-color: #191919;
-    --form-hover-bg-color: #232323;
-    --form-click-bg-color: #2d2d2d;
+    --form-bg-color: hsl(265, 14%, 7%);
+    --form-hover-bg-color: hsl(265, 12%, 10%);
+    --form-click-bg-color: hsl(265, 10%, 14%);
     --form-disabled-opacity: 0.5;
 
-    --team-color-transparency: 0.25;
-    --red-team-color-vs: 175, 29, 29;
-    --red-team-bg-color: rgba(204, 47, 47, var(--team-color-transparency));
-    --blue-team-color-vs: 27, 87, 179;
+    --team-color-transparency: 0.16;
+    --red-team-color-vs: 238, 52, 43;
+    --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
+    --blue-team-color-vs: 37, 130, 244;
     --neutral-team-color-vs: 127, 0, 190;
-    --red-team-text-color: rgb(255, 83, 71);
-    --blue-team-text-color: rgb(33, 150, 243);
+    --red-team-text-color: hsl(3, 90%, 64%);
+    --blue-team-text-color: hsl(213, 95%, 64%);
     --neutral-team-text-color: rgb(196, 79, 255);
 
     --red-stat-color-vs: 204, 47, 47;
-    --blue-stat-color-vs: var(--blue-team-color-vs);
+    --blue-stat-color-vs: 27, 87, 179;
     --light-blue-stat-color-vs: 25, 118, 210;
     --purple-stat-color-vs: var(--neutral-team-color-vs);
     --green-stat-color-vs: 46, 125, 50;
@@ -244,11 +251,19 @@ body.dark {
 
     --thick-border-width: 1px;
 
+    --team-text-color: var(--text-color);
+    --navbar-bg-color: var(--fg-color);
+    --logo-accent-color: var(--inline-theme-color);
+    --red-team-header-bg-color: rgba(var(--red-team-color-vs), 0.2);
+    --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);
+    --red-team-focus-bg-color: rgba(var(--red-team-color-vs), 0.45);
+    --blue-team-focus-bg-color: rgba(var(--blue-team-color-vs), 0.45);
+
     color-scheme: dark;
 }
 
 body.dark :where(a.norm-link:link) {
-    color: #9e9eff;
+    color: hsl(265, 90%, 78%);
 }
 body.dark :where(a.norm-link:visited) {
     color: #d0adf0;
@@ -264,54 +279,54 @@ body.dark .render-light {
 /* Same as above. Remember to copy past */
 @media (prefers-color-scheme: dark) {
     body:not(.light) {
-        --fg-color-vs: 45, 45, 45;
-        --bg-color: #161616;
+        --fg-color-vs: 25, 22, 29;
+        --bg-color: hsl(265, 14%, 7%);
 
-        --modal-bg-color: rgba(78, 78, 78, 0.8);
+        --modal-bg-color: rgba(75, 69, 84, 0.8);
 
-        --theme-color-vs: 98, 32, 146;
+        --theme-color-vs: 60, 30, 103;
         --theme-color-opacity: 0.3;
-        --inline-theme-color: #af6ddf;
+        --inline-theme-color: hsl(265, 90%, 78%);
 
-        --hover-color: #3a3a3a;
-        --tab-hover-color: #232323;
+        --hover-color: hsl(265, 10%, 17%);
+        --tab-hover-color: hsl(265, 12%, 12%);
 
-        --sep-color: #4a4e51;
-        --sep-hover-color: #595d61;
+        --sep-color: hsl(265, 10%, 22%);
+        --sep-hover-color: hsl(265, 10%, 26%);
 
-        --zebra-stripe-color: #353535;
+        --zebra-stripe-color: hsl(265, 10%, 15%);
         --zebra-stripe-opacity: rgba(255, 255, 255, 0.041);
 
         --fade-shadow: rgba(255, 255, 255, 0.15);
 
         --alert-bar-color: rgb(169, 109, 18);
 
-        --text-color: #dfe2e6;
-        --secondary-text-color: #b7b7b8;
-        --grayed-out-text-color: #a0a0a0;
+        --text-color: hsl(265, 20%, 94%);
+        --secondary-text-color: hsl(265, 8%, 64%);
+        --grayed-out-text-color: hsl(265, 6%, 55%);
         --theme-text-color: #ffffff;
         --sidebar-text-color: var(--text-color);
 
-        --inverse-bg-color: #202020;
+        --inverse-bg-color: hsl(265, 14%, 8%);
         --inverse-text-color: var(--text-color);
         --inverse-secondary-text-color: var(--secondary-text-color);
 
-        --form-bg-color: #191919;
-        --form-hover-bg-color: #232323;
-        --form-click-bg-color: #2d2d2d;
+        --form-bg-color: hsl(265, 14%, 7%);
+        --form-hover-bg-color: hsl(265, 12%, 10%);
+        --form-click-bg-color: hsl(265, 10%, 14%);
         --form-disabled-opacity: 0.5;
 
-        --team-color-transparency: 0.25;
-        --red-team-color-vs: 175, 29, 29;
-        --red-team-bg-color: rgba(204, 47, 47, var(--team-color-transparency));
-        --blue-team-color-vs: 27, 87, 179;
+        --team-color-transparency: 0.16;
+        --red-team-color-vs: 238, 52, 43;
+        --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
+        --blue-team-color-vs: 37, 130, 244;
         --neutral-team-color-vs: 127, 0, 190;
-        --red-team-text-color: rgb(255, 83, 71);
-        --blue-team-text-color: rgb(33, 150, 243);
+        --red-team-text-color: hsl(3, 90%, 64%);
+        --blue-team-text-color: hsl(213, 95%, 64%);
         --neutral-team-text-color: rgb(196, 79, 255);
 
         --red-stat-color-vs: 204, 47, 47;
-        --blue-stat-color-vs: var(--blue-team-color-vs);
+        --blue-stat-color-vs: 27, 87, 179;
         --light-blue-stat-color-vs: 25, 118, 210;
         --purple-stat-color-vs: var(--neutral-team-color-vs);
         --green-stat-color-vs: 46, 125, 50;
@@ -328,11 +343,19 @@ body.dark .render-light {
 
         --thick-border-width: 1px;
 
+        --team-text-color: var(--text-color);
+        --navbar-bg-color: var(--fg-color);
+        --logo-accent-color: var(--inline-theme-color);
+        --red-team-header-bg-color: rgba(var(--red-team-color-vs), 0.2);
+        --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);
+        --red-team-focus-bg-color: rgba(var(--red-team-color-vs), 0.45);
+        --blue-team-focus-bg-color: rgba(var(--blue-team-color-vs), 0.45);
+
         color-scheme: dark;
     }
 
     body:not(.light) :where(a.norm-link:link) {
-        color: #9e9eff;
+        color: hsl(265, 90%, 78%);
     }
     body:not(.light) :where(a.norm-link:visited) {
         color: #d0adf0;

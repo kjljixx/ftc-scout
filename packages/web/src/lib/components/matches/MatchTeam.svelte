@@ -119,11 +119,11 @@
     }
 
     .focused.red {
-        background: var(--red-team-color);
+        background: var(--red-team-focus-bg-color);
         color: var(--team-text-color);
     }
     .focused.blue {
-        background: var(--blue-team-color);
+        background: var(--blue-team-focus-bg-color);
         color: var(--team-text-color);
     }
     .focused.solo {

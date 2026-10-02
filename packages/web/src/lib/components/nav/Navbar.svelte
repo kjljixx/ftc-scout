@@ -27,7 +27,7 @@
 
         padding: var(--md-pad);
 
-        background: var(--theme-color);
+        background: var(--navbar-bg-color);
         z-index: var(--navbar-zi);
 
         display: flex;

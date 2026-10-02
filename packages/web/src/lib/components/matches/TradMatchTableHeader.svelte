@@ -49,12 +49,12 @@
     }
 
     .r {
-        background-color: var(--red-team-color);
+        background-color: var(--red-team-header-bg-color);
         color: var(--team-text-color);
     }
 
     .b {
-        background-color: var(--blue-team-color);
+        background-color: var(--blue-team-header-bg-color);
         color: var(--team-text-color);
 
         border-top-right-radius: 7px;

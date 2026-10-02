@@ -29,9 +29,9 @@
     }
 
     .red {
-        background: var(--red-team-color);
+        background: var(--red-team-header-bg-color);
     }
     .blue {
-        background: var(--blue-team-color);
+        background: var(--blue-team-header-bg-color);
     }
 </style>

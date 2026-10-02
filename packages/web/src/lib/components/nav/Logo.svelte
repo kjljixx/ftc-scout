@@ -15,7 +15,7 @@
         gap: var(--sm-gap);
         padding: var(--md-pad);
         font-size: var(--vl-font-size);
-        background-color: var(--theme-color);
+        background-color: var(--navbar-bg-color);
         color: var(--theme-text-color);
         font-weight: bold;
         user-select: none;
@@ -23,6 +23,10 @@
 
     a:hover {
         text-decoration: none;
+    }
+
+    em {
+        color: var(--logo-accent-color);
     }
 
     @media (max-width: 800px) {
