@@ -1,0 +1,16 @@
+query HomeTeamMatches($season: Int!, $code: String!, $teamNumber: Int!) {
+    eventByCode(season: $season, code: $code) {
+        season
+        code
+        teamMatches(teamNumber: $teamNumber) {
+            season
+            eventCode
+            matchId
+            station
+            alliance
+            match {
+                ...FullMatch
+            }
+        }
+    }
+}

@@ -22,6 +22,7 @@ import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHt
 import { setupSiteMap } from "./sitemap/setupSitemap";
 import { InMemoryLRUCache } from "@apollo/utils.keyvaluecache";
 import { responseCachePlugin } from "./graphql/plugins/response-cache-plugin";
+import { timingPlugin } from "./graphql/plugins/timing-plugin";
 
 async function main() {
     await DATA_SOURCE.initialize();
@@ -59,7 +60,7 @@ async function main() {
         schema: GQL_SCHEMA,
         cache: serverCache,
         persistedQueries: {
-            ttl: 120, // 2 minutes
+            ttl: 60 * 60 * 24 * 14, // 2 weeks
             cache: serverCache,
         },
         plugins: [
@@ -67,6 +68,7 @@ async function main() {
                 footer: false,
                 embed: { runTelemetry: false, endpointIsEditable: false },
             }),
+            timingPlugin(),
             responseCachePlugin(serverCache),
             ApolloServerPluginDrainHttpServer({ httpServer }),
             {

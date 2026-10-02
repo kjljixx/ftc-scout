@@ -1,0 +1,23 @@
+query HomeTeam($number: Int!, $season: Int!) {
+    teamByNumber(number: $number) {
+        number
+        name
+        activeSeasons
+        events(season: $season) {
+            season
+            eventCode
+            teamNumber
+            event {
+                season
+                code
+                name
+                start
+                relatedEvents {
+                    season
+                    code
+                    name
+                }
+            }
+        }
+    }
+}

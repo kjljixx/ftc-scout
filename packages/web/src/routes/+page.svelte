@@ -27,7 +27,7 @@
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import { isNonCompetition } from "$lib/util/event-type";
-    import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
+    import type { HomeEventQuery } from "$lib/graphql/generated/graphql-operations";
     import Rankings from "./events/[season=season]/[code]/[tab=event_tab]/Rankings.svelte";
     import Teams from "./events/[season=season]/[code]/[tab=event_tab]/Teams.svelte";
     import Preview from "./events/[season=season]/[code]/[tab=event_tab]/Preview.svelte";
@@ -54,10 +54,10 @@
     type PreviewStat = {
         teamNumber: number;
         npOpr: number | null;
-        stats: NonNullable<EventPageQuery["eventByCode"]>["teams"][number]["stats"] | null;
+        stats: NonNullable<HomeEventQuery["eventByCode"]>["teams"][number]["stats"] | null;
         event: { name: string; code: string; start: string; end: string } | null;
     };
-    type PreviewTeam = NonNullable<EventPageQuery["eventByCode"]>["teams"][number] & {
+    type PreviewTeam = NonNullable<HomeEventQuery["eventByCode"]>["teams"][number] & {
         quickOpr: number | null;
     };
     $: previewStats = ((event as any)?.previewStats ?? []) as PreviewStat[];
@@ -91,9 +91,7 @@
 
     let selectedTab = "home_matches";
     let focusedTeam: number | null = null;
-    $: focusedTeamData =
-        event?.teams?.find((t) => t.teamNumber == focusedTeam) ??
-        event?.awards?.find((a) => a.teamNumber == focusedTeam)!;
+    $: focusedTeamData = event?.teams?.find((t) => t.teamNumber == focusedTeam);
     setContext(TEAM_CLICK_ACTION_CTX, (t: number) => (focusedTeam = focusedTeam == t ? null : t));
 
     let tippy = createTippy({});

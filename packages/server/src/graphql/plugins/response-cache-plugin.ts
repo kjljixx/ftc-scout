@@ -86,7 +86,7 @@ export function responseCachePlugin(cache: KeyValueCache): ApolloServerPlugin {
                 async responseForOperation() {
                     if (cachedResponse) {
                         const headers = new HeaderMap();
-                        headers.set("cache-control", `public, max-age=${ttl}`);
+                        headers.set("cache-control", "no-store");
                         headers.set("x-cache", "HIT");
 
                         return {
@@ -129,7 +129,7 @@ export function responseCachePlugin(cache: KeyValueCache): ApolloServerPlugin {
                             if (requestContext.response.http?.headers) {
                                 requestContext.response.http.headers.set(
                                     "cache-control",
-                                    `public, max-age=${ttl}`
+                                    "no-store"
                                 );
                                 requestContext.response.http.headers.set("x-cache", "MISS");
                             }

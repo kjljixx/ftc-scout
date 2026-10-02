@@ -1,0 +1,56 @@
+query HomeEvent($season: Int!, $code: String!) {
+    eventByCode(season: $season, code: $code) {
+        season
+        code
+        name
+        remote
+        start
+        end
+        location {
+            venue
+            city
+            state
+            country
+        }
+        started
+        published
+        timezone
+        type
+        ongoing
+        matches {
+            ...FullMatch
+        }
+        teams {
+            season
+            eventCode
+            teamNumber
+            team {
+                number
+                name
+                location {
+                    city
+                    state
+                    country
+                }
+            }
+            stats {
+                ...FullStats
+            }
+            previousBestOpr
+        }
+        previewStats {
+            teamNumber
+            npOpr
+            stats {
+                ...FullStats
+            }
+            event {
+                season
+                code
+                name
+                start
+                end
+            }
+        }
+    }
+}

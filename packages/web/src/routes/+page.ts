@@ -1,33 +1,56 @@
 import { getClient } from "$lib/graphql/client";
 import {
-    EventPageDocument,
+    HomeEventDocument,
     HomePageDocument,
-    TeamDocument,
+    HomeTeamDocument,
+    HomeTeamMatchesDocument,
 } from "$lib/graphql/generated/graphql-operations";
 import { getData } from "$lib/graphql/getData";
 import { eventSorter } from "$lib/util/sorters";
 import { CURRENT_SEASON, type Season, longestCommonPrefix } from "@ftc-scout/common";
 import type { PageLoad } from "./$types";
 
+function logStep(step: string) {
+    console.log(`[home load] ${Math.round(performance.now())}ms ${step}`);
+}
+
 export const load: PageLoad = async ({ fetch, data }) => {
-    let home = await getData(getClient(fetch), HomePageDocument, { season: CURRENT_SEASON });
+    logStep(`start homeTeam=${data.homeTeam} season=${CURRENT_SEASON}`);
+    let loadHome = () => {
+        logStep("HomePage query (landing page)");
+        return getData(getClient(fetch), HomePageDocument, { season: CURRENT_SEASON });
+    };
 
     let homeTeam = data.homeTeam;
     if (!homeTeam) {
-        return { home, homeTeam: null, latestSeason: null, latestEvent: null, teamMatches: null };
+        return {
+            home: await loadHome(),
+            homeTeam: null,
+            latestSeason: null,
+            latestEvent: null,
+            teamMatches: null,
+        };
     }
 
+    logStep("Team query start");
     let teamResult = await getClient(fetch).query({
-        query: TeamDocument,
+        query: HomeTeamDocument,
         variables: {
             number: homeTeam,
             season: CURRENT_SEASON,
         },
     });
+    logStep("Team query done");
 
     let team = teamResult?.data?.teamByNumber;
     if (!team) {
-        return { home, homeTeam, latestSeason: null, latestEvent: null, teamMatches: null };
+        return {
+            home: await loadHome(),
+            homeTeam,
+            latestSeason: null,
+            latestEvent: null,
+            teamMatches: null,
+        };
     }
 
     const validSeasons = team.activeSeasons.filter((season) => season !== null) as number[];
@@ -35,7 +58,7 @@ export const load: PageLoad = async ({ fetch, data }) => {
 
     if (latestSeason !== CURRENT_SEASON) {
         teamResult = await getClient(fetch).query({
-            query: TeamDocument,
+            query: HomeTeamDocument,
             variables: {
                 number: homeTeam,
                 season: latestSeason,
@@ -45,7 +68,13 @@ export const load: PageLoad = async ({ fetch, data }) => {
     }
 
     if (!team?.events.length) {
-        return { home, homeTeam, latestSeason, latestEvent: null, teamMatches: null };
+        return {
+            home: await loadHome(),
+            homeTeam,
+            latestSeason,
+            latestEvent: null,
+            teamMatches: null,
+        };
     }
 
     let allEventNames = team.events.map((e) => [
@@ -67,17 +96,25 @@ export const load: PageLoad = async ({ fetch, data }) => {
     ].sort(eventSorter)[0];
     let { event } = latestTep;
 
-    let latestEvent = await getData(getClient(fetch), EventPageDocument, {
-        season: event.season,
-        code: event.code,
-    });
+    logStep(`HomeEvent query start (${team.events.length} team events)`);
+    let [latestEvent, teamMatchesResult] = await Promise.all([
+        getData(getClient(fetch), HomeEventDocument, {
+            season: event.season,
+            code: event.code,
+        }),
+        getClient(fetch).query({
+            query: HomeTeamMatchesDocument,
+            variables: { season: event.season, code: event.code, teamNumber: homeTeam },
+        }),
+    ]);
 
+    logStep("HomeEvent done");
     return {
-        home,
+        home: null,
         homeTeam,
         latestSeason,
         latestEvent,
-        teamMatches: latestTep.matches.map((m) => m.match),
+        teamMatches: teamMatchesResult.data.eventByCode?.teamMatches.map((m) => m.match) ?? [],
         teamName: team.name,
     };
 };
