@@ -1,11 +1,14 @@
 import argparse, json, re, statistics, time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import clock_getter, frame_fetcher, icon_locator, label_getter
+from stage_timer import timer
 
 AUTO_S = 30
 TELEOP_S = 120
 MATCH_CLOCK_S = 150
 OUTLIER_S = 5
+PROCESS_WORKERS = 8
 LABEL_PATTERN = re.compile(r"([A-Za-z][A-Za-z' ]*?)\s*(\d+)(?:\s+of\s+\d+)?(?!\d)")
 
 
@@ -39,44 +42,50 @@ def hms(seconds):
   return f"{seconds // 3600}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
 
 
+def process_frame(time_s, frame, transition_s):
+  if frame is None:
+    return "no_frame", None, None
+  with timer.time("locate_icon"):
+    icon = icon_locator.locate_icon(frame)
+  if not icon:
+    return "no_icon", None, None
+  with timer.time("read_clock"):
+    clock_s = clock_getter.read_clock(frame, icon)
+  if clock_s is None:
+    return "no_clock", None, None
+  with timer.time("read_label"):
+    label = label_getter.read_label(frame, icon)
+  if not label:
+    return "no_label", None, None
+  key = match_key(label)
+  if not key:
+    print(f"warn unparseable label {label!r} at {time_s:.0f}s", flush=True)
+    return "bad_label", None, None
+  return "used", key, match_start_s(time_s, icon["phase"], clock_s, transition_s)
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("video_id")
-  parser.add_argument("--step", type=int, default=60)
+  parser.add_argument("--step", type=int, default=120)
   parser.add_argument("--transition", type=int, default=8)
   parser.add_argument("--json", action="store_true")
   args = parser.parse_args()
-  print(f"config video={args.video_id} step={args.step}s transition={args.transition}s outlier={OUTLIER_S}s", flush=True)
+  print(f"config video={args.video_id} step={args.step}s transition={args.transition}s outlier={OUTLIER_S}s process_workers={PROCESS_WORKERS}", flush=True)
 
   began = time.time()
   counts = {"frames": 0, "no_frame": 0, "no_icon": 0, "no_clock": 0, "no_label": 0, "bad_label": 0, "used": 0}
   readings = []
-  for time_s, frame in frame_fetcher.fetch_frames(args.video_id, args.step):
-    counts["frames"] += 1
-    if frame is None:
-      counts["no_frame"] += 1
-      continue
-    icon = icon_locator.locate_icon(frame)
-    if not icon:
-      counts["no_icon"] += 1
-      continue
-    clock_s = clock_getter.read_clock(frame, icon)
-    if clock_s is None:
-      counts["no_clock"] += 1
-      continue
-    label = label_getter.read_label(frame, icon)
-    if not label:
-      counts["no_label"] += 1
-      continue
-    key = match_key(label)
-    if not key:
-      counts["bad_label"] += 1
-      print(f"warn unparseable label {label!r} at {time_s:.0f}s", flush=True)
-      continue
-    counts["used"] += 1
-    readings.append((key, match_start_s(time_s, icon["phase"], clock_s, args.transition)))
+  frames = timer.iterate("wait_for_frame", frame_fetcher.fetch_frames(args.video_id, args.step))
+  with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
+    for outcome, key, start_s in pool.map(lambda frame_args: process_frame(*frame_args, args.transition), frames):
+      counts["frames"] += 1
+      counts[outcome] += 1
+      if outcome == "used":
+        readings.append((key, start_s))
 
-  matches = merge(readings)
+  with timer.time("merge"):
+    matches = merge(readings)
   if args.json:
     print(json.dumps(matches))
   else:
@@ -85,6 +94,7 @@ def main():
       print(f"{m['match']:<28}{hms(m['start_s']):>9}{m['frames']:>8}{m['agreeing']:>7}{m['spread_s']:>7}s")
   disagreements = sum(1 for m in matches if m["agreeing"] < m["frames"])
   print(f"summary {counts} matches={len(matches)} with_disagreement={disagreements} wall={time.time() - began:.1f}s", flush=True)
+  print(f"timings (fetch.* and process stages are summed over {frame_fetcher.WORKERS} fetch and {PROCESS_WORKERS} process workers; wait_for_frame is main-thread time):\n{timer.report()}", flush=True)
 
 
 if __name__ == "__main__":

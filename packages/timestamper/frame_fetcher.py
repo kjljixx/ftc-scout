@@ -1,8 +1,9 @@
-import cv2, struct, subprocess, sys, threading, time, urllib.error, urllib.request
-import numpy as np
+import av, io, struct, sys, threading, time, urllib.error, urllib.request, yt_dlp
 from concurrent.futures import ThreadPoolExecutor
+from stage_timer import timer
 
 FORMAT_ID = "134"
+YDL_OPTIONS = {"format": FORMAT_ID, "quiet": True, "no_warnings": True, "skip_download": True}
 INDEX_BYTES = 200000
 FRAGMENT_BYTES = 100000
 WORKERS = 8
@@ -35,6 +36,12 @@ def parse_sidx(head):
   raise ValueError(f"sidx box not found in first {len(head)} bytes")
 
 
+def decode_first_frame(video_bytes):
+  with av.open(io.BytesIO(video_bytes)) as container:
+    frame = next(container.decode(video=0), None)
+    return frame.to_ndarray(format="gray") if frame else None
+
+
 class StreamSource:
   def __init__(self, video_id):
     self.video_id = video_id
@@ -44,17 +51,17 @@ class StreamSource:
     self._load()
 
   def _load(self):
-    result = subprocess.run(["yt-dlp", "-g", "-f", FORMAT_ID, "--no-warnings", f"https://www.youtube.com/watch?v={self.video_id}"], capture_output=True, text=True)
-    self.url = result.stdout.strip()
-    if not self.url:
-      raise RuntimeError(f"yt-dlp returned no stream url for {self.video_id}: {result.stderr.strip()[-200:]}")
+    with timer.time("fetch.yt_dlp_url"):
+      with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        self.url = ydl.extract_info(f"https://www.youtube.com/watch?v={self.video_id}", download=False)["url"]
     head = self._range(0, INDEX_BYTES)
     sidx_position, self.fragments, self.duration_s = parse_sidx(head)
     self.init_segment = head[:sidx_position]
 
   def _range(self, start, length):
     request = urllib.request.Request(self.url, headers={"Range": f"bytes={start}-{start + length - 1}"})
-    data = urllib.request.urlopen(request).read()
+    with timer.time("fetch.http_range"):
+      data = urllib.request.urlopen(request).read()
     self.bytes_downloaded += len(data)
     return data
 
@@ -71,8 +78,12 @@ class StreamSource:
   def frame_at(self, time_s):
     start_s, offset, size = next(f for f in reversed(self.fragments) if f[0] <= time_s)
     data = self._range_with_refresh(offset, min(FRAGMENT_BYTES, size))
-    decoded = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1"], input=self.init_segment + data, capture_output=True).stdout
-    frame = cv2.imdecode(np.frombuffer(decoded, np.uint8), cv2.IMREAD_GRAYSCALE) if decoded else None
+    with timer.time("fetch.decode"):
+      try:
+        frame = decode_first_frame(self.init_segment + data)
+      except av.error.FFmpegError as error:
+        print(f"warn decode error at fragment {start_s:.0f}s: {error}", file=sys.stderr, flush=True)
+        frame = None
     return start_s, frame
 
 
