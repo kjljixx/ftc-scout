@@ -76,6 +76,7 @@ function makeTep(descriptor: Descriptor): EntitySchema<TeamEventParticipation> {
             max: { schema: agg },
             dev: { schema: agg },
             opr: { schema: agg },
+            oprSe: { schema: agg },
         },
         checks: [
             { expression: "rp <> 'NaN'" },

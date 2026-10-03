@@ -1,4 +1,4 @@
-import { Matrix, SingularValueDecomposition } from "ml-matrix";
+import { Matrix, SingularValueDecomposition, pseudoInverse } from "ml-matrix";
 
 // Based on this guide for OPR calculation: https://blog.thebluealliance.com/2017/10/05/the-math-behind-opr-an-introduction/
 
@@ -8,8 +8,13 @@ export interface OprData {
     result: number;
 }
 
-export function calculateOpr(scores: OprData[]): Record<number, number> {
-    if (scores.length == 0) return [];
+export interface OprResult {
+    oprs: Record<number, number>;
+    stdErrs: Record<number, number>;
+}
+
+export function calculateOpr(scores: OprData[]): OprResult {
+    if (scores.length == 0) return { oprs: {}, stdErrs: {} };
 
     let allTeams = [...new Set(scores.flatMap((s) => [s.team1, s.team2]))];
 
@@ -22,9 +27,21 @@ export function calculateOpr(scores: OprData[]): Record<number, number> {
         autoTranspose: true,
     }).solve(resultsVector);
 
-    let ret: Record<number, number> = {};
+    let ret: OprResult = { oprs: {}, stdErrs: {} };
     for (let i = 0; i < allTeams.length; i++) {
-        ret[allTeams[i]] = oprs.get(i, 0);
+        ret.oprs[allTeams[i]] = oprs.get(i, 0);
+    }
+
+    // Standard error of each OPR: sqrt(residual variance * diagonal of pinv(X^T X)), X = alliance matrix.
+    let degreesOfFreedom = scores.length - allTeams.length;
+    if (degreesOfFreedom <= 0) return ret;
+
+    let residuals = resultsVector.clone().sub(allianceMatrix.mmul(oprs));
+    let residualVariance = residuals.norm("frobenius") ** 2 / degreesOfFreedom;
+    let covarianceShape = pseudoInverse(allianceMatrix.transpose().mmul(allianceMatrix));
+    for (let i = 0; i < allTeams.length; i++) {
+        let stdErr = Math.sqrt(residualVariance * covarianceShape.get(i, i));
+        if (Number.isFinite(stdErr)) ret.stdErrs[allTeams[i]] = stdErr;
     }
     return ret;
 }

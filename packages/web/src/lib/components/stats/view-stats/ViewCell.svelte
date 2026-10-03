@@ -1,5 +1,6 @@
 <script lang="ts">
     import { prettyPrintFloat, prettyPrintOrdinal } from "../../../printers/number";
+    import StdErrLabel from "../StdErrLabel.svelte";
     import type {
         StatSectionColumn,
         StatSectionRow,
@@ -28,6 +29,7 @@
             {value.val}
         {:else if value.ty == "float"}
             {prettyPrintFloat(value.val)}
+            <StdErrLabel stdErr={value.stdErr} />
         {:else if value.ty == "rank"}
             {prettyPrintOrdinal(value.val)}
         {:else if value.ty == "string"}

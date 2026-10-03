@@ -3,50 +3,26 @@
 </script>
 
 <tr>
-    <td />
-    <td class="red" />
-    <td class="blue" />
-    <td class="name"> <span>{name}</span> </td>
+    <td>{name}</td>
 </tr>
 
 <style>
     tr {
         display: grid;
-        grid-template-columns: 10.75em 5.5em 1fr 1fr;
-        height: calc(var(--xl-gap) * 1.5);
-    }
-
-    @media (max-width: 1000px) {
-        tr {
-            grid-template-columns: 9.75em 4.75em 1fr 1fr;
-        }
+        grid-template-columns: var(--trad-match-cols);
+        padding: calc(var(--lg-pad) * 2) 0 var(--sm-pad);
     }
 
     td {
         display: block;
-    }
+        grid-column: 3;
+        justify-self: center;
+        white-space: nowrap;
 
-    .red {
-        background: var(--red-team-bg-color);
-        grid-row: 1 / 1;
-        grid-column: 3 / 4;
-    }
-    .blue {
-        background: var(--blue-team-bg-color);
-        grid-row: 1 / 1;
-        grid-column: 4 / 5;
-    }
-    .name {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        grid-row: 1 / 1;
-        grid-column: 3 / 5;
-    }
-    .name span {
-        background: var(--fg-color);
-        padding: var(--sm-pad);
-        border-radius: 8px;
+        font-size: 1em;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-color);
     }
 </style>

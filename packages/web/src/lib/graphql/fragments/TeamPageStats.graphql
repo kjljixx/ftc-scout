@@ -9,6 +9,9 @@ fragment TeamPageStats on TeamEventStats {
         opr {
             totalPointsNp
         }
+        oprSe {
+            totalPointsNp
+        }
         avg {
             totalPointsNp
         }
@@ -20,6 +23,9 @@ fragment TeamPageStats on TeamEventStats {
         losses
         ties
         opr {
+            totalPointsNp
+        }
+        oprSe {
             totalPointsNp
         }
         avg {
@@ -35,6 +41,9 @@ fragment TeamPageStats on TeamEventStats {
         opr {
             totalPointsNp
         }
+        oprSe {
+            totalPointsNp
+        }
         avg {
             totalPointsNp
         }
@@ -46,6 +55,9 @@ fragment TeamPageStats on TeamEventStats {
         losses
         ties
         opr {
+            totalPointsNp
+        }
+        oprSe {
             totalPointsNp
         }
         avg {
@@ -61,6 +73,9 @@ fragment TeamPageStats on TeamEventStats {
         opr {
             totalPoints
         }
+        oprSe {
+            totalPoints
+        }
         avg {
             totalPoints
         }
@@ -69,6 +84,9 @@ fragment TeamPageStats on TeamEventStats {
         rank
         rp
         opr {
+            totalPoints
+        }
+        oprSe {
             totalPoints
         }
         avg {
@@ -84,6 +102,9 @@ fragment TeamPageStats on TeamEventStats {
         opr {
             totalPoints
         }
+        oprSe {
+            totalPoints
+        }
         avg {
             totalPoints
         }
@@ -92,6 +113,9 @@ fragment TeamPageStats on TeamEventStats {
         rank
         rp
         opr {
+            totalPoints
+        }
+        oprSe {
             totalPoints
         }
         avg {
@@ -105,6 +129,9 @@ fragment TeamPageStats on TeamEventStats {
         losses
         ties
         opr {
+            totalPointsNp
+        }
+        oprSe {
             totalPointsNp
         }
         avg {

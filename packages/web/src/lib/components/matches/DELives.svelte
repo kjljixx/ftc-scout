@@ -80,9 +80,8 @@
         gap: var(--sm-gap);
     }
 
-    @media (max-width: 1000px) {
+    @media (max-width: 640px) {
         td {
-            flex-direction: row;
             padding-left: var(--sm-gap);
         }
     }
@@ -91,19 +90,16 @@
         color: var(--red-team-text-color);
     }
 
+    td.blue {
+        padding-left: var(--sm-gap);
+        padding-right: var(--md-gap);
+    }
+
     td.blue :global(.heart) {
         color: var(--blue-team-text-color);
     }
 
     td :global(.heart.broken) {
         color: var(--grayed-out-text-color);
-    }
-
-    .red {
-        background: var(--red-team-bg-color);
-    }
-
-    .blue {
-        background: var(--blue-team-bg-color);
     }
 </style>

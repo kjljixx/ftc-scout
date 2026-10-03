@@ -37,7 +37,7 @@
             {/each}
         </div>
 
-        <div class="card" class:flat-top={shownTabs[0][2] == selectedTab}>
+        <div class="card">
             <slot />
         </div>
     </Card>
@@ -48,62 +48,39 @@
 <style>
     .tabs {
         display: flex;
-        gap: var(--md-gap);
+        gap: var(--vl-gap);
         align-items: center;
         justify-content: left;
     }
 
     .tab {
-        font-size: var(--vl-font-size);
-        font-weight: 600;
-        color: inherit;
+        font-size: var(--lg-font-size);
+        font-weight: 500;
+        color: var(--grayed-out-text-color);
 
-        padding: var(--md-pad);
-
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        border: 1px solid transparent;
-        border-bottom: 1px solid var(--sep-color);
-
-        transform: translate(0, 1px);
+        padding: var(--md-pad) 0;
+        border-bottom: 2px solid transparent;
 
         cursor: pointer;
     }
 
     .tab:hover {
         text-decoration: none;
-        background: var(--tab-hover-color);
+        color: var(--text-color);
     }
 
     .tab.selected {
-        background: var(--fg-color);
-
-        border: 1px solid var(--sep-color);
-        border-bottom: 1px solid transparent;
-    }
-
-    .tab:first-child:not(.selected):not(:focus-visible) {
-        /* Fix extra border */
-        clip-path: polygon(
-            0 0,
-            100% 0,
-            100% 100%,
-            8px 100%,
-            8px calc(100% - 1px),
-            0 calc(100% - 1px)
-        );
+        font-weight: 600;
+        color: var(--text-color);
+        border-bottom-color: var(--inline-theme-color);
     }
 
     .card {
         background-color: var(--fg-color);
-        border: 1px solid var(--sep-color);
-        border-radius: 8px;
+        border-radius: 12px;
 
+        margin-top: var(--md-gap);
         padding: var(--lg-pad);
-    }
-
-    .flat-top {
-        border-top-left-radius: 0;
     }
 
     @media (max-width: 650px) {

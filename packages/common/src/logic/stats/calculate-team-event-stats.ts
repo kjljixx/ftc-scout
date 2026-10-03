@@ -52,6 +52,7 @@ type Tep = {
     max: AnyObject;
     dev: AnyObject;
     opr: AnyObject;
+    oprSe: AnyObject;
 };
 
 export function calculateTeamEventStats(
@@ -69,6 +70,8 @@ export function calculateTeamEventStats(
     for (let c of descriptor.tepColumns()) {
         emptyGroup[c.apiName] = 0;
     }
+
+    let emptyNullGroup = Object.fromEntries(Object.keys(emptyGroup).map((k) => [k, null]));
 
     let teps = {} as Record<number, Tep>;
     teams.forEach(
@@ -94,6 +97,7 @@ export function calculateTeamEventStats(
                 max: { ...emptyGroup },
                 dev: { ...emptyGroup },
                 opr: { ...emptyGroup },
+                oprSe: { ...emptyNullGroup },
             })
     );
 
@@ -245,9 +249,10 @@ function calculateOprs(
     }
 
     for (let [name, data] of Object.entries(dataPoints)) {
-        let oprs = calculateOpr(data);
+        let { oprs, stdErrs } = calculateOpr(data);
         for (let [team, opr] of Object.entries(oprs)) {
             teps[+team].opr[name] = opr;
+            teps[+team].oprSe[name] = stdErrs[+team] ?? null;
         }
     }
 }

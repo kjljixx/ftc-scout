@@ -26,9 +26,7 @@
 
     export let theme = writable(loadThemePreference());
 
-    export let tippyTheme: Readable<"light" | "dark"> = derived(theme, ($theme) =>
-        $theme.rendered == "light" ? "dark" : "light"
-    );
+    export let tippyTheme: Readable<"light" | "dark"> = derived(theme, () => "dark" as const);
 </script>
 
 <script lang="ts">

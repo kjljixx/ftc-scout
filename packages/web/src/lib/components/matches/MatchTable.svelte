@@ -113,7 +113,7 @@
                 {#if doubleElim.length}
                     <SectionRow name={"Playoffs"} />
                 {/if}
-                {#each doubleElim as match, i}
+                {#each doubleElim as match}
                     <TradMatchRow
                         {match}
                         {allMatches}
@@ -121,7 +121,6 @@
                         {season}
                         {timeZone}
                         {focusedTeam}
-                        zebraStripe={i % 2 == 1}
                         {teamCount}
                         {showNonPenaltyScores}
                         {eventTeams}
@@ -130,7 +129,7 @@
                 {#if finals.length}
                     <SectionRow name={"Finals"} />
                 {/if}
-                {#each finals as match, i}
+                {#each finals as match}
                     <TradMatchRow
                         {match}
                         {allMatches}
@@ -138,7 +137,6 @@
                         {season}
                         {timeZone}
                         {focusedTeam}
-                        zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
                         {eventTeams}
                     />
@@ -146,7 +144,7 @@
                 {#if semis.length}
                     <SectionRow name={"Semifinals"} />
                 {/if}
-                {#each semis as match, i}
+                {#each semis as match}
                     <TradMatchRow
                         {match}
                         {allMatches}
@@ -154,7 +152,6 @@
                         {season}
                         {timeZone}
                         {focusedTeam}
-                        zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
                         {eventTeams}
                     />
@@ -162,7 +159,7 @@
                 {#if quals.length && (finals.length || semis.length || doubleElim.length)}
                     <SectionRow name={"Qualification Matches"} />
                 {/if}
-                {#each quals as match, i}
+                {#each quals as match}
                     <TradMatchRow
                         {match}
                         {allMatches}
@@ -170,7 +167,6 @@
                         {season}
                         {timeZone}
                         {focusedTeam}
-                        zebraStripe={i % 2 == 1}
                         {showNonPenaltyScores}
                         {eventTeams}
                     />
@@ -219,8 +215,18 @@
     table {
         display: block;
 
+        --trad-match-cols: 4.5em 1fr 9.5em 1fr;
+    }
+
+    table.remote {
         border: 1px solid var(--sep-color);
         border-radius: 8px;
+    }
+
+    @media (max-width: 640px) {
+        table {
+            --trad-match-cols: 2.2em 1fr 7.75em 1fr;
+        }
     }
 
     tbody {

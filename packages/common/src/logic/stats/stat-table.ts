@@ -20,7 +20,7 @@ export const StatType = {
 export type StatType = (typeof StatType)[keyof typeof StatType];
 export type StatValue =
     | { ty: "int"; val: number }
-    | { ty: "float"; val: number }
+    | { ty: "float"; val: number; stdErr?: number | null }
     | { ty: "rank"; val: number }
     | { ty: "string"; val: string }
     | { ty: "team"; number: number; name: string }

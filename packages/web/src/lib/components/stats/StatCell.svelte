@@ -1,6 +1,7 @@
 <script lang="ts">
     import { prettyPrintFloat, prettyPrintOrdinal } from "../../printers/number";
     import StatEvent from "./StatEvent.svelte";
+    import StdErrLabel from "./StdErrLabel.svelte";
     import StatTeam from "./StatTeam.svelte";
     import type { StatColumn, StatData } from "@ftc-scout/common";
 
@@ -26,6 +27,7 @@
             {prettyPrintOrdinal(val.val)}
         {:else if val.ty == "float"}
             {prettyPrintFloat(val.val)}
+            <StdErrLabel stdErr={val.stdErr} />
         {:else if val.ty == "int" || val.ty == "string"}
             {val.val}
         {:else if val.ty == "record"}

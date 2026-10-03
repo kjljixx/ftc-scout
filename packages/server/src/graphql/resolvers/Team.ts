@@ -36,6 +36,7 @@ const QuickStatGQL = new GraphQLObjectType({
     fields: {
         value: FloatTy,
         rank: IntTy,
+        stdErr: nullTy(FloatTy),
     },
 });
 const QuickStatsGQL = new GraphQLObjectType({
@@ -131,10 +132,30 @@ export async function getQuickStats(number: number, season: Season, region: Regi
 
     if (!res) return null;
 
+    let bestTotalStdErr = DATA_SOURCE.createQueryBuilder(`tep_${season}`, "t")
+        .leftJoin("event", "e", "e.season = t.season AND e.code = t.event_code")
+        .select(`opr_se_${total}`, "std_err")
+        .where("team_number = :number", { number })
+        .andWhere("NOT is_remote")
+        .andWhere("has_stats")
+        .andWhere("NOT e.modified_rules")
+        .orderBy(`opr_${total}`, "DESC")
+        .limit(1);
+    if (region && region != RegionOption.All) {
+        bestTotalStdErr.andWhere("region_code IN (:...regions)", {
+            regions: getRegionCodes(region),
+        });
+    }
+    let bestTotal = await bestTotalStdErr.getRawOne();
+
     return {
         season,
         number: number,
-        tot: { value: res.tot, rank: +res.tot_rank },
+        tot: {
+            value: res.tot,
+            rank: +res.tot_rank,
+            stdErr: bestTotal?.std_err == null ? null : +bestTotal.std_err,
+        },
         auto: { value: res.auto, rank: +res.auto_rank },
         dc: { value: res.dc, rank: +res.dc_rank },
         eg: { value: res.eg, rank: +res.eg_rank },

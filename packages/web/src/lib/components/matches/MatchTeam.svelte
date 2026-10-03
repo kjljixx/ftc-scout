@@ -15,6 +15,8 @@
     export let focusedTeam: number | null;
     export let winner: boolean;
     export let span: number;
+    export let trad = false;
+    export let benched = false;
 
     $: number = team.team.number;
     $: name = team.team.name;
@@ -46,6 +48,8 @@
     class:not-on-field={!onField}
     class:focused={focusedTeam == number && (showRemoteFocus || team.alliance != Alliance.Solo)}
     class:winner
+    class:trad
+    class:benched
     {title}
 >
     <a
@@ -59,7 +63,7 @@
             }
         }}
     >
-        <span class:dq={dq || noShow}>{number}{surrogate ? "*" : ""}</span>
+        <span class="num" class:dq={dq || noShow}>{number}{surrogate ? "*" : ""}</span>
         <em class="name">{name}</em>
     </a>
 </td>
@@ -142,14 +146,102 @@
         text-decoration: line-through;
     }
 
+    td.trad {
+        grid-column: auto;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    td.trad.red,
+    td.trad.blue,
+    td.trad.focused.red,
+    td.trad.focused.blue {
+        background: transparent;
+        color: inherit;
+    }
+
+    td.trad .inner {
+        border-radius: 6px;
+        padding: var(--md-pad) var(--lg-pad);
+    }
+
+    td.trad .name {
+        order: -1;
+        font-style: normal;
+        font-size: 1.05em;
+        font-weight: 500;
+        color: inherit;
+    }
+
+    td.trad .num {
+        font-size: 0.85em;
+        font-weight: 400;
+        color: var(--grayed-out-text-color);
+    }
+
+    td.trad.focused .inner {
+        box-shadow: inset 0 0 0 2px var(--focused-team-ring-color);
+    }
+
+    td.trad.focused .name {
+        font-weight: 600;
+    }
+
+    td.benched .inner {
+        flex-direction: row;
+        align-items: baseline;
+        gap: var(--md-gap);
+        padding: var(--sm-pad) var(--lg-pad);
+        font-size: 0.85em;
+        color: var(--faint-text-color);
+    }
+
+    td.trad.benched .name,
+    td.trad.benched .num {
+        font-size: inherit;
+        font-weight: 500;
+        color: inherit;
+    }
+
+    td.trad.benched .name {
+        order: -1;
+    }
+
+    td.trad.benched .num {
+        order: 0;
+        font-weight: 400;
+    }
+
     @media (max-width: 1000px) {
-        .name {
+        td:not(.trad) .name {
             display: none;
         }
 
-        .inner {
+        td:not(.trad) .inner {
             align-items: center;
             justify-content: center;
+        }
+    }
+
+    @media (max-width: 640px) {
+        td.trad .name {
+            font-size: 0.9em;
+            order: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        td.trad .num {
+            font-size: 0.8em;
+            font-weight: 400;
+            color: var(--grayed-out-text-color);
+        }
+
+        td.trad .inner {
+            flex-direction: row;
+            align-items: baseline;
+            justify-content: flex-start;
+            gap: var(--sm-gap);
         }
     }
 </style>

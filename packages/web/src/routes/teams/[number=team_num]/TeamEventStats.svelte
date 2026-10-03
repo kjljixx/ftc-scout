@@ -1,6 +1,7 @@
 <script lang="ts">
     import { faTrophy } from "@fortawesome/free-solid-svg-icons";
     import InfoIconRow from "$lib/components/InfoIconRow.svelte";
+    import StdErrLabel from "$lib/components/stats/StdErrLabel.svelte";
     import type { TeamQuery } from "$lib/graphql/generated/graphql-operations";
     import { prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
     import { DESCRIPTORS, type Season } from "@ftc-scout/common";
@@ -13,6 +14,10 @@
 
     const rpFormat = prettyPrintFloat;
     $: hasOpr = stats && "opr" in stats;
+    $: oprStdErrGroup = (stats && "oprSe" in stats ? stats.oprSe : undefined) as
+        | Record<string, number | null | undefined>
+        | undefined;
+    $: oprStdErr = oprStdErrGroup?.totalPoints ?? oprStdErrGroup?.totalPointsNp;
     $: hasAvg = stats && "avg" in stats;
     $: np = DESCRIPTORS[season].pensSubtract || remote ? "" : "np";
 </script>
@@ -36,6 +41,7 @@
             {@const opr =
                 "totalPoints" in stats.opr ? stats.opr.totalPoints : stats.opr.totalPointsNp}
             <b>{prettyPrintFloat(opr)}</b>
+            <StdErrLabel stdErr={oprStdErr} inline />
             {np}OPR {hasAvg ? " · " : ""}
         {/if}
         {#if "avg" in stats}

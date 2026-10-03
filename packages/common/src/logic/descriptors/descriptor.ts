@@ -268,6 +268,10 @@ export class TepComponent {
         this.make = opts.make;
     }
 
+    private getStdErr(group: TepStatGroup, d: any): number | null {
+        return group == TepStatGroup.Opr ? d.stats.oprSe?.[this.apiName] ?? null : null;
+    }
+
     getStatColumn(group: TepStatGroup) {
         return new NonRankStatColumn({
             color: TEP_GROUP_COLORS[group],
@@ -284,11 +288,13 @@ export class TepComponent {
                           ? {
                                 ty: TEP_GROUP_DATA_TYS[group],
                                 val: d.stats[group][this.apiName],
+                                stdErr: this.getStdErr(group, d),
                             }
                           : null
                 : (d: any) => ({
                       ty: TEP_GROUP_DATA_TYS[group],
                       val: d.stats[group][this.apiName],
+                      stdErr: this.getStdErr(group, d),
                   }),
         });
     }

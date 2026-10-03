@@ -1,8 +1,6 @@
 <script lang="ts">
     import {
-        EventPicklistDocument,
         SetEventPicklistDocument,
-        PicklistUpdatedDocument,
         AddCustomFieldDocument,
         RemoveCustomFieldDocument,
         SetCustomFieldValueDocument,
@@ -11,11 +9,18 @@
     import { DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
     import { faGripLines } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
-    import { onDestroy, onMount } from "svelte";
-    import { browser } from "$app/environment";
+    import { onDestroy } from "svelte";
     import { getClient } from "$lib/graphql/client";
+    import {
+        createPicklistSyncHandle,
+        picklistState,
+        type CustomFieldTy,
+        type CustomValueTy,
+        type PicklistState,
+    } from "$lib/picklist/picklistSync";
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
+    import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -45,9 +50,6 @@
     let lastSyncedOrder: number[] | null = null;
     let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    type CustomFieldTy = { id: string; name: string; type: string };
-    type CustomValueTy = { teamNumber: number; fieldId: string; value: string | number | boolean };
-
     let customFields: CustomFieldTy[] = [];
     let customValues: Record<number, Record<string, string | number | boolean>> = {};
     let pendingValueKeys = new Set<string>();
@@ -72,47 +74,23 @@
         customValues = newMap;
     }
 
-    let subscription: ReturnType<
-        ReturnType<typeof getClient>["subscribe"]
-    >["subscribe"] extends never
-        ? never
-        : any;
+    const picklistSync = createPicklistSyncHandle();
+    $: picklistSync.sync(season, eventCode);
 
-    onMount(async () => {
-        if (!browser) return;
-
-        let result = await getClient().query({
-            query: EventPicklistDocument,
-            variables: { season, eventCode },
-            fetchPolicy: "no-cache",
-        });
-        let savedOrder = result.data?.eventPicklist?.teamOrder;
-        if (savedOrder) {
-            lastSyncedOrder = savedOrder;
-            teamOrder = savedOrder;
+    function applyPicklistState(state: PicklistState) {
+        if (!state.loaded) return;
+        if (state.teamOrder && !sameOrder(state.teamOrder, lastSyncedOrder)) {
+            lastSyncedOrder = state.teamOrder;
+            teamOrder = state.teamOrder;
         }
-        customFields = result.data?.eventPicklist?.customFields ?? [];
-        applyRemoteValues(result.data?.eventPicklist?.customValues ?? []);
+        customFields = state.customFields;
+        applyRemoteValues(state.customValues);
+    }
 
-        subscription = getClient()
-            .subscribe({ query: PicklistUpdatedDocument, variables: { season, eventCode } })
-            .subscribe((result) => {
-                let updatedOrder = result.data?.picklistUpdated?.teamOrder;
-                if (updatedOrder && !sameOrder(updatedOrder, lastSyncedOrder)) {
-                    lastSyncedOrder = updatedOrder;
-                    teamOrder = updatedOrder;
-                }
-                if (result.data?.picklistUpdated?.customFields) {
-                    customFields = result.data.picklistUpdated.customFields;
-                }
-                if (result.data?.picklistUpdated?.customValues) {
-                    applyRemoteValues(result.data.picklistUpdated.customValues);
-                }
-            });
-    });
+    $: applyPicklistState($picklistState);
 
     onDestroy(() => {
-        subscription?.unsubscribe();
+        picklistSync.stop();
         if (saveTimeout) clearTimeout(saveTimeout);
         Object.values(valueSaveTimeouts).forEach(clearTimeout);
     });
@@ -353,6 +331,9 @@
     }
 </script>
 
+{#if !$picklistState.loaded}
+    <Skeleton />
+{:else}
 <div class="custom-fields-manager">
     <input
         class="new-field-name"
@@ -455,6 +436,7 @@
         </tbody>
     </table>
 </div>
+{/if}
 
 <style>
     .table-scroll-container {

@@ -1,4 +1,4 @@
-import { DESCRIPTORS, Descriptor, FloatTy, IntTy, nn, notEmpty } from "@ftc-scout/common";
+import { DESCRIPTORS, Descriptor, FloatTy, IntTy, nn, notEmpty, nullTy } from "@ftc-scout/common";
 import { GraphQLFieldConfig, GraphQLObjectType } from "graphql";
 import { TeamEventParticipation } from "../../db/entities/dyn/team-event-participation";
 
@@ -17,16 +17,23 @@ function make(descriptor: Descriptor, remote: boolean): GraphQLObjectType {
     let nameSuffix = descriptor.typeSuffix(remote);
 
     let innerFields = {} as Record<string, GraphQLFieldConfig<any, any>>;
+    let stdErrFields = {} as Record<string, GraphQLFieldConfig<any, any>>;
 
     for (let c of descriptor.tepColumns()) {
         if (c.tradOnly && remote) continue;
 
         innerFields[c.apiName] = FloatTy;
+        stdErrFields[c.apiName] = nullTy(FloatTy);
     }
 
     let inner = new GraphQLObjectType({
         name: `TeamEventStats${descriptor.season}${nameSuffix}Group`,
         fields: innerFields,
+    });
+
+    let stdErrInner = new GraphQLObjectType({
+        name: `TeamEventStats${descriptor.season}${nameSuffix}StdErrGroup`,
+        fields: stdErrFields,
     });
 
     let hasTb2 = descriptor.rankings.tb != "LosingScore";
@@ -46,6 +53,7 @@ function make(descriptor: Descriptor, remote: boolean): GraphQLObjectType {
             max: { type: nn(inner) },
             dev: { type: nn(inner) },
             opr: { type: nn(inner) },
+            oprSe: { type: nn(stdErrInner) },
         },
     });
 

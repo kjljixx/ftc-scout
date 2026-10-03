@@ -113,6 +113,8 @@ body {
     --blue-team-header-bg-color: var(--blue-team-color);
     --red-team-focus-bg-color: var(--red-team-color);
     --blue-team-focus-bg-color: var(--blue-team-color);
+    --focused-team-ring-color: var(--inline-theme-color);
+    --raised-bg-color: var(--fg-color);
 }
 
 body {
@@ -141,6 +143,7 @@ body {
     --text-color: #000000;
     --secondary-text-color: #636466;
     --grayed-out-text-color: gray;
+    --faint-text-color: #9a9a9a;
     --theme-text-color: #ffffff;
     --sidebar-text-color: var(--secondary-text-color);
 
@@ -210,8 +213,9 @@ body.dark {
     --alert-bar-color: rgb(169, 109, 18);
 
     --text-color: hsl(265, 20%, 94%);
-    --secondary-text-color: hsl(265, 8%, 64%);
-    --grayed-out-text-color: hsl(265, 6%, 55%);
+    --secondary-text-color: hsl(265, 8%, 70%);
+    --grayed-out-text-color: hsl(265, 6%, 62%);
+    --faint-text-color: hsl(265, 6%, 44%);
     --theme-text-color: #ffffff;
     --sidebar-text-color: var(--text-color);
 
@@ -258,6 +262,8 @@ body.dark {
     --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);
     --red-team-focus-bg-color: rgba(var(--red-team-color-vs), 0.45);
     --blue-team-focus-bg-color: rgba(var(--blue-team-color-vs), 0.45);
+    --focused-team-ring-color: var(--inline-theme-color);
+    --raised-bg-color: hsl(265, 12%, 14%);
 
     color-scheme: dark;
 }
@@ -302,8 +308,9 @@ body.dark .render-light {
         --alert-bar-color: rgb(169, 109, 18);
 
         --text-color: hsl(265, 20%, 94%);
-        --secondary-text-color: hsl(265, 8%, 64%);
-        --grayed-out-text-color: hsl(265, 6%, 55%);
+        --secondary-text-color: hsl(265, 8%, 70%);
+        --grayed-out-text-color: hsl(265, 6%, 62%);
+        --faint-text-color: hsl(265, 6%, 44%);
         --theme-text-color: #ffffff;
         --sidebar-text-color: var(--text-color);
 
@@ -350,6 +357,8 @@ body.dark .render-light {
         --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);
         --red-team-focus-bg-color: rgba(var(--red-team-color-vs), 0.45);
         --blue-team-focus-bg-color: rgba(var(--blue-team-color-vs), 0.45);
+        --focused-team-ring-color: var(--inline-theme-color);
+        --raised-bg-color: hsl(265, 12%, 14%);
 
         color-scheme: dark;
     }

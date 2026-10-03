@@ -19,6 +19,10 @@ fragment FullStats on TeamEventStats {
         opr {
             ...FullTeamEventStats2025Group
         }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
         min {
             ...FullTeamEventStats2025Group
         }
@@ -47,6 +51,10 @@ fragment FullStats on TeamEventStats {
         }
         opr {
             ...FullTeamEventStats2024Group
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
         }
         min {
             ...FullTeamEventStats2024Group
@@ -77,6 +85,10 @@ fragment FullStats on TeamEventStats {
         opr {
             ...FullTeamEventStats2023Group
         }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
         min {
             ...FullTeamEventStats2023Group
         }
@@ -105,6 +117,10 @@ fragment FullStats on TeamEventStats {
         }
         opr {
             ...FullTeamEventStats2022Group
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
         }
         min {
             ...FullTeamEventStats2022Group
@@ -135,6 +151,10 @@ fragment FullStats on TeamEventStats {
         opr {
             ...FullTeamEventStats2021TradGroup
         }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
         min {
             ...FullTeamEventStats2021TradGroup
         }
@@ -159,6 +179,9 @@ fragment FullStats on TeamEventStats {
         }
         opr {
             ...FullTeamEventStats2021RemoteGroup
+        }
+        oprSe {
+            totalPoints
         }
         min {
             ...FullTeamEventStats2021RemoteGroup
@@ -189,6 +212,10 @@ fragment FullStats on TeamEventStats {
         opr {
             ...FullTeamEventStats2020TradGroup
         }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
         min {
             ...FullTeamEventStats2020TradGroup
         }
@@ -213,6 +240,9 @@ fragment FullStats on TeamEventStats {
         }
         opr {
             ...FullTeamEventStats2020RemoteGroup
+        }
+        oprSe {
+            totalPoints
         }
         min {
             ...FullTeamEventStats2020RemoteGroup
@@ -241,6 +271,10 @@ fragment FullStats on TeamEventStats {
         }
         opr {
             ...FullTeamEventStats2019Group
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
         }
         min {
             ...FullTeamEventStats2019Group

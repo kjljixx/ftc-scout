@@ -1,6 +1,7 @@
 <script lang="ts">
     import { DESCRIPTORS, type Season } from "@ftc-scout/common";
     import Card from "../../../lib/components/Card.svelte";
+    import StdErrLabel from "../../../lib/components/stats/StdErrLabel.svelte";
     import type { TeamQuery } from "../../../lib/graphql/generated/graphql-operations";
     import { prettyPrintFloat, prettyPrintOrdinal } from "../../../lib/printers/number";
 
@@ -21,7 +22,10 @@
         <div class="header">Endgame</div>
 
         <div class="row-label first">Best OPR</div>
-        <div class="val first">{prettyPrintFloat(stats.tot.value)}</div>
+        <div class="val first">
+            {prettyPrintFloat(stats.tot.value)}
+            <StdErrLabel stdErr={stats.tot.stdErr} inline />
+        </div>
         <div class="val first">{prettyPrintFloat(stats.auto.value)}</div>
         <div class="val first">{prettyPrintFloat(stats.dc.value)}</div>
         <div class="val first">{prettyPrintFloat(stats.eg.value)}</div>

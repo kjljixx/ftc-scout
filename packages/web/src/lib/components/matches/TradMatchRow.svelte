@@ -8,7 +8,6 @@
     import DeLives from "./DELives.svelte";
     import MatchScore, { computeWinner } from "./MatchScore.svelte";
     import MatchTeam from "./MatchTeam.svelte";
-    import PlaceholderMatchTeam from "./PlaceholderMatchTeam.svelte";
 
     export let match: FullMatchFragment;
     export let allMatches: FullMatchFragment[] = [];
@@ -16,7 +15,6 @@
     export let season: number;
     export let timeZone: string;
     export let focusedTeam: number | null;
-    export let zebraStripe: boolean;
     export let teamCount = 0;
     export let showNonPenaltyScores = false;
     export let eventTeams: any[] = [];
@@ -25,10 +23,21 @@
     $: redTeams = teams.filter((t) => t.alliance == Alliance.Red);
     $: blueTeams = teams.filter((t) => t.alliance == Alliance.Blue);
 
-    $: redExtras = Array(Math.max(2 - redTeams.length, 0)).fill(Alliance.Red);
-    $: reds = [...redTeams, ...redExtras].sort(sortTeams);
-    $: blueExtras = Array(Math.max(2 - blueTeams.length, 0)).fill(Alliance.Blue);
-    $: blues = [...blueTeams, ...blueExtras].sort(sortTeams);
+    function splitBench(alliance: typeof redTeams) {
+        let hasBench = alliance.length > 2;
+        return {
+            playing: hasBench ? alliance.filter((t) => t.onField) : alliance,
+            benched: hasBench ? alliance.filter((t) => !t.onField) : [],
+        };
+    }
+
+    $: redSplit = splitBench(redTeams);
+    $: blueSplit = splitBench(blueTeams);
+
+    $: redExtras = Array(Math.max(2 - redSplit.playing.length, 0)).fill(Alliance.Red);
+    $: reds = [...redSplit.playing, ...redExtras].sort(sortTeams);
+    $: blueExtras = Array(Math.max(2 - blueSplit.playing.length, 0)).fill(Alliance.Blue);
+    $: blues = [...blueSplit.playing, ...blueExtras].sort(sortTeams);
 
     $: isDoubleElim = match.tournamentLevel == TournamentLevel.DoubleElim;
     $: isNewRound = isDoubleElim && checkIsNewRound(match.series, match.matchNum, teamCount);
@@ -126,112 +135,197 @@
     }
 </script>
 
-<tr class:zebraStripe class:isDoubleElim class:new-round={isNewRound}>
-    <MatchScore {match} {timeZone} {showNonPenaltyScores} />
+<tr class:new-round={isNewRound}>
+    <MatchScore
+        {match}
+        {timeZone}
+        {showNonPenaltyScores}
+        redPred={redOprSum}
+        bluePred={blueOprSum}
+    />
 
-    <div class="opr">
-        <span class="red-opr" class:opr-winner={redOprSum >= blueOprSum}
-            >{redOprSum.toFixed(0)}</span
-        >
-        <div>-</div>
-        <span class="blue-opr" class:opr-winner={redOprSum <= blueOprSum}
-            >{blueOprSum.toFixed(0)}</span
-        >
+    <div class="cell red-cell">
+        <div class="alliance red" class:lost={winner == Alliance.Blue}>
+            {#if isDoubleElim}
+                <DeLives
+                    alliance={Alliance.Red}
+                    alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Red)}
+                    lostThis={winner == Alliance.Blue}
+                />
+            {/if}
+
+            <div class="roster">
+                <div class="teams">
+                    {#each reds as team}
+                        {#if team == Alliance.Red}
+                            <div />
+                        {:else}
+                            <MatchTeam
+                                {team}
+                                {eventCode}
+                                {season}
+                                {focusedTeam}
+                                winner={winner == Alliance.Red}
+                                span={1}
+                                trad
+                            />
+                        {/if}
+                    {/each}
+                </div>
+                {#each redSplit.benched as team}
+                    <MatchTeam
+                        {team}
+                        {eventCode}
+                        {season}
+                        {focusedTeam}
+                        winner={false}
+                        span={1}
+                        trad
+                        benched
+                    />
+                {/each}
+            </div>
+        </div>
     </div>
 
-    {#if isDoubleElim}
-        <DeLives
-            alliance={Alliance.Red}
-            alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Red)}
-            lostThis={winner == Alliance.Blue}
-        />
-    {/if}
+    <div class="cell blue-cell">
+        <div class="alliance blue" class:lost={winner == Alliance.Red}>
+            <div class="roster">
+                <div class="teams">
+                    {#each blues as team}
+                        {#if team == Alliance.Blue}
+                            <div />
+                        {:else}
+                            <MatchTeam
+                                {team}
+                                {eventCode}
+                                {season}
+                                {focusedTeam}
+                                winner={winner == Alliance.Blue}
+                                span={1}
+                                trad
+                            />
+                        {/if}
+                    {/each}
+                </div>
+                {#each blueSplit.benched as team}
+                    <MatchTeam
+                        {team}
+                        {eventCode}
+                        {season}
+                        {focusedTeam}
+                        winner={false}
+                        span={1}
+                        trad
+                        benched
+                    />
+                {/each}
+            </div>
 
-    {#each reds as team}
-        {#if team == Alliance.Red}
-            <PlaceholderMatchTeam alliance={team} span={6 / reds.length} />
-        {:else}
-            <MatchTeam
-                {team}
-                {eventCode}
-                {season}
-                {focusedTeam}
-                winner={winner == Alliance.Red}
-                span={6 / reds.length}
-            />
-        {/if}
-    {/each}
-
-    {#if isDoubleElim}
-        <DeLives
-            alliance={Alliance.Blue}
-            alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Blue)}
-            lostThis={winner == Alliance.Red}
-        />
-    {/if}
-
-    {#each blues as team}
-        {#if team == Alliance.Blue}
-            <PlaceholderMatchTeam alliance={team} span={6 / blues.length} />
-        {:else}
-            <MatchTeam
-                {team}
-                {eventCode}
-                {season}
-                {focusedTeam}
-                winner={winner == Alliance.Blue}
-                span={6 / blues.length}
-            />
-        {/if}
-    {/each}
+            {#if isDoubleElim}
+                <DeLives
+                    alliance={Alliance.Blue}
+                    alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Blue)}
+                    lostThis={winner == Alliance.Red}
+                />
+            {/if}
+        </div>
+    </div>
 </tr>
 
 <style>
     tr {
         display: grid;
-        grid-template-columns: 10.75em 5.5em repeat(12, 1fr);
+        grid-template-columns: var(--trad-match-cols);
+        align-items: center;
 
-        min-height: 28px;
-    }
-
-    tr.isDoubleElim {
-        grid-template-columns: 10.75em 5.5em auto repeat(6, 1fr) auto repeat(6, 1fr);
+        min-height: 68px;
     }
 
     tr.new-round {
         border-top: 1px solid var(--sep-color);
     }
 
-    .opr {
+    .cell {
+        grid-row: 1;
         display: flex;
         align-items: center;
-        justify-content: center;
+        min-width: 0;
+    }
+
+    .red-cell {
+        grid-column: 2;
+        justify-content: flex-end;
+    }
+
+    .blue-cell {
+        grid-column: 4;
+        justify-content: flex-start;
+    }
+
+    .alliance {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+
+        padding: var(--sm-pad);
+        border-radius: 8px;
+    }
+
+    .alliance.red {
+        background: var(--red-team-bg-color);
+    }
+
+    .alliance.blue {
+        background: var(--blue-team-bg-color);
+    }
+
+    .alliance.lost {
+        background: transparent;
+    }
+
+    .roster {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .red .roster {
+        align-items: flex-end;
+    }
+    .blue .roster {
+        align-items: flex-start;
+    }
+    .teams {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 11.5em));
         gap: var(--sm-gap);
+        min-width: 0;
     }
 
-    .red-opr {
-        color: var(--red-team-text-color);
-    }
-
-    .blue-opr {
-        color: var(--blue-team-text-color);
-    }
-
-    .opr-winner {
-        font-weight: 800;
-    }
-
-    @media (max-width: 1000px) {
+    @media (max-width: 640px) {
         tr {
-            grid-template-columns: 9.75em 4.75em repeat(12, 1fr);
+            min-height: 56px;
         }
 
-        tr.isDoubleElim {
-            grid-template-columns: 9.75em 4.75em auto repeat(6, 1fr) auto repeat(6, 1fr);
+        .cell {
+            justify-content: stretch;
         }
-    }
 
-    .zebraStripe {
-        background: var(--zebra-stripe-color);
+        .alliance,
+        .roster,
+        .teams {
+            flex: 1;
+        }
+        .roster {
+            align-items: stretch;
+        }
+        .red .roster,
+        .blue .roster {
+            align-items: stretch;
+        }
+
+        .teams {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 </style>

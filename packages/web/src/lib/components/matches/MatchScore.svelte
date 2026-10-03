@@ -42,8 +42,12 @@
     export let match: FullMatchFragment;
     export let timeZone: string;
     export let showNonPenaltyScores = false;
+    export let redPred = 0;
+    export let bluePred = 0;
 
     $: winner = computeWinner(match.scores);
+
+    $: labelNumber = match.description.split("-").slice(1).join("-") || match.description;
 
     function calculateRP(s: FullMatchFragment["scores"]) {
         if (s?.season == Season.Decode) {
@@ -73,24 +77,15 @@
     }
 </script>
 
-<td
-    class:hasScores={match.scores}
-    use:tippy={tip}
-    on:click={() => show(match)}
-    id="{match.eventCode}-{match.id}"
->
-    <div
-        class="description"
-        class:red={winner == Alliance.Red}
-        class:blue={winner == Alliance.Blue}
-        class:tie={winner == "Tie"}
-    >
-        {match.description}
-    </div>
-    <div class="score">
-        {#if match.scores == undefined}
-            {prettyPrintTimeString(match.scheduledStartTime, timeZone)}
-        {:else if "red" in match.scores}
+<td class="label" id="{match.eventCode}-{match.id}">
+    <div class="description">{labelNumber}</div>
+</td>
+
+<td class="center" class:hasScores={match.scores} use:tippy={tip} on:click={() => show(match)}>
+    {#if match.scores == undefined}
+        <div class="time">{prettyPrintTimeString(match.scheduledStartTime, timeZone)}</div>
+    {:else if "red" in match.scores}
+        <div class="score">
             <div class="left" class:winner={winner == Alliance.Red} class:tie={winner == "Tie"}>
                 <!-- // Help: Season Specific -->
                 {#if match.season == Season.Decode && match.tournamentLevel == TournamentLevel.Quals}
@@ -115,20 +110,46 @@
                     </div>
                 {/if}
             </div>
-        {:else}
-            <b>{scoreValue(match.scores)}</b>
-        {/if}
+        </div>
+    {:else}
+        <div class="score"><b>{scoreValue(match.scores)}</b></div>
+    {/if}
+
+    <div class="pred">
+        <div class="left" class:strong={redPred >= bluePred}>
+            {redPred.toFixed(0)}
+        </div>
+        <div class="minus">-</div>
+        <div class="right" class:strong={bluePred >= redPred}>
+            {bluePred.toFixed(0)}
+        </div>
     </div>
 </td>
 
 <style>
     td {
-        display: grid;
-        grid-template-columns: 1fr 1.4fr;
+        display: flex;
         align-items: center;
+
+        grid-row: 1;
 
         outline: transparent solid 2px;
         transition: outline 0.12s ease 0s;
+    }
+
+    .label {
+        grid-column: 1;
+        align-self: stretch;
+    }
+
+    .center {
+        grid-column: 3;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0;
+
+        padding: calc(var(--sm-pad) + 0.65em) 0 var(--sm-pad);
+        border-radius: 8px;
     }
 
     .hasScores {
@@ -143,13 +164,51 @@
     .description {
         padding-left: var(--md-gap);
         font-weight: bold;
+        color: var(--text-color);
+        white-space: nowrap;
+    }
+
+    .time {
         color: var(--grayed-out-text-color);
+        font-size: 0.9em;
+    }
+
+    .score,
+    .pred {
+        display: grid;
+        grid-template-columns: 1fr 1.1em 1fr;
+        align-items: baseline;
+        width: 100%;
+    }
+
+    .score {
+        font-size: 1.25em;
+        line-height: 1.2;
+    }
+
+    .score .left,
+    .pred .left {
+        text-align: right;
+    }
+
+    .score .right,
+    .pred .right {
+        text-align: left;
     }
 
     .minus {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        text-align: center;
+        color: var(--grayed-out-text-color);
+    }
+
+    .pred {
+        font-size: 0.875em;
+        color: var(--grayed-out-text-color);
+    }
+
+    .pred .strong {
+        font-weight: 600;
+        color: var(--text-color);
     }
 
     .left,
@@ -159,14 +218,25 @@
 
     .dots {
         position: absolute;
-        bottom: 0px;
+        top: -8px;
         --dot-stride: 8px;
         --dot-size: 6px;
     }
 
-    @media (max-width: 1000px) {
+    @media (max-width: 640px) {
+        .description {
+            padding-left: 0;
+        }
+
+        .score,
+        .pred {
+            grid-template-columns: 1fr 0.8em 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
         .dots {
-            bottom: 1px;
+            top: -6px;
             --dot-stride: 6px;
             --dot-size: 4px;
         }
@@ -205,25 +275,9 @@
         color: var(--neutral-team-text-color);
     }
 
-    .score {
-        display: flex;
-        justify-content: space-around;
-        gap: var(--sm-gap);
-    }
-
-    .score .left {
-        width: 100%;
-        text-align: right;
-    }
-
     .score .left.winner {
         font-weight: bold;
         color: var(--red-team-text-color);
-    }
-
-    .score .right {
-        width: 100%;
-        text-align: left;
     }
 
     .score .right.winner {

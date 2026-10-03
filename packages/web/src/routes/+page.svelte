@@ -23,7 +23,8 @@
     import Loading from "$lib/components/Loading.svelte";
     import TabbedCard from "$lib/components/tabs/TabbedCard.svelte";
     import TabContent from "$lib/components/tabs/TabContent.svelte";
-    import { setContext } from "svelte";
+    import { onDestroy, setContext } from "svelte";
+    import { createPicklistSyncHandle } from "$lib/picklist/picklistSync";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import { isNonCompetition } from "$lib/util/event-type";
@@ -49,6 +50,10 @@
 
     $: event = $latestEventStore?.data?.eventByCode!;
     $: season = (data.latestSeason ?? CURRENT_SEASON) as Season;
+
+    const picklistSync = createPicklistSyncHandle();
+    $: if (showHomeTeamView && event?.code) picklistSync.sync(season, event.code);
+    onDestroy(picklistSync.stop);
 
     $: stats = event?.teams?.filter((t) => notEmpty(t.stats)) ?? [];
     type PreviewStat = {

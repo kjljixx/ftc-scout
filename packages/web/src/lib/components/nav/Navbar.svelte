@@ -29,6 +29,7 @@
 
         background: var(--navbar-bg-color);
         z-index: var(--navbar-zi);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 
         display: flex;
         align-items: center;

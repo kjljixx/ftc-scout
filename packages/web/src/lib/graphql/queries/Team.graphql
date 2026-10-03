@@ -17,6 +17,7 @@ query Team($number: Int!, $season: Int!) {
             tot {
                 value
                 rank
+                stdErr
             }
             auto {
                 value

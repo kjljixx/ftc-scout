@@ -1,14 +1,9 @@
 <thead>
     <tr>
-        <th class="s">
-            <div>Match</div>
-            <div>Score</div>
-        </th>
-        <th>
-            <div>OPR</div>
-        </th>
-        <th class="r">Red Alliance</th>
-        <th class="b">Blue Alliance</th>
+        <th class="match">Match</th>
+        <th class="red">Red Alliance</th>
+        <th class="score">Score / Pred</th>
+        <th class="blue">Blue Alliance</th>
     </tr>
 </thead>
 
@@ -19,44 +14,34 @@
 
     tr {
         display: grid;
-        grid-template-columns: 10.75em 5.5em 1fr 1fr;
-    }
+        grid-template-columns: var(--trad-match-cols);
+        align-items: center;
 
-    @media (max-width: 1000px) {
-        tr {
-            grid-template-columns: 9.75em 4.75em 1fr 1fr;
-        }
+        min-height: 40px;
     }
 
     th {
         display: block;
-        font-weight: bold;
+
+        font-size: 1em;
+        font-weight: 600;
+        color: var(--secondary-text-color);
+    }
+
+    .match {
+        text-align: left;
+        padding-left: var(--md-gap);
+    }
+
+    .red,
+    .blue,
+    .score {
         text-align: center;
-        padding: var(--lg-pad);
     }
 
-    .s {
-        display: grid;
-        grid-template-columns: 1fr 1.4fr;
-        justify-content: center;
-        padding: 0;
-
-        box-shadow: rgb(0 0 0 / 14%) 0px -4px 4px -2px inset;
-    }
-
-    .s * {
-        padding: var(--lg-pad);
-    }
-
-    .r {
-        background-color: var(--red-team-header-bg-color);
-        color: var(--team-text-color);
-    }
-
-    .b {
-        background-color: var(--blue-team-header-bg-color);
-        color: var(--team-text-color);
-
-        border-top-right-radius: 7px;
+    @media (max-width: 640px) {
+        th {
+            font-size: 0.85em;
+        }
     }
 </style>
