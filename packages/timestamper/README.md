@@ -14,12 +14,14 @@ Finds the start time of each match in a YouTube livestream VOD of an FTC event.
 ## Usage
 
 ```
-python timestamp.py <youtube_video_id> [--step 120] [--transition 8] [--json]
+python timestamp.py <youtube_video_id> [--step 120] [--json]
 ```
 
 The table shows the match description (`Q-9`, `M-3`). The `--json` output also has the match id. The video must belong to one event (for a division event, one division); the caller decides which event the ids refer to.
 
-`--transition` is the pause between autonomous and teleop in seconds: 8 at Pennsylvania, 15 at the 2026 FIRST Championship.
+From Python, call `timestamp.timestamp_video(video_id, step_s=120)`. It returns `(matches, counts)`: one dict per match (`match_id`, `description`, `start_s`, `frames`, `agreeing`, `spread_s`) and the frame outcome counts.
+
+The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `timestamp.py`).
 
 ## Requirements
 
