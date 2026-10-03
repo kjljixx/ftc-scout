@@ -117,18 +117,14 @@
                 <FocusedTeam team={focusedTeamData} remote={event.remote} />
             {/if}
 
-            <Card>
-                <h2>
-                    <a href="/events/{event.season}/{event.code}/matches" class="norm-link">
-                        {event.name}
-                    </a>
-                </h2>
-                <p>
-                    Latest Event -
-                    <a href="/teams/{data.homeTeam}" class="norm-link">
-                        Team {data.homeTeam}
-                    </a>
-                </p>
+            <Card vis={false}>
+                <div class="latest">
+                    Latest event &middot;
+                    <a href="/teams/{data.homeTeam}">Team {data.homeTeam}</a>
+                </div>
+                <h1 class="event-title">
+                    <a href="/events/{event.season}/{event.code}/matches">{event.name}</a>
+                </h1>
             </Card>
 
             <TabbedCard
@@ -328,6 +324,34 @@
     h2 {
         margin-top: var(--sm-gap);
         margin-bottom: var(--lg-gap);
+    }
+
+    @media (max-width: 550px) {
+        .latest,
+        .event-title {
+            padding-left: var(--md-pad);
+        }
+    }
+
+    .latest {
+        font-size: 0.9em;
+        color: var(--grayed-out-text-color);
+    }
+
+    .latest a {
+        color: var(--inline-theme-color);
+        font-weight: 500;
+    }
+
+    .event-title {
+        margin: var(--sm-gap) 0 var(--md-gap);
+        font-size: var(--xl-font-size);
+        font-weight: 600;
+        line-height: 1.15;
+    }
+
+    .event-title a {
+        color: inherit;
     }
 
     .title {

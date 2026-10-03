@@ -5,11 +5,12 @@
 
     export let style = "";
     export let vis = true;
+    export let panel = false;
 
     let requestedWidth: Readable<string> = getContext(REQUESTED_WIDTH);
 </script>
 
-<div style:--requested-width={$requestedWidth} {style} class:vis>
+<div style:--requested-width={$requestedWidth} {style} class:vis class:panel>
     <slot />
 </div>
 
@@ -32,6 +33,11 @@
         border-radius: 8px;
 
         padding: var(--lg-pad);
+    }
+
+    .vis.panel {
+        border: none;
+        border-radius: 12px;
     }
 
     @media (max-width: 550px) {

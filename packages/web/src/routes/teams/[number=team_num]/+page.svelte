@@ -11,19 +11,8 @@
     import Loading from "$lib/components/Loading.svelte";
     import ErrorPage from "$lib/components/ErrorPage.svelte";
     import { page } from "$app/stores";
-    import InfoIconRow from "$lib/components/InfoIconRow.svelte";
-    import {
-        faCakeCandles,
-        faCalendarAlt,
-        faHeart,
-        faLink,
-        faLocationDot,
-        faMedal,
-        faSchool,
-    } from "@fortawesome/free-solid-svg-icons";
     import { prettyPrintURL } from "$lib/printers/url";
     import Location from "$lib/components/Location.svelte";
-    import DataFromFirst from "$lib/components/DataFromFirst.svelte";
     import { eventSorter } from "$lib/util/sorters";
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
@@ -44,40 +33,6 @@
     import { setContext } from "svelte";
     import { SHOW_REMOTE_FOCUS_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import QuickStats from "./QuickStats.svelte";
-    import Button from "$lib/components/ui/Button.svelte";
-    import { serialize, parse } from "cookie";
-    import { HOME_TEAM_COOKIE_AGE, HOME_TEAM_COOKIE_NAME } from "$lib/constants";
-    import { browser } from "$app/environment";
-    import { invalidateAll } from "$app/navigation";
-    import { faHouse, faHouseCircleCheck } from "@fortawesome/free-solid-svg-icons";
-
-    function getHomeTeam(): number | null {
-        if (!browser) return null;
-        let val = parse(document.cookie)[HOME_TEAM_COOKIE_NAME];
-        return val ? +val : null;
-    }
-
-    let homeTeam: number | null = getHomeTeam();
-
-    function setHomeTeam() {
-        document.cookie = serialize(HOME_TEAM_COOKIE_NAME, String(team.number), {
-            path: "/",
-            maxAge: HOME_TEAM_COOKIE_AGE,
-            httpOnly: false,
-        });
-        homeTeam = team.number;
-    }
-
-    function clearHomeTeam() {
-        document.cookie = serialize(HOME_TEAM_COOKIE_NAME, "", {
-            path: "/",
-            maxAge: 0,
-            httpOnly: false,
-        });
-        homeTeam = null;
-        invalidateAll();
-    }
-
     const toSeason = (n: number) => n as Season;
 
     export let data;
@@ -86,8 +41,6 @@
     $: team = $teamStore?.data?.teamByNumber!;
     $: activeSeasons = team?.activeSeasons ?? [];
     $: inactiveSeasons = ALL_SEASONS.filter((s) => !activeSeasons.includes(s));
-
-    $: isHomeTeam = homeTeam === team?.number;
 
     $: sortedEvents = [...(team?.events ?? [])].sort(eventSorter);
 
@@ -116,48 +69,57 @@
             (Try searching for teams on <a href="/teams">the teams page</a>)
         </ErrorPage>
 
-        <Card>
-            <div class="header">
-                <h1>{team.number} - {team.name}</h1>
-                <Button
-                    icon={isHomeTeam ? faHouseCircleCheck : faHouse}
-                    on:click={isHomeTeam ? clearHomeTeam : setHomeTeam}
-                >
-                    {isHomeTeam ? "Clear Home Team" : "Set as Home Team"}
-                </Button>
-            </div>
-
-            <InfoIconRow icon={faSchool}>{team.schoolName}</InfoIconRow>
-
-            {#if team.sponsors.length}
-                <InfoIconRow icon={faHeart}>{team.sponsors.join(", ")}</InfoIconRow>
-            {/if}
-
-            {#if team.website}
-                <InfoIconRow icon={faLink}>
-                    <a href={team.website} target="_blank" rel="noreferrer" class="norm-link">
-                        {prettyPrintURL(team.website)}
-                    </a>
-                </InfoIconRow>
-            {/if}
-
-            <InfoIconRow icon={faLocationDot}>
-                <Location {...team.location} />
-            </InfoIconRow>
-
-            <InfoIconRow icon={faCakeCandles}>Rookie Year: {team.rookieYear}</InfoIconRow>
-
-            <DataFromFirst />
-        </Card>
-
         <Card vis={false}>
-            <Form id="season" noscriptSubmit>
-                <SeasonSelect bind:season={$season} nonForm disabledValues={inactiveSeasons} />
-            </Form>
+            <div class="header">
+                <div class="identity">
+                    <div class="title">
+                        <h1>{team.name}</h1>
+                        <span class="number">{team.number}</span>
+                    </div>
+
+                    <div class="meta">
+                        <div class="meta-line">
+                            <Location {...team.location} />
+                            <span class="sep">&middot;</span>
+                            <span>Rookie year {team.rookieYear}</span>
+                        </div>
+                        <div class="meta-line">
+                            <span>{team.schoolName}</span>
+                            {#if team.sponsors.length}
+                                <span class="sep">&middot;</span>
+                                <span>{team.sponsors.join(", ")}</span>
+                            {/if}
+                        </div>
+                        {#if team.website}
+                            <div class="meta-line">
+                                <a href={team.website} target="_blank" rel="noreferrer">
+                                    {prettyPrintURL(team.website)}
+                                </a>
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <Form id="season" noscriptSubmit>
+                        <SeasonSelect
+                            bind:season={$season}
+                            nonForm
+                            disabledValues={inactiveSeasons}
+                        />
+                    </Form>
+                </div>
+            </div>
         </Card>
 
         {#if team.quickStats}
             <QuickStats stats={team.quickStats} season={$season} />
+        {/if}
+
+        {#if sortedEvents.length}
+            <Card vis={false} style="margin-bottom: 0">
+                <h2 class="section-title">Events</h2>
+            </Card>
         {/if}
 
         {#each sortedEvents as tep}
@@ -184,34 +146,34 @@
                       }))
                   )
                 : event.teams ?? []}
-            <Card>
-                <h2 id={event.code}><a {href}>{event.name}</a></h2>
+            <Card panel style="margin-top: var(--md-gap)">
+                <div class="event-head">
+                    <h3 id={event.code}><a {href}>{event.name}</a></h3>
 
-                <InfoIconRow icon={faCalendarAlt}>
-                    {prettyPrintDateRangeString(event.start, event.end)}
-                </InfoIconRow>
+                    <div class="meta-line">
+                        <span>{prettyPrintDateRangeString(event.start, event.end)}</span>
+                        <span class="sep">&middot;</span>
+                        <Location {...event.location} />
+                    </div>
 
-                <InfoIconRow icon={faLocationDot}>
-                    <Location {...event.location} />
-                </InfoIconRow>
+                    <TeamEventStats
+                        stats={tep.stats}
+                        season={toSeason(event.season)}
+                        remote={event.remote}
+                    />
 
-                <TeamEventStats
-                    stats={tep.stats}
-                    season={toSeason(event.season)}
-                    remote={event.remote}
-                />
-
-                {#if tep.awards.length}
-                    <InfoIconRow icon={faMedal}>
-                        {#each tep.awards as award, i}
-                            <Award
-                                {award}
-                                comma={i != tep.awards.length - 1}
-                                season={event.season}
-                            />
-                        {/each}
-                    </InfoIconRow>
-                {/if}
+                    {#if tep.awards.length}
+                        <div>
+                            {#each tep.awards as award, i}
+                                <Award
+                                    {award}
+                                    comma={i != tep.awards.length - 1}
+                                    season={event.season}
+                                />
+                            {/each}
+                        </div>
+                    {/if}
+                </div>
 
                 <MatchTable
                     matches={tep.matches.map((m) => m.match)}
@@ -239,25 +201,108 @@
 <style>
     .header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: var(--lg-gap);
         flex-wrap: wrap;
         margin-top: var(--sm-gap);
-        margin-bottom: var(--lg-gap);
     }
 
-    .header h1 {
+    .identity {
+        display: flex;
+        flex-direction: column;
+        gap: var(--md-gap);
+        min-width: 0;
+    }
+
+    .title {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0 var(--md-gap);
+    }
+
+    h1 {
         margin: 0;
+        font-size: var(--xl-font-size);
+        font-weight: 600;
+        line-height: 1.15;
     }
 
-    h1,
-    h2 {
-        margin-top: var(--sm-gap);
-        margin-bottom: var(--lg-gap);
+    .number {
+        font-size: var(--lg-font-size);
+        color: var(--text-color);
     }
 
-    h2 a {
+    .meta {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sm-gap);
+
+        font-size: 0.9em;
+        color: var(--grayed-out-text-color);
+    }
+
+    .meta-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0 var(--md-gap);
+    }
+
+    .meta :global(a),
+    .event-head :global(.meta-line a) {
+        color: inherit;
+        text-decoration: underline;
+        text-decoration-color: color-mix(in srgb, currentColor 65%, transparent);
+        text-underline-offset: 2px;
+    }
+
+    .meta :global(a:hover) {
+        color: var(--text-color);
+        text-decoration-color: currentColor;
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--md-gap);
+    }
+
+    @media (max-width: 550px) {
+        .header,
+        .section-title {
+            padding-left: var(--md-pad);
+        }
+    }
+
+    .section-title {
+        margin: var(--sm-gap) 0 0;
+        font-size: calc(var(--lg-font-size) * 1.4);
+        font-weight: 600;
+    }
+
+    .event-head {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sm-gap);
+        margin-bottom: var(--md-gap);
+    }
+
+    .event-head .meta-line {
+        font-size: 0.9em;
+        color: var(--grayed-out-text-color);
+    }
+
+    h3 {
+        margin: 0;
+        font-size: calc(var(--lg-font-size) * 1.1);
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    h3 a {
         color: inherit;
     }
 

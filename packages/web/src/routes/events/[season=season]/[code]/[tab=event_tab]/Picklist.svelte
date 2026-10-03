@@ -21,6 +21,7 @@
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
     import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
+    import ConfirmModal from "$lib/components/ConfirmModal.svelte";
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -54,6 +55,8 @@
     let customValues: Record<number, Record<string, string | number | boolean>> = {};
     let pendingValueKeys = new Set<string>();
     let valueSaveTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+
+    let fieldToRemove: CustomFieldTy | null = null;
 
     let newFieldName = "";
     let newFieldType: string = "string";
@@ -371,7 +374,7 @@
                         <button
                             class="remove-field-btn"
                             title="Remove field"
-                            on:click={() => removeCustomField(field.id)}
+                            on:click={() => (fieldToRemove = field)}
                         >
                             ×
                         </button>
@@ -437,6 +440,15 @@
     </table>
 </div>
 {/if}
+
+<ConfirmModal
+    shown={fieldToRemove != null}
+    titleText="Delete field?"
+    close={() => (fieldToRemove = null)}
+    on:confirm={() => fieldToRemove && removeCustomField(fieldToRemove.id)}
+>
+    Delete "{fieldToRemove?.name}" and its values for every team? This can't be undone.
+</ConfirmModal>
 
 <style>
     .table-scroll-container {

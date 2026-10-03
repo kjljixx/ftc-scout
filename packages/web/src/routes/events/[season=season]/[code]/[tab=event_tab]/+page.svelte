@@ -432,6 +432,13 @@
         margin-bottom: var(--md-gap);
     }
 
+    @media (max-width: 550px) {
+        h1,
+        .meta {
+            padding-left: var(--md-pad);
+        }
+    }
+
     .meta {
         display: flex;
         flex-direction: column;

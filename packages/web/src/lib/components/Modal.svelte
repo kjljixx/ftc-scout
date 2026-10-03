@@ -30,7 +30,9 @@
             <div class="scroll-wrapper" tabindex="-1" use:quickFocus>
                 <slot />
             </div>
-            <button class="close" on:click={_close}> {closeText} </button>
+            <slot name="footer">
+                <button class="close" on:click={_close}> {closeText} </button>
+            </slot>
         </div>
     </div>
 {/if}
