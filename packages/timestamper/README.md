@@ -23,6 +23,21 @@ From Python, call `timestamp.timestamp_video(video_id, step_s=120)`. It returns 
 
 The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `timestamp.py`).
 
+## Worker
+
+`worker.py` runs jobs from the `timestamp_job` table (created by the server's TypeORM entities):
+
+1. It claims the oldest `Queued` job and marks it `Running`.
+2. It runs `timestamp_video` on the job's video.
+3. In one transaction it upserts one row per match into `match_video_timestamp` (key: season, event code, match id, video id) and marks the job `Done` with `matches_found`. If the video fails, the job is marked `Failed` with the error text.
+
+```
+python worker.py          # polls every 5 s until stopped
+python worker.py --once   # exits when the queue is empty
+```
+
+It reads `DATABASE_URL` from the environment, or from `../server/.env`. It assumes a single worker: at startup it re-queues every job still marked `Running`. Under PM2 it is the `timestamper` app in `ecosystem.config.cjs` and `ecosystem_prod.config.cjs` (`pm2 start ecosystem_prod.config.cjs --only timestamper`).
+
 ## Requirements
 
 - Python 3.10+ with `pip install -r requirements.txt`
@@ -30,6 +45,7 @@ The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `time
 
 ## Known limits
 
-- Tested on the Pennsylvania Championship Day 1 VOD only (10 of 10 matches found, frames agree to the second).
-- Matches are named by the label text. They are not yet matched to match IDs in the database.
-- Hard-coded to the 360p format (YouTube format ID 134) and the DECODE-season scoreboard icons.
+- Fully run on the Pennsylvania Championship (Days 1 and 2) and one Michiana division day. Frames from Niagara and Worlds VODs were only sampled.
+- Match labels "Qualification N" and "Playoff Match N" are mapped to match ids. Practice labels are skipped. Worlds Finale labels ("da Vinci Match N", "Finals N"), replays and 2-team finals are not handled yet.
+- Hard-coded to the 360p format (YouTube format ID 134), the DECODE-season scoreboard icons and an 8 s transition.
+- A match seen in only one frame has no cross-check. Matches with no readable frame are missing from the result.

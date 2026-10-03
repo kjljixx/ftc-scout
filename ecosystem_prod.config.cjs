@@ -17,6 +17,16 @@ module.exports = {
       env: {
         NODE_ENV: "production"
       }
+    },
+    {
+      name: "timestamper",
+      script: "worker.py",
+      cwd: "packages/timestamper",
+      interpreter: "python",
+      autorestart: true,
+      env: {
+        PYTHONUNBUFFERED: "1"
+      }
     }
   ]
 };

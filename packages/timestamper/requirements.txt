@@ -1,4 +1,6 @@
 av
 opencv-python
 numpy
+psycopg[binary]
+python-dotenv
 yt-dlp[default]
