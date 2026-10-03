@@ -1,4 +1,4 @@
-import cv2, subprocess
+import cv2, os, subprocess
 
 UPSCALE = 5
 BORDER_PX = 20
@@ -7,6 +7,7 @@ LABEL_TOP_IN_ICONS = -28 / 22
 LABEL_WIDTH_IN_ICONS = 230 / 22
 LABEL_HEIGHT_IN_ICONS = 24 / 22
 TESSERACT_CMD = ["tesseract", "stdin", "stdout", "--psm", "7"]
+NO_CONSOLE_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
 def label_crop(frame_gray, icon):
@@ -20,5 +21,5 @@ def label_crop(frame_gray, icon):
 
 def read_label(frame_gray, icon):
   _, png = cv2.imencode(".png", label_crop(frame_gray, icon))
-  text = subprocess.run(TESSERACT_CMD, input=png.tobytes(), capture_output=True).stdout.decode().strip()
+  text = subprocess.run(TESSERACT_CMD, input=png.tobytes(), capture_output=True, creationflags=NO_CONSOLE_WINDOW).stdout.decode().strip()
   return text or None

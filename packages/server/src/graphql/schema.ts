@@ -9,6 +9,7 @@ import {
     EventPicklistQueries,
     EventPicklistSubscriptions,
 } from "./resolvers/EventPicklist";
+import { TimestamperMutations, TimestamperQueries } from "./resolvers/Timestamper";
 
 const query = new GraphQLObjectType({
     name: "Query",
@@ -19,6 +20,7 @@ const query = new GraphQLObjectType({
         ...HomeQueries,
         ...BestNameQueries,
         ...EventPicklistQueries,
+        ...TimestamperQueries,
     },
 });
 
@@ -27,6 +29,7 @@ const mutation = new GraphQLObjectType({
     fields: {
         ...BestNameMutations,
         ...EventPicklistMutations,
+        ...TimestamperMutations,
     },
 });
 

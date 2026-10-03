@@ -11,4 +11,5 @@ export const SYNC_API = process.env.SYNC_API !== "0";
 export const CACHE_REQ = process.env.CACHE_REQ === "1" && IS_DEV;
 
 export const FRONTEND_CODE = process.env.FRONTEND_CODE;
+export const TIMESTAMPER_KEY = process.env.TIMESTAMPER_KEY;
 export const DB_TIMEOUT = process.env.DB_TIMEOUT;

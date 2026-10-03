@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Timestamper demo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; }
+    label { display: block; margin: 0.5em 0; }
+    input { width: 22em; padding: 0.3em; }
+    button { padding: 0.4em 1em; margin-right: 0.5em; }
+    #status { margin: 1em 0; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #ccc; padding: 0.3em 0.6em; text-align: left; }
+    tr.match { cursor: pointer; }
+    tr.match:hover { background: #eef; }
+    iframe { width: 100%; height: 420px; border: 0; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Timestamper demo</h1>
+  <label>Server <input id="server" value="http://localhost:4000/graphql"></label>
+  <label>Season <input id="season" value="2025"></label>
+  <label>Event code <input id="eventCode" value="USPACMP"></label>
+  <label>YouTube video (id or link) <input id="video" value="hL_qTq1LrSo"></label>
+  <label>Timestamper key <input id="key" type="password"></label>
+  <button id="run">Timestamp this video</button>
+  <button id="load">Show saved timestamps</button>
+
+  <div id="status"></div>
+  <table id="results" hidden>
+    <thead><tr><th>Match</th><th>Starts at</th><th>Frames</th><th>Link</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <iframe id="player" hidden allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+  <script>
+    const POLL_INTERVAL_MS = 2000;
+    const $ = (id) => document.getElementById(id);
+
+    async function graphql(query, variables) {
+      const response = await fetch($("server").value, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, variables }),
+      });
+      const body = await response.json();
+      if (body.errors) throw new Error(body.errors[0].message);
+      return body.data;
+    }
+
+    function videoId() {
+      const text = $("video").value.trim();
+      const found = text.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/) || text.match(/^([A-Za-z0-9_-]{11})$/);
+      if (!found) throw new Error("Could not find a YouTube video id in: " + text);
+      return found[1];
+    }
+
+    function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+
+    function play(video, startSeconds) {
+      $("player").hidden = false;
+      $("player").src = `https://www.youtube.com/embed/${video}?start=${startSeconds}&autoplay=1`;
+    }
+
+    async function showResults() {
+      const video = videoId();
+      const data = await graphql(
+        `query($season: Int!, $code: String!) {
+          eventByCode(season: $season, code: $code) {
+            name
+            matches { description videoTimestamps { videoId startSeconds frames url } }
+          }
+        }`,
+        { season: Number($("season").value), code: $("eventCode").value.trim() }
+      );
+      const rows = data.eventByCode.matches
+        .flatMap((m) => m.videoTimestamps.filter((t) => t.videoId === video).map((t) => ({ description: m.description, ...t })))
+        .sort((a, b) => a.startSeconds - b.startSeconds);
+
+      const body = $("results").querySelector("tbody");
+      body.innerHTML = "";
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        tr.className = "match";
+        tr.innerHTML = `<td>${row.description}</td><td>${formatTime(row.startSeconds)}</td><td>${row.frames}</td><td><a href="${row.url}" target="_blank">YouTube</a></td>`;
+        tr.onclick = (event) => { if (event.target.tagName !== "A") play(video, row.startSeconds); };
+        body.appendChild(tr);
+      }
+      $("results").hidden = rows.length === 0;
+      $("status").textContent = `${data.eventByCode.name}: ${rows.length} matches timestamped in this video. Click a row to play it here.`;
+    }
+
+    async function waitForJob(id) {
+      for (;;) {
+        const { timestampJob: job } = await graphql(
+          "query($id: Int!) { timestampJob(id: $id) { status matchesFound error } }",
+          { id }
+        );
+        $("status").textContent = `Job ${id}: ${job.status}` + (job.matchesFound != null ? `, ${job.matchesFound} matches` : "");
+        if (job.status === "Done") return;
+        if (job.status === "Failed") throw new Error(job.error);
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+    }
+
+    async function run() {
+      $("status").textContent = "Requesting...";
+      const { requestTimestamps: job } = await graphql(
+        `mutation($season: Int!, $eventCode: String!, $videoId: String!, $key: String!) {
+          requestTimestamps(season: $season, eventCode: $eventCode, videoId: $videoId, key: $key) { id status }
+        }`,
+        { season: Number($("season").value), eventCode: $("eventCode").value.trim(), videoId: videoId(), key: $("key").value }
+      );
+      await waitForJob(job.id);
+      await showResults();
+    }
+
+    function guarded(action) {
+      return () => action().catch((error) => { $("status").textContent = "Error: " + error.message; });
+    }
+
+    $("run").onclick = guarded(run);
+    $("load").onclick = guarded(showResults);
+  </script>
+</body>
+</html>

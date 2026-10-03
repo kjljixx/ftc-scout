@@ -38,6 +38,16 @@ python worker.py --once   # exits when the queue is empty
 
 It reads `DATABASE_URL` from the environment, or from `../server/.env`. It assumes a single worker: at startup it re-queues every job still marked `Running`. Under PM2 it is the `timestamper` app in `ecosystem.config.cjs` and `ecosystem_prod.config.cjs` (`pm2 start ecosystem_prod.config.cjs --only timestamper`).
 
+## GraphQL and demo
+
+The server (`packages/server/src/graphql/resolvers/Timestamper.ts`) exposes:
+
+- `mutation requestTimestamps(season, eventCode, videoId, key)`: queues a job (or returns the active one for the same event and video). `key` must equal `TIMESTAMPER_KEY` from `packages/server/.env`; the mutation is disabled if that is empty.
+- `query timestampJob(id)` and `query timestampJobs(season, eventCode)`: job status.
+- `Match.videoTimestamps`: for each video, `startSeconds`, `frames`, `agreeingFrames` and a YouTube `url` with `&t=`.
+
+`demo.html` is a single-file page that calls these: enter the event, a YouTube video and the key, press "Timestamp this video", and click a match to play it from its start. "Show saved timestamps" needs no key. Serve it from any local static server (for example `python -m http.server 8791` in this folder) and open `http://127.0.0.1:8791/demo.html`.
+
 ## Requirements
 
 - Python 3.10+ with `pip install -r requirements.txt`

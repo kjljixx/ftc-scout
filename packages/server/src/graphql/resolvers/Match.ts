@@ -1,8 +1,10 @@
 import { GraphQLObjectType, GraphQLResolveInfo } from "graphql";
-import { dataLoaderResolverSingle, keyListToWhereClause } from "../utils";
+import { dataLoaderResolverList, dataLoaderResolverSingle, keyListToWhereClause } from "../utils";
 import { BoolTy, DateTimeTy, IntTy, StrTy, list, nn, nullTy } from "@ftc-scout/common";
 import { Match } from "../../db/entities/Match";
 import { Event } from "../../db/entities/Event";
+import { MatchVideoTimestamp } from "../../db/entities/MatchVideoTimestamp";
+import { MatchVideoTimestampGQL } from "./Timestamper";
 import { TournamentLevelGQL } from "./enums";
 import { Season } from "@ftc-scout/common";
 import { MatchScoresUnionGQL } from "../dyn/dyn-types-schema";
@@ -39,6 +41,18 @@ export const MatchGQL: GraphQLObjectType = new GraphQLObjectType({
             resolve: (m) => frontendMSFromDB(m.scores),
         },
         teams: { type: list(nn(TeamMatchParticipationGQL)) },
+
+        videoTimestamps: {
+            type: list(nn(MatchVideoTimestampGQL)),
+            resolve: dataLoaderResolverList<
+                Match,
+                MatchVideoTimestamp,
+                { season: Season; eventCode: string; matchId: number }
+            >(
+                (m) => ({ season: m.eventSeason, eventCode: m.eventCode, matchId: m.id }),
+                (keys) => MatchVideoTimestamp.find({ where: keys })
+            ),
+        },
 
         event: {
             type: nn(EventGQL),
