@@ -304,7 +304,7 @@
 
     @media (max-width: 640px) {
         tr {
-            min-height: 56px;
+            min-height: 54px;
         }
 
         .cell {
@@ -324,8 +324,13 @@
             align-items: stretch;
         }
 
+        .alliance {
+            padding: var(--sm-pad);
+        }
+
         .teams {
             grid-template-columns: minmax(0, 1fr);
+            gap: 2px;
         }
     }
 </style>

@@ -81,7 +81,7 @@
     <div class="description">{labelNumber}</div>
 </td>
 
-<td class="center" class:hasScores={match.scores} use:tippy={tip} on:click={() => show(match)}>
+<td class="center" class:hasScores={match.scores} class:unplayed={!match.scores} use:tippy={tip} on:click={() => show(match)}>
     {#if match.scores == undefined}
         <div class="time">{prettyPrintTimeString(match.scheduledStartTime, timeZone)}</div>
     {:else if "red" in match.scores}
@@ -170,7 +170,11 @@
 
     .time {
         color: var(--grayed-out-text-color);
-        font-size: 0.9em;
+        font-size: 0.75em;
+    }
+
+    .unplayed .pred {
+        font-size: 1.15em;
     }
 
     .score,
@@ -237,7 +241,7 @@
     @media (max-width: 640px) {
         .dots {
             top: -6px;
-            --dot-stride: 6px;
+            --dot-stride: 5px;
             --dot-size: 4px;
         }
     }

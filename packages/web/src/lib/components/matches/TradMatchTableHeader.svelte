@@ -1,10 +1,26 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+
+    let header: HTMLElement;
+    let stuck = false;
+
+    onMount(() => {
+        const content = document.getElementById("content");
+        if (!content) return;
+        const update = () => {
+            stuck = header.getBoundingClientRect().top <= content.getBoundingClientRect().top;
+        };
+        update();
+        content.addEventListener("scroll", update, { passive: true });
+        return () => content.removeEventListener("scroll", update);
+    });
+
     function scrollToTop() {
         document.getElementById("content")?.scrollTo({ top: 0, behavior: "smooth" });
     }
 </script>
 
-<thead>
+<thead bind:this={header} class:stuck>
     <tr
         role="button"
         tabindex="0"
@@ -24,13 +40,17 @@
 
         position: sticky;
         top: calc(var(--md-pad) * -1);
-        z-index: 1;
+        z-index: 3;
 
         background: var(--raised-bg-color);
         border-radius: 8px;
         box-shadow:
             0 4px 12px rgba(0, 0, 0, 0.35),
             0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    thead.stuck {
+        border-radius: 0 0 8px 8px;
     }
 
     tr {

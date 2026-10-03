@@ -225,19 +225,22 @@
 
     @media (max-width: 640px) {
         td.trad .name {
-            font-size: 0.9em;
+            font-size: 1.15em;
             order: 0;
+            min-width: 0;
             overflow: hidden;
-            text-overflow: ellipsis;
+            text-overflow: clip;
         }
 
         td.trad .num {
-            font-size: 0.8em;
+            font-size: 0.85em;
             font-weight: 400;
             color: var(--grayed-out-text-color);
         }
 
         td.trad .inner {
+            padding: 2px var(--md-pad);
+            text-overflow: clip;
             flex-direction: row;
             align-items: baseline;
             justify-content: flex-start;

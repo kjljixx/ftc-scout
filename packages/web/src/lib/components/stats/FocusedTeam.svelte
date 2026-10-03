@@ -168,6 +168,11 @@
         }
 
         .name {
+            font-size: var(--lg-font-size);
+        }
+
+        .number,
+        .label {
             font-size: var(--md-font-size);
         }
 
@@ -177,7 +182,7 @@
         }
 
         .value {
-            font-size: var(--md-font-size);
+            font-size: var(--lg-font-size);
         }
     }
 </style>

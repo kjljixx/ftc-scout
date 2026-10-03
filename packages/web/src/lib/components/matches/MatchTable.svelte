@@ -225,7 +225,7 @@
 
     @media (max-width: 640px) {
         table {
-            --trad-match-cols: 2.2em 1fr 7.75em 1fr;
+            --trad-match-cols: 2.2em 1fr 6.5em 1fr;
         }
     }
 
