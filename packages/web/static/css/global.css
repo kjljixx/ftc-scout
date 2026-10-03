@@ -256,7 +256,7 @@ body.dark {
     --thick-border-width: 1px;
 
     --team-text-color: var(--text-color);
-    --navbar-bg-color: var(--fg-color);
+    --navbar-bg-color: var(--raised-bg-color);
     --logo-accent-color: var(--inline-theme-color);
     --red-team-header-bg-color: rgba(var(--red-team-color-vs), 0.2);
     --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);
@@ -351,7 +351,7 @@ body.dark .render-light {
         --thick-border-width: 1px;
 
         --team-text-color: var(--text-color);
-        --navbar-bg-color: var(--fg-color);
+        --navbar-bg-color: var(--raised-bg-color);
         --logo-accent-color: var(--inline-theme-color);
         --red-team-header-bg-color: rgba(var(--red-team-color-vs), 0.2);
         --blue-team-header-bg-color: rgba(var(--blue-team-color-vs), 0.2);

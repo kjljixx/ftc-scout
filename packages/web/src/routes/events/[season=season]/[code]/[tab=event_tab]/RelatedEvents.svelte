@@ -67,7 +67,7 @@
         gap: 2px;
         padding: 2px;
 
-        background: var(--fg-color);
+        background: var(--raised-bg-color);
         border-radius: 8px;
     }
 
