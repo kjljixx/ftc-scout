@@ -8,6 +8,7 @@
     import DeLives from "./DELives.svelte";
     import MatchScore, { computeWinner } from "./MatchScore.svelte";
     import MatchTeam from "./MatchTeam.svelte";
+    import { predictScores } from "./match-prediction";
 
     export let match: FullMatchFragment;
     export let allMatches: FullMatchFragment[] = [];
@@ -44,46 +45,7 @@
 
     $: winner = computeWinner(match.scores);
 
-    $: useNp = true;
-    $: npStat = useNp ? ("totalPointsNp" as const) : ("totalPoints" as const);
-
-    function matchesPlayedSoFar(teamNumber: number): number {
-        return allMatches.filter(
-            (m) =>
-                m.tournamentLevel === TournamentLevel.Quals &&
-                m.scores !== null &&
-                m.teams.some((t) => t.teamNumber === teamNumber && !t.noShow && !t.dq && t.onField)
-        ).length;
-    }
-
-    function weightedOpr(teamNumber: number): number {
-        const matchEventTeam = eventTeams.find((et) => et.team.number === teamNumber);
-        const previousBestOpr = matchEventTeam?.previousBestOpr ?? null;
-        const currentOpr = matchEventTeam?.stats?.opr?.[npStat] ?? null;
-        if (currentOpr !== null && previousBestOpr == null) return currentOpr;
-        if (currentOpr == null && previousBestOpr !== null) return previousBestOpr;
-        if (currentOpr == null && previousBestOpr == null) return 0;
-
-        const currentWeight =
-            allMatches.filter((m) => m.tournamentLevel === TournamentLevel.Quals).length > 0
-                ? Math.min(matchesPlayedSoFar(teamNumber) / 5, 1)
-                : 1;
-        return currentWeight * currentOpr + (1 - currentWeight) * previousBestOpr;
-    }
-
-    $: redOprSum = redTeams
-        .map((rt) => {
-            if (rt.noShow || rt.dq || !rt.onField) return 0;
-            return weightedOpr(rt.teamNumber);
-        })
-        .reduce((a, b) => a + b, 0);
-
-    $: blueOprSum = blueTeams
-        .map((bt) => {
-            if (bt.noShow || bt.dq || !bt.onField) return 0;
-            return weightedOpr(bt.teamNumber);
-        })
-        .reduce((a, b) => a + b, 0);
+    $: ({ red: redOprSum, blue: blueOprSum } = predictScores(match, allMatches, eventTeams));
 
     function hasAlreadyLost(series: number, teamCount: number, alliance: Alliance): boolean {
         if (teamCount <= 10) {

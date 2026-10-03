@@ -15,9 +15,11 @@
     import TradMatchRow from "./TradMatchRow.svelte";
     import TradMatchTableHeader from "./TradMatchTableHeader.svelte";
     import RemoteMatches from "./RemoteMatches.svelte";
+    import Bracket from "./Bracket.svelte";
+    import { bracketLayoutFor } from "./bracket-layout";
     import { page } from "$app/stores";
     import ScoreModal from "./score-modal/ScoreModal.svelte";
-    import { setContext } from "svelte";
+    import { onMount, setContext, tick } from "svelte";
     import { queryParam } from "../../util/search-params/search-params";
     import { faHeart, faHeartBroken } from "@fortawesome/free-solid-svg-icons";
     import { faHeart as faHeartOutline } from "@fortawesome/free-regular-svg-icons";
@@ -69,6 +71,33 @@
         event.allianceCount || allianceCountFromSeries(allMatches.length ? allMatches : matches);
     $: teamCount = allianceCount > 6 ? 41 : allianceCount > 4 ? 40 : allianceCount > 0 ? 20 : 0;
 
+    $: bracketLayout = bracketLayoutFor(allianceCount);
+    $: bracketMatches = allMatches.filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim);
+    $: bracketAvailable = !remote && !!bracketLayout && bracketMatches.length > 0;
+    let bracketView = false;
+    $: showBracket = bracketView && bracketAvailable;
+
+    const HEADER_HEIGHT = 40;
+    let bracketRow: HTMLElement | null = null;
+    let bracketPassed = false;
+
+    function updateBracketPassed() {
+        let content = document.getElementById("content");
+        if (!content || !bracketRow) return;
+        bracketPassed =
+            bracketRow.getBoundingClientRect().bottom <=
+            content.getBoundingClientRect().top + HEADER_HEIGHT;
+    }
+
+    $: if (showBracket) tick().then(updateBracketPassed);
+    $: if (!showBracket) bracketPassed = false;
+
+    onMount(() => {
+        let content = document.getElementById("content");
+        content?.addEventListener("scroll", updateBracketPassed, { passive: true });
+        return () => content?.removeEventListener("scroll", updateBracketPassed);
+    });
+
     let modalShown = false;
     let modalMatch: FullMatchFragment | null;
 
@@ -105,7 +134,7 @@
     {#if remote}
         <RemoteMatchTableHeader />
     {:else}
-        <TradMatchTableHeader />
+        <TradMatchTableHeader hidden={showBracket && !bracketPassed} />
     {/if}
 
     <tbody>
@@ -123,21 +152,49 @@
                 {/each}
             {:else}
                 {#if doubleElim.length}
-                    <SectionRow name={"Playoffs"} />
+                    <SectionRow name={"Playoffs"}>
+                        {#if bracketAvailable}
+                            <div class="view-toggle">
+                                <button class:active={!bracketView} on:click={() => (bracketView = false)}>
+                                    List
+                                </button>
+                                <button class:active={bracketView} on:click={() => (bracketView = true)}>
+                                    Bracket
+                                </button>
+                            </div>
+                        {/if}
+                    </SectionRow>
                 {/if}
-                {#each doubleElim as match}
-                    <TradMatchRow
-                        {match}
-                        {allMatches}
-                        {eventCode}
-                        {season}
-                        {timeZone}
-                        {focusedTeam}
-                        {teamCount}
-                        {showNonPenaltyScores}
-                        {eventTeams}
-                    />
-                {/each}
+                {#if showBracket && bracketLayout}
+                    <tr class="bracket-row" bind:this={bracketRow}>
+                        <td>
+                            <Bracket
+                                layout={bracketLayout}
+                                matches={bracketMatches}
+                                {allMatches}
+                                {eventTeams}
+                                {eventCode}
+                                {season}
+                                {focusedTeam}
+                                {showNonPenaltyScores}
+                            />
+                        </td>
+                    </tr>
+                {:else}
+                    {#each doubleElim as match}
+                        <TradMatchRow
+                            {match}
+                            {allMatches}
+                            {eventCode}
+                            {season}
+                            {timeZone}
+                            {focusedTeam}
+                            {teamCount}
+                            {showNonPenaltyScores}
+                            {eventTeams}
+                        />
+                    {/each}
+                {/if}
                 {#if finals.length}
                     <SectionRow name={"Finals"} />
                 {/if}
@@ -254,6 +311,45 @@
     }
     table tbody :global(tr:last-child) :global(td:last-child) {
         border-bottom-right-radius: 7px;
+    }
+
+    .view-toggle {
+        display: inline-flex;
+        gap: 2px;
+        padding: 2px;
+
+        background: var(--bg-color);
+        border-radius: 8px;
+    }
+
+    .view-toggle button {
+        padding: var(--md-pad) calc(var(--lg-pad) * 1.5);
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+
+        color: var(--grayed-out-text-color);
+        font: inherit;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: normal;
+        cursor: pointer;
+    }
+
+    .view-toggle button:hover {
+        background: var(--hover-color);
+        color: var(--text-color);
+    }
+
+    .view-toggle button.active {
+        background: var(--sep-color);
+        color: var(--text-color);
+        font-weight: 600;
+    }
+
+    .bracket-row,
+    .bracket-row td {
+        display: block;
     }
 
     .info {

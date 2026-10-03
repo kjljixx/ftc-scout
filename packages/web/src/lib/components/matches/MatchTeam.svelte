@@ -17,6 +17,7 @@
     export let span: number;
     export let trad = false;
     export let benched = false;
+    export let compact = false;
 
     $: number = team.team.number;
     $: name = team.team.name;
@@ -50,6 +51,7 @@
     class:winner
     class:trad
     class:benched
+    class:compact
     {title}
 >
     <a
@@ -179,6 +181,10 @@
         color: var(--grayed-out-text-color);
     }
 
+    td.trad.compact .inner {
+        padding: var(--compact-pad-y, 2px) var(--md-pad);
+    }
+
     td.trad.focused .inner {
         box-shadow: inset 0 0 0 2px var(--focused-team-ring-color);
     }
@@ -245,6 +251,21 @@
             align-items: baseline;
             justify-content: flex-start;
             gap: var(--sm-gap);
+        }
+    }
+
+    @media (max-width: 640px) {
+        td.trad.compact .name {
+            order: -1;
+            font-size: 1.15em;
+            text-overflow: ellipsis;
+        }
+
+        td.trad.compact .inner {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0;
+            text-overflow: ellipsis;
         }
     }
 </style>

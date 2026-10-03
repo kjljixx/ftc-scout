@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
 
     let header: HTMLElement;
+    export let hidden = false;
     let stuck = false;
 
     onMount(() => {
@@ -20,7 +21,7 @@
     }
 </script>
 
-<thead bind:this={header} class:stuck>
+<thead bind:this={header} class:stuck class:hidden>
     <tr
         role="button"
         tabindex="0"
@@ -47,6 +48,12 @@
         box-shadow:
             0 4px 12px rgba(0, 0, 0, 0.35),
             0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    thead.hidden {
+        margin-bottom: -40px;
+        opacity: 0;
+        pointer-events: none;
     }
 
     thead.stuck {

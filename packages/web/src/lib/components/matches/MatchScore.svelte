@@ -15,6 +15,14 @@
         }
     }
 
+    export function scoreValue(score: any, showNonPenaltyScores: boolean): number {
+        if (!score || !("totalPoints" in score)) return 0;
+        if (showNonPenaltyScores && "totalPointsNp" in score && score.totalPointsNp != null) {
+            return score.totalPointsNp;
+        }
+        return score.totalPoints;
+    }
+
     export type TradScoresTy = NonNullable<
         Exclude<FullMatchFragment["scores"], { __typename: `${string}Remote` }>
     >;
@@ -67,14 +75,6 @@
     $: tip = matchTimeTip(match, timeZone, $tippyTheme);
 
     let show: ShowMatchFn = getContext(SHOW_MATCH_SCORE);
-
-    function scoreValue(score: any): number {
-        if (!score || !("totalPoints" in score)) return 0;
-        if (showNonPenaltyScores && "totalPointsNp" in score && score.totalPointsNp != null) {
-            return score.totalPointsNp;
-        }
-        return score.totalPoints;
-    }
 </script>
 
 <td class="label" id="{match.eventCode}-{match.id}">
@@ -96,11 +96,11 @@
                     </div>
                 {/if}
 
-                {scoreValue(match.scores.red)}
+                {scoreValue(match.scores.red, showNonPenaltyScores)}
             </div>
             <div class="minus">-</div>
             <div class="right" class:winner={winner == Alliance.Blue} class:tie={winner == "Tie"}>
-                {scoreValue(match.scores.blue)}
+                {scoreValue(match.scores.blue, showNonPenaltyScores)}
 
                 {#if match.season == Season.Decode && match.tournamentLevel == TournamentLevel.Quals}
                     <div class="dots blue">
@@ -112,7 +112,7 @@
             </div>
         </div>
     {:else}
-        <div class="score"><b>{scoreValue(match.scores)}</b></div>
+        <div class="score"><b>{scoreValue(match.scores, showNonPenaltyScores)}</b></div>
     {/if}
 
     <div class="pred">
