@@ -8,13 +8,16 @@ Finds the start time of each match in a YouTube livestream VOD of an FTC event.
 2. `icon_locator.py` finds the robot, hand or gamepad icon above the match clock. The icon gives the match phase (auto, transition, teleop).
 3. `clock_getter.py` reads the match clock below the icon by matching each digit against the templates in `tpl/digits/`.
 4. `label_getter.py` reads the match label (for example "Qualification 9 of 50") above the icon.
-5. `timestamp.py` computes the match start from phase and clock, then merges the results for each match.
+5. `match_resolver.py` turns the label text into a match: it finds the level word and the number (ignoring junk letters around them) and computes the match id with the same formula as the server's `Match` entity (`level × 10000 + series × 1000 + matchNum`). Practice labels are skipped.
+6. `timestamp.py` computes the match start from phase and clock, then merges the results for each match.
 
 ## Usage
 
 ```
 python timestamp.py <youtube_video_id> [--step 120] [--transition 8] [--json]
 ```
+
+The table shows the match description (`Q-9`, `M-3`). The `--json` output also has the match id. The video must belong to one event (for a division event, one division); the caller decides which event the ids refer to.
 
 `--transition` is the pause between autonomous and teleop in seconds: 8 at Pennsylvania, 15 at the 2026 FIRST Championship.
 

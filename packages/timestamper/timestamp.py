@@ -1,7 +1,7 @@
-import argparse, json, re, statistics, time
+import argparse, json, statistics, time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-import clock_getter, frame_fetcher, icon_locator, label_getter
+import clock_getter, frame_fetcher, icon_locator, label_getter, match_resolver
 from stage_timer import timer
 
 AUTO_S = 30
@@ -9,12 +9,6 @@ TELEOP_S = 120
 MATCH_CLOCK_S = 150
 OUTLIER_S = 5
 PROCESS_WORKERS = 8
-LABEL_PATTERN = re.compile(r"([A-Za-z][A-Za-z' ]*?)\s*(\d+)(?:\s+of\s+\d+)?(?!\d)")
-
-
-def match_key(label):
-  found = LABEL_PATTERN.search(label)
-  return f"{found.group(1).strip()} {found.group(2)}" if found else None
 
 
 def match_start_s(frame_time_s, phase, clock_s, transition_s):
@@ -28,13 +22,15 @@ def match_start_s(frame_time_s, phase, clock_s, transition_s):
 
 def merge(readings):
   by_match = defaultdict(list)
-  for key, start_s in readings:
+  descriptions = {}
+  for key, description, start_s in readings:
     by_match[key].append(start_s)
+    descriptions[key] = description
   results = []
   for key, starts in by_match.items():
     median = statistics.median(starts)
     agreeing = [s for s in starts if abs(s - median) <= OUTLIER_S]
-    results.append({"match": key, "start_s": round(statistics.median(agreeing)), "frames": len(starts), "agreeing": len(agreeing), "spread_s": round(max(agreeing) - min(agreeing))})
+    results.append({"key": key, "match": descriptions[key], "start_s": round(statistics.median(agreeing)), "frames": len(starts), "agreeing": len(agreeing), "spread_s": round(max(agreeing) - min(agreeing))})
   return sorted(results, key=lambda r: r["start_s"])
 
 
@@ -44,24 +40,25 @@ def hms(seconds):
 
 def process_frame(time_s, frame, transition_s):
   if frame is None:
-    return "no_frame", None, None
+    return "no_frame", None
   with timer.time("locate_icon"):
     icon = icon_locator.locate_icon(frame)
   if not icon:
-    return "no_icon", None, None
+    return "no_icon", None
   with timer.time("read_clock"):
     clock_s = clock_getter.read_clock(frame, icon)
   if clock_s is None:
-    return "no_clock", None, None
+    return "no_clock", None
   with timer.time("read_label"):
     label = label_getter.read_label(frame, icon)
   if not label:
-    return "no_label", None, None
-  key = match_key(label)
-  if not key:
-    print(f"warn unparseable label {label!r} at {time_s:.0f}s", flush=True)
-    return "bad_label", None, None
-  return "used", key, match_start_s(time_s, icon["phase"], clock_s, transition_s)
+    return "no_label", None
+  outcome, key, description = match_resolver.resolve_label(label)
+  if outcome == "unparsed":
+    print(f"warn unparsed label {label!r} at {time_s:.0f}s", flush=True)
+  if outcome != "ok":
+    return outcome, None
+  return "used", (key, description, match_start_s(time_s, icon["phase"], clock_s, transition_s))
 
 
 def main():
@@ -74,15 +71,15 @@ def main():
   print(f"config video={args.video_id} step={args.step}s transition={args.transition}s outlier={OUTLIER_S}s process_workers={PROCESS_WORKERS}", flush=True)
 
   began = time.time()
-  counts = {"frames": 0, "no_frame": 0, "no_icon": 0, "no_clock": 0, "no_label": 0, "bad_label": 0, "used": 0}
+  counts = {"frames": 0, "no_frame": 0, "no_icon": 0, "no_clock": 0, "no_label": 0, "unparsed": 0, "practice": 0, "used": 0}
   readings = []
   frames = timer.iterate("wait_for_frame", frame_fetcher.fetch_frames(args.video_id, args.step))
   with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
-    for outcome, key, start_s in pool.map(lambda frame_args: process_frame(*frame_args, args.transition), frames):
+    for outcome, reading in pool.map(lambda frame_args: process_frame(*frame_args, args.transition), frames):
       counts["frames"] += 1
       counts[outcome] += 1
       if outcome == "used":
-        readings.append((key, start_s))
+        readings.append(reading)
 
   with timer.time("merge"):
     matches = merge(readings)
