@@ -1,0 +1,7 @@
+mutation RequestTimestamps($season: Int!, $eventCode: String!, $videoId: String!) {
+    requestTimestamps(season: $season, eventCode: $eventCode, videoId: $videoId) {
+        id
+        videoId
+        status
+    }
+}

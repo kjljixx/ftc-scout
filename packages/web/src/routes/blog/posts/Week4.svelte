@@ -4,7 +4,7 @@
     import BlogTemplate from "../BlogTemplate.svelte";
 
     import * as data_ from "../data/USGADOUGM1.json";
-    let data = data_ as BlogMatchImport;
+    let data = data_ as unknown as BlogMatchImport;
 </script>
 
 <BlogTemplate slug="whats-up-with-power-play">

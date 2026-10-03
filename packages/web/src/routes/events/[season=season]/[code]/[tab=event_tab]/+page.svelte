@@ -25,6 +25,12 @@
     import { goto } from "$app/navigation";
     import { browser } from "$app/environment";
     import { onDestroy, setContext } from "svelte";
+    import { writable } from "svelte/store";
+    import {
+        LIVESTREAM_VIDEOS_CTX,
+        youtubeVideoId,
+        type LivestreamVideos,
+    } from "$lib/timestamps/timestampToast";
     import { createPicklistSyncHandle } from "$lib/picklist/picklistSync";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
@@ -168,6 +174,19 @@
         const bDate = getDateOnly(b.day).getTime();
         return aDate - bDate;
     });
+
+    const livestreamVideos = writable<LivestreamVideos | undefined>(undefined);
+    setContext(LIVESTREAM_VIDEOS_CTX, livestreamVideos);
+    $: livestreamVideoIds = [
+        ...new Set(
+            [...sortedLivestreams.map((ls) => ls.liveStreamURL), event?.liveStreamURL]
+                .map((url) => youtubeVideoId(url))
+                .filter(notEmpty)
+        ),
+    ];
+    $: livestreamVideos.set(
+        event ? { eventCode: event.code, videoIds: livestreamVideoIds } : undefined
+    );
 
     $: currentDayLivestream =
         livestreamsByDay.find((ls) => {

@@ -4,10 +4,10 @@
     import BlogTemplate from "../BlogTemplate.svelte";
 
     import * as data1_ from "../data/USIAMALT.json";
-    let data1 = data1_ as BlogMatchImport;
+    let data1 = data1_ as unknown as BlogMatchImport;
 
     import * as data2_ from "../data/USNJNOM2.json";
-    let data2 = data2_ as BlogMatchImport;
+    let data2 = data2_ as unknown as BlogMatchImport;
 </script>
 
 <BlogTemplate slug="circuitous-circuits">

@@ -1,0 +1,21 @@
+query TimestampProgress($season: Int!, $eventCode: String!) {
+    timestampJobs(season: $season, eventCode: $eventCode) {
+        id
+        videoId
+        status
+    }
+    eventByCode(season: $season, code: $eventCode) {
+        season
+        code
+        matches {
+            season
+            eventCode
+            id
+            videoTimestamps {
+                videoId
+                startSeconds
+                url
+            }
+        }
+    }
+}

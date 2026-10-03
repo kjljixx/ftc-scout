@@ -4,7 +4,7 @@
     import BlogTemplate from "../BlogTemplate.svelte";
 
     import * as data_ from "../data/USTXHOSLLT.json";
-    let data = data_ as BlogMatchImport;
+    let data = data_ as unknown as BlogMatchImport;
 </script>
 
 <BlogTemplate slug="worst-surrogacy">

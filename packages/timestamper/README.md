@@ -42,11 +42,11 @@ It reads `DATABASE_URL` from the environment, or from `../server/.env`. It assum
 
 The server (`packages/server/src/graphql/resolvers/Timestamper.ts`) exposes:
 
-- `mutation requestTimestamps(season, eventCode, videoId, key)`: queues a job (or returns the active one for the same event and video). `key` must equal `TIMESTAMPER_KEY` from `packages/server/.env`; the mutation is disabled if that is empty.
+- `mutation requestTimestamps(season, eventCode, videoId)`: queues a job. It needs no key, so anyone can choose which video is linked from an event's matches. It returns the existing job if one for the same event and video is waiting, running, or finished within the last 10 minutes, and it refuses new jobs while 20 are already waiting.
 - `query timestampJob(id)` and `query timestampJobs(season, eventCode)`: job status.
 - `Match.videoTimestamps`: for each video, `startSeconds`, `frames`, `agreeingFrames` and a YouTube `url` with `&t=`.
 
-`demo.html` is a single-file page that calls these: enter the event, a YouTube video and the key, press "Timestamp this video", and click a match to play it from its start. "Show saved timestamps" needs no key. Serve it from any local static server (for example `python -m http.server 8791` in this folder) and open `http://127.0.0.1:8791/demo.html`.
+`demo.html` is a single-file page that calls these: enter the event and a YouTube video, press "Timestamp this video", and click a match to play it from its start. "Show saved timestamps" only reads existing results. Serve it from any local static server (for example `python -m http.server 8791` in this folder) and open `http://127.0.0.1:8791/demo.html`.
 
 ## Requirements
 

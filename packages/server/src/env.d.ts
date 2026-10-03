@@ -13,6 +13,5 @@ declare namespace NodeJS {
 
         // Secrets
         FRONTEND_CODE: string;
-        TIMESTAMPER_KEY: string;
     }
 }

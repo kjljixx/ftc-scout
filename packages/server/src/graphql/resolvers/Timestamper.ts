@@ -1,13 +1,18 @@
 import { GraphQLFieldConfig, GraphQLObjectType } from "graphql";
 import { DateTimeTy, IntTy, Season, StrTy, list, makeGQLEnum, nn, nullTy } from "@ftc-scout/common";
-import { In } from "typeorm";
-import { TIMESTAMPER_KEY } from "../../constants";
 import { Event } from "../../db/entities/Event";
 import { MatchVideoTimestamp } from "../../db/entities/MatchVideoTimestamp";
 import { TimestampJob, TimestampJobStatus } from "../../db/entities/TimestampJob";
 
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const RECENT_JOB_COUNT = 20;
+const MAX_QUEUED_JOBS = 20;
+const REPEAT_COOLDOWN_MS = 10 * 60 * 1000;
+
+function isActiveOrRecentlyFinished(job: TimestampJob): boolean {
+    if (job.status == TimestampJobStatus.Queued || job.status == TimestampJobStatus.Running) return true;
+    return job.finishedAt != null && Date.now() - job.finishedAt.getTime() < REPEAT_COOLDOWN_MS;
+}
 
 export const TimestampJobStatusGQL = makeGQLEnum(TimestampJobStatus, "TimestampJobStatus");
 
@@ -63,24 +68,26 @@ export const TimestamperQueries: Record<string, GraphQLFieldConfig<any, any>> = 
 export const TimestamperMutations: Record<string, GraphQLFieldConfig<any, any>> = {
     requestTimestamps: {
         type: nn(TimestampJobGQL),
-        args: { season: IntTy, eventCode: StrTy, videoId: StrTy, key: StrTy },
+        args: { season: IntTy, eventCode: StrTy, videoId: StrTy },
         resolve: async (
             _,
-            { season, eventCode, videoId, key }: { season: Season; eventCode: string; videoId: string; key: string }
+            { season, eventCode, videoId }: { season: Season; eventCode: string; videoId: string }
         ) => {
-            if (!TIMESTAMPER_KEY || key !== TIMESTAMPER_KEY) throw new Error("Invalid timestamper key.");
             if (!VIDEO_ID_PATTERN.test(videoId)) throw new Error(`Invalid YouTube video id: ${videoId}`);
             if (!(await Event.findOneBy({ season, code: eventCode }))) {
                 throw new Error(`No event ${eventCode} in season ${season}.`);
             }
 
-            let activeJob = await TimestampJob.findOneBy({
-                season,
-                eventCode,
-                videoId,
-                status: In([TimestampJobStatus.Queued, TimestampJobStatus.Running]),
+            let latestJob = await TimestampJob.findOne({
+                where: { season, eventCode, videoId },
+                order: { id: "DESC" },
             });
-            return activeJob ?? (await TimestampJob.create({ season, eventCode, videoId }).save());
+            if (latestJob && isActiveOrRecentlyFinished(latestJob)) return latestJob;
+
+            let queuedJobs = await TimestampJob.countBy({ status: TimestampJobStatus.Queued });
+            if (queuedJobs >= MAX_QUEUED_JOBS) throw new Error("Too many timestamp jobs are waiting. Try again later.");
+
+            return TimestampJob.create({ season, eventCode, videoId }).save();
         },
     },
 };

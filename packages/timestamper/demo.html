@@ -22,7 +22,6 @@
   <label>Season <input id="season" value="2025"></label>
   <label>Event code <input id="eventCode" value="USPACMP"></label>
   <label>YouTube video (id or link) <input id="video" value="hL_qTq1LrSo"></label>
-  <label>Timestamper key <input id="key" type="password"></label>
   <button id="run">Timestamp this video</button>
   <button id="load">Show saved timestamps</button>
 
@@ -111,10 +110,10 @@
     async function run() {
       $("status").textContent = "Requesting...";
       const { requestTimestamps: job } = await graphql(
-        `mutation($season: Int!, $eventCode: String!, $videoId: String!, $key: String!) {
-          requestTimestamps(season: $season, eventCode: $eventCode, videoId: $videoId, key: $key) { id status }
+        `mutation($season: Int!, $eventCode: String!, $videoId: String!) {
+          requestTimestamps(season: $season, eventCode: $eventCode, videoId: $videoId) { id status }
         }`,
-        { season: Number($("season").value), eventCode: $("eventCode").value.trim(), videoId: videoId(), key: $("key").value }
+        { season: Number($("season").value), eventCode: $("eventCode").value.trim(), videoId: videoId() }
       );
       await waitForJob(job.id);
       await showResults();

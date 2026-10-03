@@ -45,7 +45,13 @@
     import { tippyTheme } from "../nav/DarkModeToggle.svelte";
     import { matchTimeTip } from "../../util/tippy";
     import { getContext } from "svelte";
+    import { readable, type Readable } from "svelte/store";
     import { SHOW_MATCH_SCORE, type ShowMatchFn } from "./MatchTable.svelte";
+    import {
+        LIVESTREAM_VIDEOS_CTX,
+        requestMatchTimestamp,
+        type LivestreamVideos,
+    } from "$lib/timestamps/timestampToast";
 
     export let match: FullMatchFragment;
     export let timeZone: string;
@@ -75,9 +81,29 @@
     $: tip = matchTimeTip(match, timeZone, $tippyTheme);
 
     let show: ShowMatchFn = getContext(SHOW_MATCH_SCORE);
+
+    const livestreamStore: Readable<LivestreamVideos | undefined> =
+        getContext(LIVESTREAM_VIDEOS_CTX) ?? readable(undefined);
+    $: livestream = $livestreamStore;
+    $: existingVideoUrl = match.videoTimestamps?.[0]?.url ?? null;
+    $: canRequestTimestamp =
+        !!match.scores &&
+        livestream?.eventCode == match.eventCode &&
+        (livestream?.videoIds.length ?? 0) > 0;
+    $: linkable = existingVideoUrl != null || canRequestTimestamp;
+
+    function openVideo() {
+        if (existingVideoUrl) window.open(existingVideoUrl, "_blank", "noopener,noreferrer");
+        else if (canRequestTimestamp) requestMatchTimestamp(match, livestream!.videoIds);
+    }
 </script>
 
-<td class="label" id="{match.eventCode}-{match.id}">
+<td
+    class="label"
+    class:linkable
+    id="{match.eventCode}-{match.id}"
+    on:click={() => linkable && openVideo()}
+>
     <div class="description">{labelNumber}</div>
 </td>
 
@@ -140,6 +166,16 @@
     .label {
         grid-column: 1;
         align-self: stretch;
+    }
+
+    .label.linkable {
+        cursor: pointer;
+        border-radius: 8px;
+    }
+
+    .label.linkable:hover {
+        z-index: 1;
+        outline: 2px solid var(--neutral-team-color);
     }
 
     .center {

@@ -8,6 +8,11 @@ fragment FullMatch on Match {
     tournamentLevel
     scheduledStartTime
     actualStartTime
+    videoTimestamps {
+        videoId
+        startSeconds
+        url
+    }
     scores {
         ...FullMatchScores
     }

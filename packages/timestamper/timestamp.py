@@ -31,7 +31,7 @@ def merge(readings):
   results = []
   for key, starts in by_match.items():
     median = statistics.median(starts)
-    agreeing = [s for s in starts if abs(s - median) <= OUTLIER_S]
+    agreeing = [s for s in starts if abs(s - median) <= OUTLIER_S] or starts
     results.append({"match_id": key, "description": descriptions[key], "start_s": round(statistics.median(agreeing)), "frames": len(starts), "agreeing": len(agreeing), "spread_s": round(max(agreeing) - min(agreeing))})
   return sorted(results, key=lambda r: r["start_s"])
 
