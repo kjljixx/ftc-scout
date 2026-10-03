@@ -21,7 +21,7 @@ python timestamp.py <youtube_video_id> [--step 120] [--transition 8] [--json]
 ## Requirements
 
 - Python 3.10+ with `pip install -r requirements.txt`
-- `tesseract` on the PATH (it reads the match label only)
+- `node` and `tesseract` on the PATH (`node` runs the YouTube challenge solver for `yt-dlp`; `tesseract` reads the match label only)
 
 ## Known limits
 

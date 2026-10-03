@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from stage_timer import timer
 
 FORMAT_ID = "134"
-YDL_OPTIONS = {"format": FORMAT_ID, "quiet": True, "no_warnings": True, "skip_download": True}
+YDL_OPTIONS = {"format": FORMAT_ID, "quiet": True, "no_warnings": True, "skip_download": True, "js_runtimes": {"node": {}}}
 INDEX_BYTES = 200000
 FRAGMENT_BYTES = 100000
 WORKERS = 8

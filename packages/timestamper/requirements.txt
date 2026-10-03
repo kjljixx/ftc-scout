@@ -1,4 +1,4 @@
 av
 opencv-python
 numpy
-yt-dlp
+yt-dlp[default]
