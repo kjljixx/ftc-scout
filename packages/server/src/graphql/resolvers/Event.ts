@@ -49,6 +49,7 @@ export const EventGQL: GraphQLObjectType = new GraphQLObjectType({
         remote: BoolTy,
         hybrid: BoolTy,
         fieldCount: IntTy,
+        allianceCount: IntTy,
         published: BoolTy,
         type: { type: nn(EventTypeGQL) },
         regionCode: nullTy(StrTy),

@@ -99,6 +99,9 @@ export class Event extends BaseEntity {
     @Column()
     modifiedRules!: boolean;
 
+    @Column("smallint", { default: 0 })
+    allianceCount!: number;
+
     @CreateDateColumn({ type: "timestamptz" })
     createdAt!: Date;
 

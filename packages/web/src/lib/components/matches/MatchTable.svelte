@@ -32,6 +32,7 @@
         published: boolean;
         timezone: string;
         remote: boolean;
+        allianceCount?: number;
     };
     export let focusedTeam: number | null = null;
     export let showNonPenaltyScores = false;
@@ -55,7 +56,18 @@
     $: anySurrogate = matches.some((m) => m.teams.some((t) => t.surrogate));
     $: anyDq = matches.some((m) => m.teams.some((t) => t.dq));
 
-    $: teamCount = new Set(matches.flatMap((m) => m.teams.map((t) => t.teamNumber))).size;
+    // Older events have no stored alliance count; their bracket size shows in the series numbers.
+    function allianceCountFromSeries(ms: FullMatchFragment[]): number {
+        let deSeries = ms
+            .filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim)
+            .map((m) => m.series);
+        let maxSeries = Math.max(0, ...deSeries);
+        return maxSeries > 11 ? 8 : maxSeries > 7 ? 6 : maxSeries > 0 ? 4 : 0;
+    }
+
+    $: allianceCount =
+        event.allianceCount || allianceCountFromSeries(allMatches.length ? allMatches : matches);
+    $: teamCount = allianceCount > 6 ? 41 : allianceCount > 4 ? 40 : allianceCount > 0 ? 20 : 0;
 
     let modalShown = false;
     let modalMatch: FullMatchFragment | null;

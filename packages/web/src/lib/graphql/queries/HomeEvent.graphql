@@ -4,6 +4,7 @@ query HomeEvent($season: Int!, $code: String!) {
         code
         name
         remote
+        allianceCount
         start
         end
         location {

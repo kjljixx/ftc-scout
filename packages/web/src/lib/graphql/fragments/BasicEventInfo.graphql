@@ -3,6 +3,7 @@ fragment BasicEventInfo on Event {
     code
     name
     remote
+    allianceCount
     start
     end
     location {

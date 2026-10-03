@@ -13,6 +13,7 @@ import { Event } from "../entities/Event";
 import { DATA_SOURCE } from "../data-source";
 import { Match } from "../entities/Match";
 import { getMatches } from "../../ftc-api/get-matches";
+import { getAllianceCount } from "../../ftc-api/get-alliance-count";
 import { getMatchScores } from "../../ftc-api/get-match-scores";
 import { getTeams } from "../../ftc-api/get-teams";
 import { MatchScore, MatchScoreSchemas } from "../entities/dyn/match-score";
@@ -56,10 +57,11 @@ export async function loadAllMatches(season: Season, loadType: LoadType) {
         if (event.remote && !DESCRIPTORS[season].hasRemote) continue;
 
         try {
-            let [matches, scores, teams] = await Promise.all([
+            let [matches, scores, teams, allianceCount] = await Promise.all([
                 getMatches(season, event.code),
                 getMatchScores(season, event.code),
                 getTeams(season, event.code),
+                event.remote ? 0 : getAllianceCount(season, event.code),
             ]);
 
             let allDbMatches: Match[] = [];
@@ -115,6 +117,9 @@ export async function loadAllMatches(season: Season, loadType: LoadType) {
                     updatedTmps.some((tmp) => m.eventCode == tmp.eventCode && m.id == tmp.matchId)
                 );
             });
+
+            if (allianceCount > 0)
+                await Event.update({ season, code: event.code }, { allianceCount });
 
             publishMatchUpdates(updatedMatches);
 
