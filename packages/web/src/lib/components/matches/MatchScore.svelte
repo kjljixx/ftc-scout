@@ -49,6 +49,8 @@
     import { SHOW_MATCH_SCORE, type ShowMatchFn } from "./MatchTable.svelte";
     import {
         LIVESTREAM_VIDEOS_CTX,
+        knownVideoUrls,
+        matchKey,
         requestMatchTimestamp,
         type LivestreamVideos,
     } from "$lib/timestamps/timestampToast";
@@ -85,16 +87,19 @@
     const livestreamStore: Readable<LivestreamVideos | undefined> =
         getContext(LIVESTREAM_VIDEOS_CTX) ?? readable(undefined);
     $: livestream = $livestreamStore;
-    $: existingVideoUrl = match.videoTimestamps?.[0]?.url ?? null;
-    $: canRequestTimestamp =
-        !!match.scores &&
-        livestream?.eventCode == match.eventCode &&
-        (livestream?.videoIds.length ?? 0) > 0;
+    $: existingVideoUrl =
+        match.videoTimestamps?.[0]?.url ??
+        $knownVideoUrls.get(matchKey(match.season, match.eventCode, match.id)) ??
+        null;
+    $: canRequestTimestamp = !!match.scores;
     $: linkable = existingVideoUrl != null || canRequestTimestamp;
 
     function openVideo() {
         if (existingVideoUrl) window.open(existingVideoUrl, "_blank", "noopener,noreferrer");
-        else if (canRequestTimestamp) requestMatchTimestamp(match, livestream!.videoIds);
+        else if (canRequestTimestamp) {
+            let pageVideoIds = livestream?.eventCode == match.eventCode ? livestream.videoIds : undefined;
+            requestMatchTimestamp(match, pageVideoIds);
+        }
     }
 </script>
 

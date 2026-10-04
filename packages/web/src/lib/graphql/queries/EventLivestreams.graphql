@@ -1,0 +1,11 @@
+query EventLivestreams($season: Int!, $code: String!) {
+    eventByCode(season: $season, code: $code) {
+        season
+        code
+        liveStreamURL
+        livestreamsByDay {
+            day
+            liveStreamURL
+        }
+    }
+}

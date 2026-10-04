@@ -3,6 +3,7 @@ query TimestampProgress($season: Int!, $eventCode: String!) {
         id
         videoId
         status
+        error
     }
     eventByCode(season: $season, code: $eventCode) {
         season

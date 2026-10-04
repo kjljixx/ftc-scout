@@ -2,7 +2,13 @@
     import Fa from "svelte-fa";
     import { faChevronRight, faXmark } from "@fortawesome/free-solid-svg-icons";
     import { fly } from "svelte/transition";
-    import { dismissTimestampToast, timestampToast } from "$lib/timestamps/timestampToast";
+    import {
+        dismissTimestampToast,
+        submitLivestreamLink,
+        timestampToast,
+    } from "$lib/timestamps/timestampToast";
+
+    let link = "";
 
     $: toast = $timestampToast;
     $: ready = toast?.readyUrl != null;
@@ -27,8 +33,25 @@
         </button>
 
         {#if ready}
-            <span class="name">Open {toast.description}</span>
-            <span class="chevron"><Fa icon={faChevronRight} /></span>
+            <div class="open">
+                <span class="name">Open {toast.description}</span>
+                <span class="chevron"><Fa icon={faChevronRight} /></span>
+            </div>
+        {:else if toast.failure}
+            <div class="team">
+                <span class="name">{toast.description}</span>
+                <span class="detail">Couldn't find it</span>
+            </div>
+            <p class="error">{toast.failure}</p>
+            <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
+                <input
+                    type="text"
+                    bind:value={link}
+                    placeholder="Paste a YouTube livestream link"
+                    aria-label="YouTube livestream link"
+                />
+                <button type="submit">Try</button>
+            </form>
         {:else}
             <div class="team">
                 <span class="name">{toast.description}</span>
@@ -84,8 +107,10 @@
         line-height: 1.2;
     }
 
-    .toast > .name {
-        flex: 1;
+    .open {
+        display: flex;
+        align-items: center;
+        gap: var(--md-gap);
     }
 
     .chevron {
@@ -118,6 +143,48 @@
 
     .close:hover {
         color: var(--text-color);
+    }
+
+    .error {
+        flex-basis: 100%;
+        margin: 0;
+        font-size: var(--md-font-size);
+        line-height: 1.3;
+    }
+
+    .link {
+        display: flex;
+        flex-basis: 100%;
+        gap: var(--md-gap);
+    }
+
+    .link input {
+        flex: 1;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: var(--md-pad);
+        border: none;
+        border-radius: 8px;
+        background: var(--form-bg-color);
+        color: var(--text-color);
+        font: inherit;
+        font-size: var(--md-font-size);
+    }
+
+    .link input:focus {
+        outline: 2px solid var(--neutral-team-color);
+    }
+
+    .link button {
+        padding: var(--md-pad) var(--lg-pad);
+        border: none;
+        border-radius: 8px;
+        background: var(--inline-theme-color);
+        color: var(--bg-color);
+        font: inherit;
+        font-size: var(--md-font-size);
+        font-weight: 600;
+        cursor: pointer;
     }
 
     .bar {
