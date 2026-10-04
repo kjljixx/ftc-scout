@@ -60,6 +60,8 @@
     export let showNonPenaltyScores = false;
     export let redPred = 0;
     export let bluePred = 0;
+    export let redColorStyle: string | null = null;
+    export let blueColorStyle: string | null = null;
 
     $: winner = computeWinner(match.scores);
 
@@ -116,7 +118,13 @@
         <div class="time">{prettyPrintTimeString(match.scheduledStartTime, timeZone)}</div>
     {:else if "red" in match.scores}
         <div class="score">
-            <div class="left" class:winner={winner == Alliance.Red} class:tie={winner == "Tie"}>
+            <div
+                class="left"
+                class:winner={winner == Alliance.Red}
+                class:tie={winner == "Tie"}
+                class:alliance-colored={!!redColorStyle}
+                style={redColorStyle}
+            >
                 <!-- // Help: Season Specific -->
                 {#if match.season == Season.Decode && match.tournamentLevel == TournamentLevel.Quals}
                     <div class="dots red">
@@ -129,7 +137,13 @@
                 {scoreValue(match.scores.red, showNonPenaltyScores)}
             </div>
             <div class="minus">-</div>
-            <div class="right" class:winner={winner == Alliance.Blue} class:tie={winner == "Tie"}>
+            <div
+                class="right"
+                class:winner={winner == Alliance.Blue}
+                class:tie={winner == "Tie"}
+                class:alliance-colored={!!blueColorStyle}
+                style={blueColorStyle}
+            >
                 {scoreValue(match.scores.blue, showNonPenaltyScores)}
 
                 {#if match.season == Season.Decode && match.tournamentLevel == TournamentLevel.Quals}
@@ -332,5 +346,9 @@
     .score .tie {
         font-weight: bold;
         color: var(--neutral-team-text-color);
+    }
+
+    .score .alliance-colored.winner {
+        color: var(--alliance-bright-text-color);
     }
 </style>

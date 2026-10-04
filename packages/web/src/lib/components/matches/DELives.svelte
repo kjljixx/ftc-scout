@@ -14,6 +14,7 @@
     export let alliance: Alliance;
     export let alreadyLost: boolean;
     export let lostThis: boolean;
+    export let colorStyle: string | null = null;
 
     function compute(
         i: number,
@@ -58,6 +59,8 @@
     class:red={alliance == Alliance.Red}
     class:blue={alliance == Alliance.Blue}
     class="hearts"
+    class:alliance-colored={!!colorStyle}
+    style={colorStyle}
     {title}
 >
     {#if a}
@@ -97,6 +100,10 @@
 
     td.blue :global(.heart) {
         color: var(--blue-team-text-color);
+    }
+
+    td.alliance-colored :global(.heart) {
+        color: var(--alliance-text-color);
     }
 
     td :global(.heart.broken) {

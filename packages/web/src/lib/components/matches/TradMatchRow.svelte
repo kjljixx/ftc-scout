@@ -9,6 +9,7 @@
     import MatchScore, { computeWinner } from "./MatchScore.svelte";
     import MatchTeam from "./MatchTeam.svelte";
     import { predictScores } from "./match-prediction";
+    import { allianceColorStyle, type AllianceSeeds } from "./alliance-colors";
 
     export let match: FullMatchFragment;
     export let allMatches: FullMatchFragment[] = [];
@@ -19,6 +20,10 @@
     export let teamCount = 0;
     export let showNonPenaltyScores = false;
     export let eventTeams: any[] = [];
+    export let seeds: AllianceSeeds | null = null;
+
+    $: redColorStyle = allianceColorStyle(seeds, match, Alliance.Red);
+    $: blueColorStyle = allianceColorStyle(seeds, match, Alliance.Blue);
 
     $: teams = match.teams;
     $: redTeams = teams.filter((t) => t.alliance == Alliance.Red);
@@ -104,13 +109,21 @@
         {showNonPenaltyScores}
         redPred={redOprSum}
         bluePred={blueOprSum}
+        {redColorStyle}
+        {blueColorStyle}
     />
 
     <div class="cell red-cell">
-        <div class="alliance red" class:lost={winner == Alliance.Blue}>
+        <div
+            class="alliance red"
+            class:lost={winner == Alliance.Blue}
+            class:alliance-colored={!!redColorStyle}
+            style={redColorStyle}
+        >
             {#if isDoubleElim}
                 <DeLives
                     alliance={Alliance.Red}
+                    colorStyle={redColorStyle}
                     alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Red)}
                     lostThis={winner == Alliance.Blue}
                 />
@@ -130,6 +143,7 @@
                                 winner={winner == Alliance.Red}
                                 span={1}
                                 trad
+                                tinted={!!redColorStyle && winner == Alliance.Blue}
                             />
                         {/if}
                     {/each}
@@ -151,7 +165,12 @@
     </div>
 
     <div class="cell blue-cell">
-        <div class="alliance blue" class:lost={winner == Alliance.Red}>
+        <div
+            class="alliance blue"
+            class:lost={winner == Alliance.Red}
+            class:alliance-colored={!!blueColorStyle}
+            style={blueColorStyle}
+        >
             <div class="roster">
                 <div class="teams">
                     {#each blues as team}
@@ -166,6 +185,7 @@
                                 winner={winner == Alliance.Blue}
                                 span={1}
                                 trad
+                                tinted={!!blueColorStyle && winner == Alliance.Red}
                             />
                         {/if}
                     {/each}
@@ -187,6 +207,7 @@
             {#if isDoubleElim}
                 <DeLives
                     alliance={Alliance.Blue}
+                    colorStyle={blueColorStyle}
                     alreadyLost={hasAlreadyLost(match.series, teamCount, Alliance.Blue)}
                     lostThis={winner == Alliance.Red}
                 />
@@ -240,6 +261,10 @@
 
     .alliance.blue {
         background: var(--blue-team-bg-color);
+    }
+
+    .alliance.alliance-colored {
+        background: rgba(var(--alliance-color-vs), var(--team-color-transparency));
     }
 
     .alliance.lost {

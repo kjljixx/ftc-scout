@@ -157,6 +157,8 @@ body {
     --form-disabled-opacity: 0.7;
 
     --team-color-transparency: 0.15;
+    --alliance-text-keep: 100%;
+    --alliance-bright-lightness: l;
     --red-team-color-vs: 244, 67, 54;
     --blue-team-color-vs: 33, 150, 243;
     --neutral-team-color-vs: 170, 0, 255;
@@ -183,6 +185,17 @@ body {
     --thick-border-width: 2px;
 
     color-scheme: light;
+}
+
+.alliance-colored {
+    --alliance-text-color: color-mix(
+        in srgb,
+        rgb(var(--alliance-color-vs)) var(--alliance-text-keep),
+        white
+    );
+    --alliance-bright-text-color: oklch(
+        from rgb(var(--alliance-color-vs)) var(--alliance-bright-lightness) c h
+    );
 }
 
 body .render-dark {
@@ -229,6 +242,8 @@ body.dark {
     --form-disabled-opacity: 0.5;
 
     --team-color-transparency: 0.16;
+    --alliance-text-keep: 55%;
+    --alliance-bright-lightness: 0.82;
     --red-team-color-vs: 238, 52, 43;
     --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
     --blue-team-color-vs: 37, 130, 244;
@@ -324,6 +339,8 @@ body.dark .render-light {
         --form-disabled-opacity: 0.5;
 
         --team-color-transparency: 0.16;
+        --alliance-text-keep: 55%;
+        --alliance-bright-lightness: 0.82;
         --red-team-color-vs: 238, 52, 43;
         --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
         --blue-team-color-vs: 37, 130, 244;

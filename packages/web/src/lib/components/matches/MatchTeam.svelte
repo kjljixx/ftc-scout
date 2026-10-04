@@ -18,6 +18,7 @@
     export let trad = false;
     export let benched = false;
     export let compact = false;
+    export let tinted = false;
 
     $: number = team.team.number;
     $: name = team.team.name;
@@ -52,6 +53,7 @@
     class:trad
     class:benched
     class:compact
+    class:tinted
     {title}
 >
     <a
@@ -179,6 +181,10 @@
         font-size: 0.85em;
         font-weight: 400;
         color: var(--grayed-out-text-color);
+    }
+
+    td.trad.tinted .name {
+        color: var(--alliance-text-color);
     }
 
     td.trad.compact .inner {

@@ -7,7 +7,9 @@
     import { computeWinner, scoreValue } from "./MatchScore.svelte";
     import { SHOW_MATCH_SCORE, type ShowMatchFn } from "./MatchTable.svelte";
     import MatchTeam from "./MatchTeam.svelte";
+    import { allianceColorStyle, type AllianceSeeds } from "./alliance-colors";
 
+    export let seeds: AllianceSeeds | null = null;
     export let layout: BracketLayout;
     export let matches: FullMatchFragment[];
     export let allMatches: FullMatchFragment[] = [];
@@ -84,10 +86,17 @@
         return `M${startX} ${startY} H${bendX} V${endY} H${endX}`;
     };
 
+    $: linkStyle = (from: BracketSeries): string | null => {
+        let match = latestBySeries[from.series];
+        let winner = match && computeWinner(match.scores);
+        let advancing = winner == Alliance.Red || winner == Alliance.Blue ? winner : null;
+        return match && advancing ? allianceColorStyle(seeds, match, advancing) : null;
+    };
+
     $: links = placed.flatMap((to) =>
         to.slots.flatMap((slot) => {
             let from = slot?.kind == "winner" && placed.find((s) => s.series == slot.from);
-            return from ? [linkPath(from, to)] : [];
+            return from ? [{ d: linkPath(from, to), style: linkStyle(from) }] : [];
         })
     );
 
@@ -111,6 +120,7 @@
             let other = red ? pred.blue : pred.red;
             return {
                 alliance,
+                colorStyle: allianceColorStyle(seeds, match, alliance),
                 teams: rosterOf(match, alliance),
                 won: winner == alliance,
                 lost: winner != null && winner != alliance && winner != "Tie",
@@ -141,8 +151,8 @@
         style:--scale={scale}
     >
         <svg {width} {height}>
-            {#each links as d}
-                <path {d} />
+            {#each links as link}
+                <path d={link.d} class:alliance-colored={!!link.style} style={link.style} />
             {/each}
         </svg>
 
@@ -163,6 +173,8 @@
                             class:red={row.alliance == Alliance.Red}
                             class:blue={row.alliance == Alliance.Blue}
                             class:lost={row.lost}
+                            class:alliance-colored={!!row.colorStyle}
+                            style={row.colorStyle}
                         >
                             <div class="teams">
                                 <table>
@@ -178,6 +190,7 @@
                                                     span={1}
                                                     trad
                                                     compact
+                                                    tinted={!!row.colorStyle && row.lost}
                                                 />
                                             {/each}
                                         </tr>
@@ -239,7 +252,7 @@
 
     path {
         fill: none;
-        stroke: var(--grayed-out-text-color);
+        stroke: var(--alliance-text-color, var(--grayed-out-text-color));
         stroke-width: 2;
     }
 
@@ -272,6 +285,10 @@
 
     .alliance.blue {
         background: var(--blue-team-bg-color);
+    }
+
+    .alliance.alliance-colored {
+        background: rgba(var(--alliance-color-vs), var(--team-color-transparency));
     }
 
     .alliance.lost {
@@ -357,6 +374,10 @@
     .score.winner.blue {
         font-weight: bold;
         color: var(--blue-team-text-color);
+    }
+
+    .alliance-colored .score.winner {
+        color: var(--alliance-bright-text-color);
     }
 
     .score.tie {

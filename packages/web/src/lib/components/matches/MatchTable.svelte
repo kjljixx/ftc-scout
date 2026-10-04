@@ -17,6 +17,7 @@
     import RemoteMatches from "./RemoteMatches.svelte";
     import Bracket from "./Bracket.svelte";
     import { bracketLayoutFor } from "./bracket-layout";
+    import { allianceSeeds } from "./alliance-colors";
     import { page } from "$app/stores";
     import ScoreModal from "./score-modal/ScoreModal.svelte";
     import { onMount, setContext, tick } from "svelte";
@@ -71,6 +72,7 @@
         event.allianceCount || allianceCountFromSeries(allMatches.length ? allMatches : matches);
     $: teamCount = allianceCount > 6 ? 41 : allianceCount > 4 ? 40 : allianceCount > 0 ? 20 : 0;
 
+    $: seeds = allianceSeeds(allMatches.length ? allMatches : matches, allianceCount);
     $: bracketLayout = bracketLayoutFor(allianceCount);
     $: bracketMatches = allMatches.filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim);
     $: bracketAvailable = !remote && !!bracketLayout && bracketMatches.length > 0;
@@ -177,6 +179,7 @@
                                 {season}
                                 {focusedTeam}
                                 {showNonPenaltyScores}
+                                {seeds}
                             />
                         </td>
                     </tr>
@@ -192,6 +195,7 @@
                             {teamCount}
                             {showNonPenaltyScores}
                             {eventTeams}
+                            {seeds}
                         />
                     {/each}
                 {/if}
