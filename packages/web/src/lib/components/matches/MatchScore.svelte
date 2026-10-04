@@ -97,8 +97,7 @@
     function openVideo() {
         if (existingVideoUrl) window.open(existingVideoUrl, "_blank", "noopener,noreferrer");
         else if (canRequestTimestamp) {
-            let pageVideoIds = livestream?.eventCode == match.eventCode ? livestream.videoIds : undefined;
-            requestMatchTimestamp(match, pageVideoIds);
+            requestMatchTimestamp(match, livestream?.eventCode == match.eventCode ? livestream : undefined);
         }
     }
 </script>

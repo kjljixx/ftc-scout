@@ -22,13 +22,14 @@
     import TabbedCard from "$lib/components/tabs/TabbedCard.svelte";
     import TabContent from "$lib/components/tabs/TabContent.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
-    import { goto } from "$app/navigation";
+    import { goto, invalidateAll } from "$app/navigation";
     import { browser } from "$app/environment";
     import { onDestroy, setContext } from "svelte";
     import { writable } from "svelte/store";
     import {
         LIVESTREAM_VIDEOS_CTX,
-        livestreamVideoIds,
+        clearEventTimestamps,
+        eventKnownVideos,
         type LivestreamVideos,
     } from "$lib/timestamps/timestampToast";
     import { createPicklistSyncHandle } from "$lib/picklist/picklistSync";
@@ -181,7 +182,7 @@
         event
             ? {
                   eventCode: event.code,
-                  videoIds: livestreamVideoIds(livestreamsByDay, event.liveStreamURL),
+                  ...eventKnownVideos({ ...event, livestreamsByDay }),
               }
             : undefined
     );
@@ -211,6 +212,11 @@
         const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
         return mappedName === "Finals Division";
     })();
+
+    async function clearTimestamps() {
+        await clearEventTimestamps(season, event.code);
+        await invalidateAll();
+    }
 
     $: matchTableTeams = isFinalsDivision
         ? (event?.relatedEvents ?? []).flatMap((re) =>
@@ -388,6 +394,9 @@
                     {focusedTeam}
                     eventTeams={matchTableTeams}
                 />
+                <button class="clear-timestamps" type="button" on:click={clearTimestamps}>
+                    Delete video timestamps for this event
+                </button>
             </TabContent>
 
             <TabContent name="preview">
@@ -443,6 +452,23 @@
 </WidthProvider>
 
 <style>
+    .clear-timestamps {
+        display: block;
+        margin: var(--lg-gap) auto 0;
+        padding: var(--md-pad) var(--lg-pad);
+        border: none;
+        border-radius: 8px;
+        background: var(--form-bg-color);
+        color: var(--grayed-out-text-color);
+        font: inherit;
+        font-size: var(--md-font-size);
+        cursor: pointer;
+    }
+
+    .clear-timestamps:hover {
+        color: var(--text-color);
+    }
+
     h1 {
         font-size: var(--xl-font-size);
         margin-top: var(--sm-gap);

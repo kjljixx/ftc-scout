@@ -1,0 +1,3 @@
+mutation ClearTimestamps($season: Int!, $eventCode: String!) {
+    clearTimestamps(season: $season, eventCode: $eventCode)
+}

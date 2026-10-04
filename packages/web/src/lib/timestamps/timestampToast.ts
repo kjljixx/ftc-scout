@@ -2,15 +2,19 @@ import { writable } from "svelte/store";
 import { notEmpty } from "@ftc-scout/common";
 import { getClient } from "$lib/graphql/client";
 import {
+    ClearTimestampsDocument,
     EventLivestreamsDocument,
     RequestTimestampsDocument,
     TimestampJobStatus,
+    TimestampJobsDocument,
     TimestampProgressDocument,
     type FullMatchFragment,
 } from "$lib/graphql/generated/graphql-operations";
 
 export const LIVESTREAM_VIDEOS_CTX = {};
-export type LivestreamVideos = { eventCode: string; videoIds: string[] };
+export type VideoRef = { eventCode: string; videoId: string };
+export type KnownVideos = { videos: VideoRef[]; hasDivisions: boolean };
+export type LivestreamVideos = KnownVideos & { eventCode: string };
 
 export type TimestampToast = {
     description: string;
@@ -20,6 +24,7 @@ export type TimestampToast = {
     readyUrl: string | null;
     readyStartSeconds: number | null;
     failure: string | null;
+    hasDivisions: boolean;
 };
 
 export const timestampToast = writable<TimestampToast | null>(null);
@@ -58,6 +63,15 @@ export function dismissTimestampToast() {
     timestampToast.set(null);
 }
 
+export async function clearEventTimestamps(season: number, eventCode: string) {
+    await getClient().mutate({
+        mutation: ClearTimestampsDocument,
+        variables: { season, eventCode },
+    });
+    dismissTimestampToast();
+    knownVideoUrls.set(new Map());
+}
+
 export function livestreamVideoIds(
     livestreamsByDay: { day: string | Date; liveStreamURL?: string | null }[],
     liveStreamURL?: string | null
@@ -69,43 +83,70 @@ export function livestreamVideoIds(
     return [...new Set(urls.map((url) => youtubeVideoId(url)).filter(notEmpty))];
 }
 
-async function loadLivestreamVideoIds(match: FullMatchFragment): Promise<string[]> {
+type EventStreams = {
+    code: string;
+    liveStreamURL?: string | null;
+    livestreamsByDay: { day: string | Date; liveStreamURL?: string | null }[];
+};
+
+export function eventKnownVideos(
+    event: EventStreams & { relatedEvents?: (EventStreams & { divisionCode?: string | null })[] | null }
+): KnownVideos {
+    return {
+        videos: eventVideoRefs(event),
+        hasDivisions: (event.relatedEvents ?? []).some((e) => e.divisionCode == event.code),
+    };
+}
+
+export function eventVideoRefs(
+    event: EventStreams & { relatedEvents?: (EventStreams & { divisionCode?: string | null })[] | null }
+): VideoRef[] {
+    let streams = [event, ...(event.relatedEvents ?? []).filter((e) => e.divisionCode == event.code)];
+    let refs = streams.flatMap((stream) =>
+        livestreamVideoIds(stream.livestreamsByDay, stream.liveStreamURL).map((videoId) => ({
+            eventCode: stream.code,
+            videoId,
+        }))
+    );
+    return refs.filter((ref, i) => refs.findIndex((other) => other.videoId == ref.videoId) == i);
+}
+
+async function loadKnownVideos(match: FullMatchFragment): Promise<KnownVideos> {
     let { data } = await getClient().query({
         query: EventLivestreamsDocument,
         variables: { season: match.season, code: match.eventCode },
     });
-    return livestreamVideoIds(
-        data.eventByCode?.livestreamsByDay ?? [],
-        data.eventByCode?.liveStreamURL
-    );
+    return data.eventByCode ? eventKnownVideos(data.eventByCode) : { videos: [], hasDivisions: false };
 }
 
-export function requestMatchTimestamp(match: FullMatchFragment, knownVideoIds?: string[]) {
+export function requestMatchTimestamp(match: FullMatchFragment, known?: KnownVideos) {
     let run = ++currentRun;
     retryMatch = match;
     timestampToast.set({
         description: match.description,
         videoNumber: 1,
-        videoCount: knownVideoIds?.length || 1,
+        videoCount: known?.videos.length || 1,
         progress: 0,
         readyUrl: null,
         readyStartSeconds: null,
         failure: null,
+        hasDivisions: known?.hasDivisions ?? false,
     });
-    startRun(run, match, knownVideoIds).catch((error) => {
+    startRun(run, match, known).catch((error) => {
         failWith(run, error?.message || "Something went wrong.");
     });
 }
 
-async function startRun(run: number, match: FullMatchFragment, knownVideoIds?: string[]) {
-    let videoIds = knownVideoIds ?? (await loadLivestreamVideoIds(match));
+async function startRun(run: number, match: FullMatchFragment, known?: KnownVideos) {
+    let { videos, hasDivisions } = known ?? (await loadKnownVideos(match));
     if (run != currentRun) return;
-    if (videoIds.length == 0) {
+    timestampToast.update((t) => (t ? { ...t, hasDivisions } : t));
+    if (videos.length == 0) {
         failWith(run, "No livestream is listed for this event.");
         return;
     }
-    timestampToast.update((t) => (t ? { ...t, videoCount: videoIds.length } : t));
-    await followProgress(run, match, videoIds);
+    timestampToast.update((t) => (t ? { ...t, videoCount: videos.length } : t));
+    await followProgress(run, match, videos);
 }
 
 export function submitLivestreamLink(link: string) {
@@ -114,7 +155,10 @@ export function submitLivestreamLink(link: string) {
         timestampToast.update((t) => (t ? { ...t, failure: "That doesn't look like a YouTube link." } : t));
         return;
     }
-    if (retryMatch) requestMatchTimestamp(retryMatch, [videoId]);
+    if (retryMatch) requestMatchTimestamp(retryMatch, {
+            videos: [{ eventCode: retryMatch.eventCode, videoId }],
+            hasDivisions: false,
+        });
 }
 
 function failWith(run: number, message: string) {
@@ -140,12 +184,16 @@ function describeFailure(
     return "This match wasn't found in the stream.";
 }
 
-async function followProgress(run: number, match: FullMatchFragment, videoIds: string[]) {
+async function followProgress(run: number, match: FullMatchFragment, videos: VideoRef[]) {
     let client = getClient();
-    for (let videoId of videoIds) {
+    let videoIds = videos.map((v) => v.videoId);
+    let otherEventCodes = [...new Set(videos.map((v) => v.eventCode))].filter(
+        (code) => code != match.eventCode
+    );
+    for (let { eventCode, videoId } of videos) {
         await client.mutate({
             mutation: RequestTimestampsDocument,
-            variables: { season: match.season, eventCode: match.eventCode, videoId },
+            variables: { season: match.season, eventCode, videoId },
         });
     }
 
@@ -158,6 +206,18 @@ async function followProgress(run: number, match: FullMatchFragment, videoIds: s
             variables: { season: match.season, eventCode: match.eventCode },
             fetchPolicy: "network-only",
         });
+        let otherJobs = (
+            await Promise.all(
+                otherEventCodes.map((eventCode) =>
+                    client.query({
+                        query: TimestampJobsDocument,
+                        variables: { season: match.season, eventCode },
+                        fetchPolicy: "network-only",
+                    })
+                )
+            )
+        ).flatMap((result) => result.data.timestampJobs ?? []);
+        let jobs = [...(data.timestampJobs ?? []), ...otherJobs];
         rememberVideoUrls(match.season, match.eventCode, data.eventByCode?.matches ?? [], videoIds);
         if (run != currentRun) return;
 
@@ -172,7 +232,7 @@ async function followProgress(run: number, match: FullMatchFragment, videoIds: s
         }
 
         let latestJobs = new Map<string, TimestampJobStatus>();
-        for (let job of data.timestampJobs ?? []) {
+        for (let job of jobs) {
             if (!latestJobs.has(job.videoId)) latestJobs.set(job.videoId, job.status);
         }
         let isFinished = (id: string) => {
@@ -182,7 +242,7 @@ async function followProgress(run: number, match: FullMatchFragment, videoIds: s
 
         let finishedCount = videoIds.filter(isFinished).length;
         if (finishedCount == videoIds.length) {
-            failWith(run, describeFailure(data.timestampJobs ?? [], videoIds));
+            failWith(run, describeFailure(jobs, videoIds));
             return;
         }
 

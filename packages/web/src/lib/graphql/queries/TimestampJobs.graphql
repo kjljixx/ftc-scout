@@ -1,0 +1,8 @@
+query TimestampJobs($season: Int!, $eventCode: String!) {
+    timestampJobs(season: $season, eventCode: $eventCode) {
+        id
+        videoId
+        status
+        error
+    }
+}

@@ -7,5 +7,14 @@ query EventLivestreams($season: Int!, $code: String!) {
             day
             liveStreamURL
         }
+        relatedEvents {
+            code
+            divisionCode
+            liveStreamURL
+            livestreamsByDay {
+                day
+                liveStreamURL
+            }
+        }
     }
 }

@@ -32,6 +32,27 @@ export function videoTimestampsFor(
     });
 }
 
+export async function eventVideosFor(events: { season: Season; eventCode: string }[]): Promise<EventVideo[][]> {
+    let unique = [
+        ...new Map(
+            events.map((e) => [`${e.season}|${e.eventCode}`, { season: e.season, eventCode: e.eventCode }])
+        ).values(),
+    ];
+    let divisions = await Event.find({
+        where: unique.map((e) => ({ season: e.season, divisionCode: e.eventCode })),
+    });
+    let sources = [...unique, ...divisions.map((d) => ({ season: d.season, eventCode: d.code }))];
+    let videos = await EventVideo.find({ where: sources });
+    return events.map((e) => {
+        let divisionCodes = divisions
+            .filter((d) => d.season == e.season && d.divisionCode == e.eventCode)
+            .map((d) => d.code);
+        let own = videos.filter((v) => v.season == e.season && v.eventCode == e.eventCode);
+        let borrowed = videos.filter((v) => v.season == e.season && divisionCodes.includes(v.eventCode));
+        return [...own, ...borrowed];
+    });
+}
+
 function isActiveOrRecentlyFinished(job: TimestampJob): boolean {
     if (job.status == TimestampJobStatus.Queued || job.status == TimestampJobStatus.Running) return true;
     return job.finishedAt != null && Date.now() - job.finishedAt.getTime() < REPEAT_COOLDOWN_MS;
@@ -113,6 +134,16 @@ export const TimestamperMutations: Record<string, GraphQLFieldConfig<any, any>> 
             if (queuedJobs >= MAX_QUEUED_JOBS) throw new Error("Too many timestamp jobs are waiting. Try again later.");
 
             return TimestampJob.create({ season, eventCode, videoId }).save();
+        },
+    },
+    clearTimestamps: {
+        ...IntTy,
+        args: { season: IntTy, eventCode: StrTy },
+        resolve: async (_, { season, eventCode }: { season: Season; eventCode: string }) => {
+            let videos = await EventVideo.delete({ season, eventCode });
+            let jobs = await TimestampJob.delete({ season, eventCode });
+            console.log(`Cleared timestamps for ${season} ${eventCode}: ${videos.affected} videos, ${jobs.affected} jobs`);
+            return (videos.affected ?? 0) + (jobs.affected ?? 0);
         },
     },
 };

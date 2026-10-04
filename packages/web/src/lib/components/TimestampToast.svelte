@@ -12,6 +12,7 @@
 
     $: toast = $timestampToast;
     $: ready = toast?.readyUrl != null;
+    $: if (!toast?.failure) link = "";
 </script>
 
 {#if toast}
@@ -43,15 +44,19 @@
                 <span class="detail">Couldn't find it</span>
             </div>
             <p class="error">{toast.failure}</p>
-            <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
-                <input
-                    type="text"
-                    bind:value={link}
-                    placeholder="Paste a YouTube livestream link"
-                    aria-label="YouTube livestream link"
-                />
-                <button type="submit">Try</button>
-            </form>
+            {#if toast.hasDivisions}
+                <p class="error">Paste a livestream link on one of this event's division pages instead.</p>
+            {:else}
+                <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
+                    <input
+                        type="text"
+                        bind:value={link}
+                        placeholder="Paste a YouTube livestream link"
+                        aria-label="YouTube livestream link"
+                    />
+                    <button type="submit">Try</button>
+                </form>
+            {/if}
         {:else}
             <div class="team">
                 <span class="name">{toast.description}</span>
