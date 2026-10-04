@@ -2,30 +2,22 @@ import { Season } from "@ftc-scout/common";
 import { BaseEntity, Column, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
 
 @Entity()
-export class MatchVideoTimestamp extends BaseEntity {
+export class EventVideo extends BaseEntity {
     @PrimaryColumn("smallint")
     season!: Season;
 
     @PrimaryColumn()
     eventCode!: string;
 
-    @PrimaryColumn("int")
-    matchId!: number;
-
     @PrimaryColumn()
     videoId!: string;
 
-    @Column("int")
-    startSeconds!: number;
+    @Column("timestamptz")
+    wallStart!: Date;
 
-    @Column("smallint")
-    frames!: number;
-
-    @Column("smallint")
-    agreeingFrames!: number;
-
-    @Column({ default: "read" })
-    source!: string;
+    // Null while the video is still a live stream.
+    @Column("int", { nullable: true })
+    durationS!: number | null;
 
     @UpdateDateColumn({ type: "timestamptz" })
     updatedAt!: Date;

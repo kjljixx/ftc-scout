@@ -14,7 +14,7 @@ import { Analytics } from "./entities/Analytics";
 import { BestName } from "./entities/BestName";
 import { EventPicklist } from "./entities/EventPicklist";
 import { TimestampJob } from "./entities/TimestampJob";
-import { MatchVideoTimestamp } from "./entities/MatchVideoTimestamp";
+import { EventVideo } from "./entities/EventVideo";
 
 export const DEV_ENTITIES: MixedList<string | Function | EntitySchema<any>> = [FtcApiReq];
 
@@ -32,6 +32,6 @@ export const ENTITIES: MixedList<string | Function | EntitySchema<any>> = [
     Analytics,
     EventPicklist,
     TimestampJob,
-    MatchVideoTimestamp,
+    EventVideo,
     ...(IS_DEV ? DEV_ENTITIES : []),
 ];

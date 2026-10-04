@@ -1,4 +1,4 @@
-import argparse, json, statistics, sys, time
+import argparse, statistics, time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import clock_getter, frame_fetcher, icon_locator, label_getter, match_resolver, predict
@@ -33,7 +33,7 @@ def merge(readings):
   for key, starts in by_match.items():
     median = statistics.median(starts)
     agreeing = [s for s in starts if abs(s - median) <= OUTLIER_S] or starts
-    results.append({"match_id": key, "description": descriptions[key], "start_s": round(statistics.median(agreeing)), "frames": len(starts), "agreeing": len(agreeing), "spread_s": round(max(agreeing) - min(agreeing)), "source": "read"})
+    results.append({"match_id": key, "description": descriptions[key], "start_s": round(statistics.median(agreeing)), "frames": len(starts), "agreeing": len(agreeing), "spread_s": round(max(agreeing) - min(agreeing))})
   return sorted(results, key=lambda r: r["start_s"])
 
 
@@ -87,64 +87,54 @@ def full_sweep(video_id, step_s):
     return merge(readings), counts
 
 
-def anchored_sweep(video_id, step_s, matches):
+class NoAnchorError(Exception):
+  pass
+
+
+def anchor_video(video_id, step_s, matches):
   counts = dict.fromkeys(COUNT_KEYS, 0)
   readings = []
   actual_by_id = dict(matches)
-  source = frame_fetcher.StreamSource(video_id)
+  source = frame_fetcher.open_source(video_id)
   times = spread_order(list(range(0, int(source.duration_s), step_s)))
-  wall_start_s = None
   with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
     for batch in frame_fetcher.fetch_frame_batches(source, times):
       read_frames(pool, batch, counts, readings)
-      read_matches = merge(readings)
-      anchors = [(actual_by_id[m["match_id"]], m["start_s"]) for m in read_matches if m["match_id"] in actual_by_id]
+      anchors = [(actual_by_id[m["match_id"]], m["start_s"]) for m in merge(readings) if m["match_id"] in actual_by_id]
       if anchors:
         wall_start_s, residuals = predict.estimate_wall_start(anchors)
         print(f"anchor found: {len(anchors)} match(es) read from {counts['frames']} frames, wall start spread {max(residuals) - min(residuals):.1f}s", flush=True)
-        break
-  if wall_start_s is None:
-    print(f"warn no match read from {counts['frames']} frames is in the database list; using the matches read", flush=True)
-    return merge(readings), {**counts, "predicted": 0}
-
-  read_ids = {m["match_id"] for m in read_matches}
-  predictions = [p for p in predict.predict_offsets(matches, wall_start_s, source.duration_s) if p[0] not in read_ids]
-  predicted = [{"match_id": match_id, "description": match_resolver.describe_match_id(match_id), "start_s": offset_s, "frames": 0, "agreeing": 0, "spread_s": 0, "source": "predicted"} for match_id, offset_s in predictions]
-  return sorted(read_matches + predicted, key=lambda r: r["start_s"]), {**counts, "predicted": len(predicted)}
-
-
-def timestamp_video(video_id, step_s=DEFAULT_STEP_S, matches=None):
-  mode = f"anchored matches={len(matches)}" if matches else "full"
-  print(f"config video={video_id} step={step_s}s transition={TRANSITION_S}s outlier={OUTLIER_S}s process_workers={PROCESS_WORKERS} mode={mode}", flush=True)
-  return anchored_sweep(video_id, step_s, matches) if matches else full_sweep(video_id, step_s)
+        return {"wall_start_s": wall_start_s, "duration_s": None if source.is_live else source.duration_s, "counts": counts}
+  raise NoAnchorError(f"None of the {counts['frames']} frames read showed a match that has a start time in the database")
 
 
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("video_id")
   parser.add_argument("--step", type=int, default=DEFAULT_STEP_S)
-  parser.add_argument("--event", help="event code: predict most matches from the database's actual start times")
+  parser.add_argument("--event", help="event code: find the video's wall start from one match and list the event's matches inside it")
   parser.add_argument("--season", type=int, default=2025)
-  parser.add_argument("--json", action="store_true")
   args = parser.parse_args()
+  print(f"config video={args.video_id} step={args.step}s transition={TRANSITION_S}s outlier={OUTLIER_S}s process_workers={PROCESS_WORKERS} event={args.event}", flush=True)
 
-  matches = None
+  began = time.time()
   if args.event:
     import event_matches
     matches = event_matches.load_event_matches(event_matches.connect(), args.season, args.event)
-    print(f"loaded {len(matches)} matches with an actual start time for {args.event}", file=sys.stderr, flush=True)
-
-  began = time.time()
-  results, counts = timestamp_video(args.video_id, args.step, matches)
-  if args.json:
-    print(json.dumps(results))
+    print(f"loaded {len(matches)} matches with an actual start time for {args.event}", flush=True)
+    anchor = anchor_video(args.video_id, args.step, matches)
+    visible = predict.predict_offsets(matches, anchor["wall_start_s"], anchor["duration_s"])
+    for match_id, offset_s in visible:
+      print(f"{match_resolver.describe_match_id(match_id):<12}{hms(offset_s):>9}")
+    print(f"summary {anchor['counts']} wall_start={anchor['wall_start_s']:.0f} matches_in_video={len(visible)} wall={time.time() - began:.1f}s", flush=True)
   else:
-    print(f"{'match':<28}{'start':>9}{'frames':>8}{'agree':>7}{'spread':>8}  source")
+    results, counts = full_sweep(args.video_id, args.step)
+    print(f"{'match':<28}{'start':>9}{'frames':>8}{'agree':>7}{'spread':>8}")
     for m in results:
-      print(f"{m['description']:<28}{hms(m['start_s']):>9}{m['frames']:>8}{m['agreeing']:>7}{m['spread_s']:>7}s  {m['source']}")
-  disagreements = sum(1 for m in results if m["agreeing"] < m["frames"])
-  print(f"summary {counts} matches={len(results)} with_disagreement={disagreements} wall={time.time() - began:.1f}s", flush=True)
-  print(f"timings (fetch.* and process stages are summed over {frame_fetcher.WORKERS} fetch and {PROCESS_WORKERS} process workers; wait_for_frame is main-thread time):\n{timer.report()}", flush=True)
+      print(f"{m['description']:<28}{hms(m['start_s']):>9}{m['frames']:>8}{m['agreeing']:>7}{m['spread_s']:>7}s")
+    print(f"summary {counts} matches={len(results)} wall={time.time() - began:.1f}s", flush=True)
+  print(f"timings (fetch.* and process stages are summed over {frame_fetcher.WORKERS} fetch and {PROCESS_WORKERS} process workers; wait_for_frame is main-thread time):", flush=True)
+  print(timer.report(), flush=True)
 
 
 if __name__ == "__main__":

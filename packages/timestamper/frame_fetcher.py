@@ -1,9 +1,12 @@
-import av, io, struct, sys, threading, time, urllib.error, urllib.request, yt_dlp
+import av, io, re, struct, sys, threading, time, urllib.error, urllib.request, yt_dlp
 from concurrent.futures import ThreadPoolExecutor
 from stage_timer import timer
 
 FORMAT_ID = "134"
-YDL_OPTIONS = {"format": FORMAT_ID, "quiet": True, "no_warnings": True, "skip_download": True, "js_runtimes": {"node": {}}}
+YDL_OPTIONS = {"quiet": True, "no_warnings": True, "skip_download": True, "js_runtimes": {"node": {}}, "live_from_start": True}
+LIVE_STATUSES = ("is_live", "post_live")
+LIVE_FRAGMENT_S = 5
+SEQUENCE_PATTERN = re.compile(r"([?&])sq=\d+")
 INDEX_BYTES = 200000
 FRAGMENT_BYTES = 100000
 WORKERS = 8
@@ -45,72 +48,118 @@ def decode_first_frame(video_bytes):
     return frame.to_ndarray(format="gray") if frame else None
 
 
-class StreamSource:
-  def __init__(self, video_id):
+def extract_info(video_id):
+  for attempt in range(1, EXTRACT_ATTEMPTS + 1):
+    try:
+      with timer.time("fetch.yt_dlp_url"):
+        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+          return ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+    except yt_dlp.utils.DownloadError as error:
+      if attempt == EXTRACT_ATTEMPTS:
+        raise
+      print(f"warn yt-dlp failed (attempt {attempt} of {EXTRACT_ATTEMPTS}): {str(error)[-90:]}", file=sys.stderr, flush=True)
+      time.sleep(RETRY_DELAY_S * attempt)
+
+
+def pick_format(info, format_id):
+  found = next((f for f in info["formats"] if f["format_id"] == format_id), None)
+  if not found:
+    raise ValueError(f"format {format_id} is not available for this video")
+  return found["url"]
+
+
+def live_fragment_template(info):
+  fragments = next(f for f in info["formats"] if f["format_id"] == FORMAT_ID).get("fragments")
+  if not fragments:
+    raise ValueError("this live stream cannot be read from its start")
+  first = next(iter(fragments({})))
+  return SEQUENCE_PATTERN.sub(r"\g<1>sq={}", first["url"]), int(first["fragment_count"])
+
+
+class RefreshableSource:
+  def __init__(self, video_id, info):
     self.video_id = video_id
     self.lock = threading.Lock()
     self.bytes_downloaded = 0
     self.refresh_count = 0
-    self._load()
+    self.is_live = False
+    self._load(info)
 
-  def _load(self):
-    with timer.time("fetch.yt_dlp_url"):
-      self.url = self._extract_url()
-    head = self._range(0, INDEX_BYTES)
-    sidx_position, self.fragments, self.duration_s = parse_sidx(head)
-    self.init_segment = head[:sidx_position]
-
-  def _extract_url(self):
-    for attempt in range(1, EXTRACT_ATTEMPTS + 1):
-      try:
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-          return ydl.extract_info(f"https://www.youtube.com/watch?v={self.video_id}", download=False)["url"]
-      except yt_dlp.utils.DownloadError as error:
-        if attempt == EXTRACT_ATTEMPTS:
-          raise
-        print(f"warn yt-dlp failed (attempt {attempt} of {EXTRACT_ATTEMPTS}): {str(error)[-90:]}", file=sys.stderr, flush=True)
-        time.sleep(RETRY_DELAY_S * attempt)
-
-  def _range(self, start, length):
-    request = urllib.request.Request(self.url, headers={"Range": f"bytes={start}-{start + length - 1}"})
+  def _download(self, url, headers=None):
     with timer.time("fetch.http_range"):
-      data = urllib.request.urlopen(request).read()
+      data = urllib.request.urlopen(urllib.request.Request(url, headers=headers or {})).read()
     self.bytes_downloaded += len(data)
     return data
 
-  def _range_with_refresh(self, start, length):
+  def _fetch_with_refresh(self, fetch):
     for attempt in range(1, RANGE_ATTEMPTS + 1):
-      stale_url = self.url
+      stale_load = self.load_id
       try:
-        return self._range(start, length)
+        return fetch()
       except urllib.error.HTTPError as error:
         if attempt == RANGE_ATTEMPTS:
           raise
-        print(f"warn http {error.code} on range request (attempt {attempt} of {RANGE_ATTEMPTS}); refreshing stream url", file=sys.stderr, flush=True)
+        print(f"warn http {error.code} on request (attempt {attempt} of {RANGE_ATTEMPTS}); refreshing stream url", file=sys.stderr, flush=True)
         with self.lock:
-          if self.url == stale_url:
+          if self.load_id == stale_load:
             self.refresh_count += 1
-            self._load()
+            self._load(extract_info(self.video_id))
         time.sleep(RETRY_DELAY_S * attempt)
+
+  def _decode(self, video_bytes, start_s):
+    with timer.time("fetch.decode"):
+      try:
+        return decode_first_frame(video_bytes)
+      except av.error.FFmpegError as error:
+        print(f"warn decode error at {start_s:.0f}s: {error}", file=sys.stderr, flush=True)
+        return None
+
+
+class StreamSource(RefreshableSource):
+  def _load(self, info):
+    self.url = pick_format(info, FORMAT_ID)
+    self.load_id = self.url
+    head = self._download(self.url, {"Range": f"bytes=0-{INDEX_BYTES - 1}"})
+    sidx_position, self.fragments, self.duration_s = parse_sidx(head)
+    self.init_segment = head[:sidx_position]
+
+  def _range(self, start, length):
+    return self._download(self.url, {"Range": f"bytes={start}-{start + length - 1}"})
 
   def frame_at(self, time_s):
     start_s, offset, size = next(f for f in reversed(self.fragments) if f[0] <= time_s)
-    data = self._range_with_refresh(offset, min(FRAGMENT_BYTES, size))
-    with timer.time("fetch.decode"):
-      try:
-        frame = decode_first_frame(self.init_segment + data)
-      except av.error.FFmpegError as error:
-        print(f"warn decode error at fragment {start_s:.0f}s: {error}", file=sys.stderr, flush=True)
-        frame = None
-    return start_s, frame
+    data = self._fetch_with_refresh(lambda: self._range(offset, min(FRAGMENT_BYTES, size)))
+    return start_s, self._decode(self.init_segment + data, start_s)
+
+
+class LiveStreamSource(RefreshableSource):
+  def _load(self, info):
+    self.is_live = True
+    self.url_template, fragment_count = live_fragment_template(info)
+    self.load_id = self.url_template
+    self.duration_s = fragment_count * LIVE_FRAGMENT_S
+
+  def frame_at(self, time_s):
+    sequence = min(int(time_s // LIVE_FRAGMENT_S), int(self.duration_s // LIVE_FRAGMENT_S) - 1)
+    data = self._fetch_with_refresh(lambda: self._download(self.url_template.format(sequence)))
+    start_s = sequence * LIVE_FRAGMENT_S
+    return start_s, self._decode(data, start_s)
+
+
+def open_source(video_id):
+  info = extract_info(video_id)
+  source_class = LiveStreamSource if info.get("live_status") in LIVE_STATUSES else StreamSource
+  source = source_class(video_id, info)
+  print(f"config video={video_id} source={source_class.__name__} duration={source.duration_s:.0f}s", flush=True)
+  return source
 
 
 def fetch_frames(video_id, step_s=60, start_s=0, end_s=None, workers=WORKERS):
   began = time.time()
-  source = StreamSource(video_id)
+  source = open_source(video_id)
   end_s = min(end_s or source.duration_s, source.duration_s)
   times = list(range(int(start_s), int(end_s), step_s))
-  print(f"config video={video_id} format={FORMAT_ID} duration={source.duration_s:.0f}s fragments={len(source.fragments)} step={step_s}s frames={len(times)} workers={workers}", flush=True)
+  print(f"config step={step_s}s frames={len(times)} workers={workers}", flush=True)
   failed = 0
   with ThreadPoolExecutor(workers) as pool:
     for fragment_start_s, frame in pool.map(source.frame_at, times):

@@ -10,28 +10,29 @@ Finds the start time of each match in a YouTube livestream VOD of an FTC event.
 4. `label_getter.py` reads the match label (for example "Qualification 9 of 50") above the icon.
 5. `match_resolver.py` turns the label text into a match: it finds the level word and the number (ignoring junk letters around them) and computes the match id with the same formula as the server's `Match` entity (`level × 10000 + series × 1000 + matchNum`). Practice labels are skipped.
 6. `timestamp.py` computes the match start from phase and clock, then merges the results for each match.
-7. `predict.py` and `event_matches.py` (anchored mode, below) turn a few read matches into timestamps for the whole event.
+7. `predict.py` and `event_matches.py` (anchored mode, below) turn one read match into the video's wall start time.
 
 ## Anchored mode
 
-If the event's matches and their `actual_start_time` values are known, the worker does not read every match:
+The worker needs the event's matches and their `actual_start_time` values. It does not read every match:
 
 1. It reads frames in a spread-out order (coarse to fine), 8 at a time in parallel, and stops after the first batch in which at least one match that is in the database list has been read (an "anchor").
 2. For each anchor, `wall_start = actual_start_time − position in the video` (the real-world time at which the video began). It takes the median over the anchors found in that batch.
-3. It predicts every other match as `actual_start_time − wall_start`. Matches outside the video (other days, other videos) are dropped.
-4. If no read match is in the database list after all frames, it keeps the matches it read (a full read).
+3. It saves one row in `event_video`: the season, event code, video id, `wall_start`, and the video length (`NULL` while the video is a live stream). It saves no per-match rows.
 
-There is no check on the anchors or the predictions. Rows are saved with `source = 'read'` (found in a frame) or `'predicted'`. On `USPACOQ1` (8 h video, 55 matches) this reads 8 frames instead of 244 (about 2.4 s instead of 10.6 s), and every start time is within 1 s of the full read.
+The server computes a match's link when it is asked for: `position = match.actual_start_time − wall_start`. The video qualifies if `0 <= position <= length − 30`. For a live stream the length is `now − wall_start`. Matches outside the video (other days, other videos) get no link.
+
+There is no check on the anchors. If no frame shows a match from the database list, the job fails.
 
 ## Usage
 
 ```
-python timestamp.py <youtube_video_id> [--step 120] [--event <event_code> [--season 2025]] [--json]
+python timestamp.py <youtube_video_id> [--step 120] [--event <event_code> [--season 2025]]
 ```
 
-The table shows the match description (`Q-9`, `M-3`) and the source of each row. The `--json` output also has the match id. The video must belong to one event (for a division event, one division); the caller decides which event the ids refer to. `--event` loads that event's match times from the database and uses anchored mode; without it every match is read from frames.
+With `--event` the script loads that event's match times from the database, finds the anchor, and lists the matches inside the video. Without it every match is read from frames (a full read, for checking only). The video must belong to one event (for a division event, one division); the caller decides which event the ids refer to.
 
-From Python, call `timestamp.timestamp_video(video_id, step_s=120, matches=None)`. `matches` is a list of `(match_id, actual_start_epoch_seconds)` (see `event_matches.load_event_matches`). It returns `(results, counts)`: one dict per match (`match_id`, `description`, `start_s`, `frames`, `agreeing`, `spread_s`, `source`) and the frame outcome counts.
+From Python, call `timestamp.anchor_video(video_id, step_s, matches)`. `matches` is a list of `(match_id, actual_start_epoch_seconds)` (see `event_matches.load_event_matches`). It returns `wall_start_s`, `duration_s` and the frame outcome counts, or raises `NoAnchorError`.
 
 The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `timestamp.py`).
 
@@ -40,8 +41,12 @@ The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `time
 `worker.py` runs jobs from the `timestamp_job` table (created by the server's TypeORM entities):
 
 1. It claims the oldest `Queued` job and marks it `Running`.
-2. It loads the event's match times from the `match` table and runs `timestamp_video` (anchored mode) on the job's video.
-3. In one transaction it upserts one row per match into `match_video_timestamp` (key: season, event code, match id, video id; plus `source`) and marks the job `Done` with `matches_found`. If the video fails, the job is marked `Failed` with the error text.
+2. It loads the event's match times from the `match` table and runs `anchor_video` on the job's video.
+3. In one transaction it upserts the `event_video` row and marks the job `Done` with `matches_found` (the matches inside the video). If the video fails, the job is marked `Failed` with the error text.
+
+For a live stream, `frame_fetcher.LiveStreamSource` asks yt-dlp for the stream from its start (`live_from_start`). The 360p format is then a list of numbered 5 s pieces (`sq=0` to `sq=N`), so a frame at time T comes from piece `T // 5`. This works for the whole stream, not only the last hour (tested on a 60 h stream: 0.2–0.7 s per frame).
+
+A second thread checks every 30 s each `event_video` row whose length is `NULL` (a live stream). When `live_status.py` finds that the video is no longer live, it saves the final length.
 
 ```
 python worker.py          # polls every second until stopped
@@ -71,5 +76,5 @@ The server (`packages/server/src/graphql/resolvers/Timestamper.ts`) exposes:
 - Match labels "Qualification N" and "Playoff Match N" are mapped to match ids. Practice labels are skipped. Worlds Finale labels ("da Vinci Match N", "Finals N"), replays and 2-team finals are not handled yet.
 - Hard-coded to the 360p format (YouTube format ID 134), the DECODE-season scoreboard icons and an 8 s transition.
 - Without match times (full read), a match seen in only one frame has no cross-check and a match with no readable frame is missing.
-- Anchored mode assumes the video is a continuous recording of the event, and that the video belongs to the event code given. It does not check this. A cut or restarted stream, a wrong event or video, a misread anchor label, or a match played while the stream was off (or on a field the stream did not show) all give wrong predicted times with no warning.
+- The wall start assumes the video is a continuous recording of the event, and that the video belongs to the event code given. It does not check this. A cut or restarted stream, a wrong event or video, a misread anchor label, or a match played while the stream was off (or on a field the stream did not show) all give wrong predicted times with no warning.
 - Range requests to YouTube sometimes fail with HTTP 403 for a moment; the fetcher refreshes the stream address once and retries up to 3 times.

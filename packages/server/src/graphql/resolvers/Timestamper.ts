@@ -1,13 +1,36 @@
 import { GraphQLFieldConfig, GraphQLObjectType } from "graphql";
 import { DateTimeTy, IntTy, Season, StrTy, list, makeGQLEnum, nn, nullTy } from "@ftc-scout/common";
 import { Event } from "../../db/entities/Event";
-import { MatchVideoTimestamp } from "../../db/entities/MatchVideoTimestamp";
+import { EventVideo } from "../../db/entities/EventVideo";
 import { TimestampJob, TimestampJobStatus } from "../../db/entities/TimestampJob";
 
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const RECENT_JOB_COUNT = 20;
 const MAX_QUEUED_JOBS = 20;
-const REPEAT_COOLDOWN_MS = 10 * 60 * 1000;
+const REPEAT_COOLDOWN_MS = 60 * 1000;
+const MIN_VISIBLE_S = 30;
+
+export type VideoTimestamp = {
+    videoId: string;
+    startSeconds: number;
+    frames: number;
+    agreeingFrames: number;
+    source: string;
+};
+
+export function videoTimestampsFor(
+    videos: EventVideo[],
+    actualStartTime: Date | null,
+    nowMs = Date.now()
+): VideoTimestamp[] {
+    if (!actualStartTime) return [];
+    return videos.flatMap((video) => {
+        let startSeconds = Math.round((actualStartTime.getTime() - video.wallStart.getTime()) / 1000);
+        let durationS = video.durationS ?? (nowMs - video.wallStart.getTime()) / 1000;
+        if (startSeconds < 0 || startSeconds > durationS - MIN_VISIBLE_S) return [];
+        return [{ videoId: video.videoId, startSeconds, frames: 0, agreeingFrames: 0, source: "predicted" }];
+    });
+}
 
 function isActiveOrRecentlyFinished(job: TimestampJob): boolean {
     if (job.status == TimestampJobStatus.Queued || job.status == TimestampJobStatus.Running) return true;
@@ -26,7 +49,7 @@ export const MatchVideoTimestampGQL = new GraphQLObjectType({
         source: StrTy,
         url: {
             ...StrTy,
-            resolve: (t: MatchVideoTimestamp) =>
+            resolve: (t: VideoTimestamp) =>
                 `https://www.youtube.com/watch?v=${t.videoId}&t=${t.startSeconds}s`,
         },
     },
@@ -83,6 +106,7 @@ export const TimestamperMutations: Record<string, GraphQLFieldConfig<any, any>> 
                 where: { season, eventCode, videoId },
                 order: { id: "DESC" },
             });
+            if (latestJob && (await EventVideo.countBy({ season, eventCode, videoId })) > 0) return latestJob;
             if (latestJob && isActiveOrRecentlyFinished(latestJob)) return latestJob;
 
             let queuedJobs = await TimestampJob.countBy({ status: TimestampJobStatus.Queued });

@@ -1,10 +1,14 @@
 import { GraphQLObjectType, GraphQLResolveInfo } from "graphql";
-import { dataLoaderResolverList, dataLoaderResolverSingle, keyListToWhereClause } from "../utils";
+import {
+    dataLoaderResolver,
+    dataLoaderResolverSingle,
+    keyListToWhereClause,
+} from "../utils";
 import { BoolTy, DateTimeTy, IntTy, StrTy, list, nn, nullTy } from "@ftc-scout/common";
 import { Match } from "../../db/entities/Match";
 import { Event } from "../../db/entities/Event";
-import { MatchVideoTimestamp } from "../../db/entities/MatchVideoTimestamp";
-import { MatchVideoTimestampGQL } from "./Timestamper";
+import { EventVideo } from "../../db/entities/EventVideo";
+import { MatchVideoTimestampGQL, videoTimestampsFor } from "./Timestamper";
 import { TournamentLevelGQL } from "./enums";
 import { Season } from "@ftc-scout/common";
 import { MatchScoresUnionGQL } from "../dyn/dyn-types-schema";
@@ -44,13 +48,25 @@ export const MatchGQL: GraphQLObjectType = new GraphQLObjectType({
 
         videoTimestamps: {
             type: list(nn(MatchVideoTimestampGQL)),
-            resolve: dataLoaderResolverList<
-                Match,
-                MatchVideoTimestamp,
-                { season: Season; eventCode: string; matchId: number }
-            >(
-                (m) => ({ season: m.eventSeason, eventCode: m.eventCode, matchId: m.id }),
-                (keys) => MatchVideoTimestamp.find({ where: keys })
+            resolve: dataLoaderResolver(
+                (m: Match) => ({
+                    season: m.eventSeason,
+                    eventCode: m.eventCode,
+                    actualStartTime: m.actualStartTime,
+                }),
+                (keys) =>
+                    EventVideo.find({
+                        where: [...new Map(keys.map((k) => [`${k.season}|${k.eventCode}`, k])).values()].map(
+                            (k) => ({ season: k.season, eventCode: k.eventCode })
+                        ),
+                    }),
+                (keys, videos) =>
+                    keys.map((k) =>
+                        videoTimestampsFor(
+                            videos.filter((v) => v.season == k.season && v.eventCode == k.eventCode),
+                            k.actualStartTime
+                        )
+                    )
             ),
         },
 
