@@ -24,6 +24,9 @@ export class MatchVideoTimestamp extends BaseEntity {
     @Column("smallint")
     agreeingFrames!: number;
 
+    @Column({ default: "read" })
+    source!: string;
+
     @UpdateDateColumn({ type: "timestamptz" })
     updatedAt!: Date;
 }

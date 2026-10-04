@@ -2,9 +2,9 @@ import argparse, os, signal, time, traceback
 from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
-import timestamp
+import event_matches, timestamp
 
-POLL_INTERVAL_S = 5
+POLL_INTERVAL_S = 1
 RECONNECT_DELAY_S = 10
 ERROR_MAX_CHARS = 1000
 
@@ -15,10 +15,10 @@ CLAIM_JOB_SQL = """
   RETURNING id, season, event_code, video_id
 """
 SAVE_MATCH_SQL = """
-  INSERT INTO match_video_timestamp (season, event_code, match_id, video_id, start_seconds, frames, agreeing_frames)
-  VALUES (%s, %s, %s, %s, %s, %s, %s)
+  INSERT INTO match_video_timestamp (season, event_code, match_id, video_id, start_seconds, frames, agreeing_frames, source)
+  VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
   ON CONFLICT (season, event_code, match_id, video_id)
-  DO UPDATE SET start_seconds = EXCLUDED.start_seconds, frames = EXCLUDED.frames, agreeing_frames = EXCLUDED.agreeing_frames, updated_at = now()
+  DO UPDATE SET start_seconds = EXCLUDED.start_seconds, frames = EXCLUDED.frames, agreeing_frames = EXCLUDED.agreeing_frames, source = EXCLUDED.source, updated_at = now()
 """
 FINISH_JOB_SQL = "UPDATE timestamp_job SET status = 'Done', matches_found = %s, error = NULL, finished_at = now() WHERE id = %s"
 FAIL_JOB_SQL = "UPDATE timestamp_job SET status = 'Failed', error = %s, finished_at = now() WHERE id = %s"
@@ -37,14 +37,15 @@ def run_job(conn, job):
   began = time.time()
   print(f"job {job_id} started: season={season} event={event_code} video={video_id}", flush=True)
   try:
-    matches, counts = timestamp.timestamp_video(video_id)
+    event_match_times = event_matches.load_event_matches(conn, season, event_code)
+    matches, counts = timestamp.timestamp_video(video_id, matches=event_match_times)
   except Exception as error:
     print(f"job {job_id} FAILED after {time.time() - began:.1f}s:\n{traceback.format_exc()}", flush=True)
     conn.execute(FAIL_JOB_SQL, (f"{type(error).__name__}: {error}"[:ERROR_MAX_CHARS], job_id))
     return
   with conn.transaction():
     for match in matches:
-      conn.execute(SAVE_MATCH_SQL, (season, event_code, match["match_id"], video_id, match["start_s"], match["frames"], match["agreeing"]))
+      conn.execute(SAVE_MATCH_SQL, (season, event_code, match["match_id"], video_id, match["start_s"], match["frames"], match["agreeing"], match["source"]))
     conn.execute(FINISH_JOB_SQL, (len(matches), job_id))
   print(f"job {job_id} done in {time.time() - began:.1f}s: matches={len(matches)} counts={counts}", flush=True)
 

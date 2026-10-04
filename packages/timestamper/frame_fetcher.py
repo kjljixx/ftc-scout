@@ -7,6 +7,9 @@ YDL_OPTIONS = {"format": FORMAT_ID, "quiet": True, "no_warnings": True, "skip_do
 INDEX_BYTES = 200000
 FRAGMENT_BYTES = 100000
 WORKERS = 8
+RANGE_ATTEMPTS = 3
+EXTRACT_ATTEMPTS = 3
+RETRY_DELAY_S = 1
 
 
 def parse_sidx(head):
@@ -52,11 +55,21 @@ class StreamSource:
 
   def _load(self):
     with timer.time("fetch.yt_dlp_url"):
-      with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        self.url = ydl.extract_info(f"https://www.youtube.com/watch?v={self.video_id}", download=False)["url"]
+      self.url = self._extract_url()
     head = self._range(0, INDEX_BYTES)
     sidx_position, self.fragments, self.duration_s = parse_sidx(head)
     self.init_segment = head[:sidx_position]
+
+  def _extract_url(self):
+    for attempt in range(1, EXTRACT_ATTEMPTS + 1):
+      try:
+        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+          return ydl.extract_info(f"https://www.youtube.com/watch?v={self.video_id}", download=False)["url"]
+      except yt_dlp.utils.DownloadError as error:
+        if attempt == EXTRACT_ATTEMPTS:
+          raise
+        print(f"warn yt-dlp failed (attempt {attempt} of {EXTRACT_ATTEMPTS}): {str(error)[-90:]}", file=sys.stderr, flush=True)
+        time.sleep(RETRY_DELAY_S * attempt)
 
   def _range(self, start, length):
     request = urllib.request.Request(self.url, headers={"Range": f"bytes={start}-{start + length - 1}"})
@@ -66,14 +79,19 @@ class StreamSource:
     return data
 
   def _range_with_refresh(self, start, length):
-    try:
-      return self._range(start, length)
-    except urllib.error.HTTPError as error:
-      print(f"warn http {error.code} on range request; refreshing stream url", file=sys.stderr, flush=True)
-      with self.lock:
-        self.refresh_count += 1
-        self._load()
-      return self._range(start, length)
+    for attempt in range(1, RANGE_ATTEMPTS + 1):
+      stale_url = self.url
+      try:
+        return self._range(start, length)
+      except urllib.error.HTTPError as error:
+        if attempt == RANGE_ATTEMPTS:
+          raise
+        print(f"warn http {error.code} on range request (attempt {attempt} of {RANGE_ATTEMPTS}); refreshing stream url", file=sys.stderr, flush=True)
+        with self.lock:
+          if self.url == stale_url:
+            self.refresh_count += 1
+            self._load()
+        time.sleep(RETRY_DELAY_S * attempt)
 
   def frame_at(self, time_s):
     start_s, offset, size = next(f for f in reversed(self.fragments) if f[0] <= time_s)
@@ -101,6 +119,12 @@ def fetch_frames(video_id, step_s=60, start_s=0, end_s=None, workers=WORKERS):
         print(f"warn no frame decoded for fragment at {fragment_start_s:.0f}s", file=sys.stderr, flush=True)
       yield fragment_start_s, frame
   print(f"summary frames={len(times)} failed={failed} downloaded={source.bytes_downloaded / 1e6:.1f}MB url_refreshes={source.refresh_count} wall={time.time() - began:.1f}s", flush=True)
+
+
+def fetch_frame_batches(source, times, batch_size=WORKERS):
+  with ThreadPoolExecutor(batch_size) as pool:
+    for start in range(0, len(times), batch_size):
+      yield list(pool.map(source.frame_at, times[start:start + batch_size]))
 
 
 if __name__ == "__main__":

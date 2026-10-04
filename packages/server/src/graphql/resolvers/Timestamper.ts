@@ -23,6 +23,7 @@ export const MatchVideoTimestampGQL = new GraphQLObjectType({
         startSeconds: IntTy,
         frames: IntTy,
         agreeingFrames: IntTy,
+        source: StrTy,
         url: {
             ...StrTy,
             resolve: (t: MatchVideoTimestamp) =>

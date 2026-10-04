@@ -9,6 +9,7 @@ LABEL_PATTERNS = [
   (DOUBLE_ELIM, re.compile(r"Playoff\s+Match\s+(\d+)", re.IGNORECASE)),
   (PRACTICE, re.compile(r"Practice\s+(\d+)(?:\s+of\s+(\d+))?", re.IGNORECASE)),
 ]
+SEMIS_LEVEL_VALUE = 1
 DOUBLE_ELIM_LEVEL_VALUE = 2
 LEVEL_ID_FACTOR = 10000
 SERIES_ID_FACTOR = 1000
@@ -38,6 +39,18 @@ def match_id(parsed):
 
 def match_description(parsed):
   return f"Q-{parsed.number}" if parsed.level == QUALS else f"M-{parsed.number}"
+
+
+def describe_match_id(match_id):
+  if match_id < LEVEL_ID_FACTOR * SEMIS_LEVEL_VALUE:
+    return f"Q-{match_id}"
+  if match_id < LEVEL_ID_FACTOR * DOUBLE_ELIM_LEVEL_VALUE:
+    series, number = divmod(match_id - LEVEL_ID_FACTOR * SEMIS_LEVEL_VALUE, SERIES_ID_FACTOR)
+    return f"SF{series}-{number}"
+  series, number = divmod(match_id - LEVEL_ID_FACTOR * DOUBLE_ELIM_LEVEL_VALUE, SERIES_ID_FACTOR)
+  if series == 0:
+    return f"F-{number}"
+  return f"M-{series}" if number == 1 else f"M-{series}.{number}"
 
 
 def resolve_label(text):

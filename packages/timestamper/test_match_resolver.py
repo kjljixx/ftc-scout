@@ -1,4 +1,4 @@
-from match_resolver import resolve_label
+from match_resolver import describe_match_id, resolve_label
 
 CASES = [
   ("Qualification 9 of 50 F", ("ok", 9, "Q-9")),
@@ -14,9 +14,12 @@ CASES = [
   ("", ("unparsed", None, None)),
 ]
 
+DESCRIBE_CASES = {9: "Q-9", 120: "Q-120", 21001: "M-1", 34001: "M-14", 25002: "M-5.2", 20001: "F-1", 11002: "SF1-2"}
+
 if __name__ == "__main__":
   failures = [(text, expected, resolve_label(text)) for text, expected in CASES if resolve_label(text) != expected]
-  print(f"summary cases={len(CASES)} failures={len(failures)}")
+  failures += [(match_id, expected, describe_match_id(match_id)) for match_id, expected in DESCRIBE_CASES.items() if describe_match_id(match_id) != expected]
+  print(f"summary cases={len(CASES) + len(DESCRIBE_CASES)} failures={len(failures)}")
   for text, expected, actual in failures:
     print(f"  {text!r}: expected {expected}, got {actual}")
   raise SystemExit(1 if failures else 0)
