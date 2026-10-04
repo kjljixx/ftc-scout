@@ -1,9 +1,6 @@
 <script lang="ts">
     import { getContext } from "svelte";
-    import {
-        Alliance,
-        type FullMatchFragment,
-    } from "../../graphql/generated/graphql-operations";
+    import { Alliance, type FullMatchFragment } from "../../graphql/generated/graphql-operations";
     import { sortTeams } from "../../util/sorters";
     import type { BracketLayout, BracketSeries, Slot } from "./bracket-layout";
     import { predictScores } from "./match-prediction";
@@ -21,7 +18,7 @@
     export let showNonPenaltyScores = false;
 
     const BOX_WIDTH = 184;
-    const BASE_BOX_HEIGHT = 156;
+    const BASE_BOX_HEIGHT = 172;
     const PHONE_TEAMS_HEIGHT_PER_TEXT_SCALE = 58;
     const BASE_TEXT_SCALE = 0.85;
     const COLUMN_GAP = 26;
@@ -31,6 +28,7 @@
     const BOX_PADDING = 4;
     const ROW_MARGIN = 2;
     const PHONE_ROW_MARGIN = 6;
+    const PHONE_RED_PAD_BOTTOM = 3;
     const ALLIANCES = [Alliance.Red, Alliance.Blue];
 
     let show: ShowMatchFn = getContext(SHOW_MATCH_SCORE);
@@ -117,7 +115,9 @@
                 won: winner == alliance,
                 lost: winner != null && winner != alliance && winner != "Tie",
                 tie: winner == "Tie",
-                score: scores ? scoreValue(red ? scores.red : scores.blue, showNonPenaltyScores) : null,
+                score: scores
+                    ? scoreValue(red ? scores.red : scores.blue, showNonPenaltyScores)
+                    : null,
                 pred: own,
                 predStrong: own >= other,
             };
@@ -125,8 +125,21 @@
     }
 </script>
 
-<div class="scroller" bind:clientWidth={availableWidth} style:--text-scale={textScale} style:--compact-pad-y={isPhone ? "0px" : "2px"} style:--row-margin="{rowMargin}px">
-    <div class="bracket" style:width="{width}px" style:height="{height}px" style:zoom={scale} style:--scale={scale}>
+<div
+    class="scroller"
+    bind:clientWidth={availableWidth}
+    style:--text-scale={textScale}
+    style:--compact-pad-y={isPhone ? "0px" : "2px"}
+    style:--row-margin="{isPhone ? rowMargin - PHONE_RED_PAD_BOTTOM : rowMargin}px"
+    style:--red-pad-bottom="{isPhone ? PHONE_RED_PAD_BOTTOM : 0}px"
+>
+    <div
+        class="bracket"
+        style:width="{width}px"
+        style:height="{height}px"
+        style:zoom={scale}
+        style:--scale={scale}
+    >
         <svg {width} {height}>
             {#each links as d}
                 <path {d} />
@@ -287,6 +300,10 @@
 
     .alliance:not(.empty) {
         padding: 0 var(--sm-pad);
+    }
+
+    .alliance.red:not(.empty) {
+        padding-bottom: var(--red-pad-bottom, 0);
     }
 
     .alliance.lost .score {
