@@ -139,6 +139,7 @@
     class="scroller"
     bind:clientWidth={availableWidth}
     style:--text-scale={textScale}
+    style:--pred-scale={isPhone ? 0.85 : 1}
     style:--compact-pad-y={isPhone ? "0px" : "2px"}
     style:--row-margin="{isPhone ? rowMargin - PHONE_RED_PAD_BOTTOM : rowMargin}px"
     style:--red-pad-bottom="{isPhone ? PHONE_RED_PAD_BOTTOM : 0}px"
@@ -386,7 +387,7 @@
     }
 
     .pred {
-        font-size: 1em;
+        font-size: calc(1em * var(--pred-scale));
         color: var(--grayed-out-text-color);
     }
 
