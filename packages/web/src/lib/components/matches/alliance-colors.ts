@@ -15,6 +15,8 @@ const PALETTE = [
     "181, 61, 181",
 ];
 
+const WARM_SEEDS = [1, 2];
+
 type FirstRound = Record<number, [number | null, number | null]>;
 
 const FIRST_ROUND: Record<number, FirstRound> = {
@@ -48,5 +50,8 @@ export function allianceColorStyle(
 ): string | null {
     if (!seeds || match.tournamentLevel != TournamentLevel.DoubleElim) return null;
     let team = match.teams.find((t) => t.alliance == alliance && seeds.has(t.teamNumber));
-    return team ? `--alliance-color-vs: ${PALETTE[seeds.get(team.teamNumber)! - 1]}` : null;
+    if (!team) return null;
+    let seed = seeds.get(team.teamNumber)!;
+    let warm = WARM_SEEDS.includes(seed) ? "; --alliance-warm: 1" : "";
+    return `--alliance-color-vs: ${PALETTE[seed - 1]}${warm}`;
 }

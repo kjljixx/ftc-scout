@@ -159,6 +159,8 @@ body {
     --team-color-transparency: 0.15;
     --alliance-text-keep: 100%;
     --alliance-bright-lightness: l;
+    --alliance-warm-keep: 0%;
+    --alliance-warm-lightness: 0;
     --red-team-color-vs: 244, 67, 54;
     --blue-team-color-vs: 33, 150, 243;
     --neutral-team-color-vs: 170, 0, 255;
@@ -190,11 +192,12 @@ body {
 .alliance-colored {
     --alliance-text-color: color-mix(
         in srgb,
-        rgb(var(--alliance-color-vs)) var(--alliance-text-keep),
+        rgb(var(--alliance-color-vs))
+            calc(var(--alliance-text-keep) + var(--alliance-warm, 0) * var(--alliance-warm-keep)),
         white
     );
     --alliance-bright-text-color: oklch(
-        from rgb(var(--alliance-color-vs)) var(--alliance-bright-lightness) c h
+        from rgb(var(--alliance-color-vs)) calc(var(--alliance-bright-lightness) + var(--alliance-warm, 0) * var(--alliance-warm-lightness)) c h
     );
 }
 
@@ -244,6 +247,8 @@ body.dark {
     --team-color-transparency: 0.16;
     --alliance-text-keep: 55%;
     --alliance-bright-lightness: 0.82;
+    --alliance-warm-keep: 15%;
+    --alliance-warm-lightness: -0.08;
     --red-team-color-vs: 238, 52, 43;
     --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
     --blue-team-color-vs: 37, 130, 244;
@@ -341,6 +346,8 @@ body.dark .render-light {
         --team-color-transparency: 0.16;
         --alliance-text-keep: 55%;
         --alliance-bright-lightness: 0.82;
+        --alliance-warm-keep: 15%;
+        --alliance-warm-lightness: -0.08;
         --red-team-color-vs: 238, 52, 43;
         --red-team-bg-color: rgba(var(--red-team-color-vs), var(--team-color-transparency));
         --blue-team-color-vs: 37, 130, 244;
