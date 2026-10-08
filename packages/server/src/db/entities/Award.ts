@@ -5,6 +5,7 @@ import {
     CreateDateColumn,
     DeepPartial,
     Entity,
+    Index,
     PrimaryColumn,
     UpdateDateColumn,
 } from "typeorm";
@@ -35,6 +36,7 @@ export const AwardType = {
 export type AwardType = (typeof AwardType)[keyof typeof AwardType];
 
 @Entity()
+@Index(["teamNumber"])
 export class Award extends BaseEntity {
     @PrimaryColumn("smallint")
     season!: Season;

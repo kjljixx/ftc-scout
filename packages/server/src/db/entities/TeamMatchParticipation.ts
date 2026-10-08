@@ -14,6 +14,7 @@ import {
     CreateDateColumn,
     DeepPartial,
     Entity,
+    Index,
     ManyToOne,
     PrimaryColumn,
     UpdateDateColumn,
@@ -22,6 +23,7 @@ import { Match } from "./Match";
 import { Team } from "./Team";
 
 @Entity()
+@Index(["teamNumber"])
 export class TeamMatchParticipation extends BaseEntity {
     @PrimaryColumn("smallint")
     season!: Season;
