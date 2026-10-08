@@ -9,6 +9,8 @@
     import type { TeamQuery } from "$lib/graphql/generated/graphql-operations";
     import { percentile, prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
 
+    const AXIS_FONT_SIZE = 14;
+
     export let history: NonNullable<NonNullable<TeamQuery["teamByNumber"]>["quickStatsHistory"]>;
 
     $: rows = history
@@ -38,13 +40,17 @@
             dot(rows, { x: "season", y: "height", fill: "var(--inline-theme-color)", r: 5 }),
         ],
         scales: {
-            x: { scale: () => scalePoint<string>().padding(0.2) },
+            x: {
+                scale: () => scalePoint<string>().padding(0.2),
+                axis: { tickLabels: { fontSize: AXIS_FONT_SIZE } },
+            },
             y: {
                 scale: scaleLinear().domain([0, topHeight]),
                 grid: true,
                 axis: {
-                    label: "OPR rank among all teams",
+                    label: { text: "OPR rank among all teams", fontSize: AXIS_FONT_SIZE },
                     ticks: { values: heightTicks, format: (v: number) => `Top ${100 / 10 ** v}%` },
+                    tickLabels: { fontSize: AXIS_FONT_SIZE },
                 },
             },
         },
