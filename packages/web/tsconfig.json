@@ -4,6 +4,12 @@
         /* Modules */
         "resolveJsonModule": true,
         "moduleResolution": "node",
+        "paths": {
+            "$lib": ["./src/lib"],
+            "$lib/*": ["./src/lib/*"],
+            "@tanstack/charts": ["../../node_modules/@tanstack/charts/dist/index.d.ts"],
+            "@tanstack/charts/*": ["../../node_modules/@tanstack/charts/dist/*.d.ts"]
+        },
 
         /* Compilation */
         "incremental": true,

@@ -19,6 +19,10 @@ export function prettyPrintFloat(num: number): string {
     return (Math.round(num * 100) / 100).toFixed(2);
 }
 
+export function percentile(rank: number, count: number): number {
+    return (1 - (rank - 1) / (count - 1)) * 100;
+}
+
 export function prettyPrintInt(num: number): string {
     return num + "";
 }

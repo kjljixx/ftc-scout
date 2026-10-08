@@ -3,6 +3,10 @@
         let seasonName = url.searchParams.get("season");
         return ALL_SEASONS.find((s) => "" + s == seasonName) ?? CURRENT_SEASON;
     }
+
+    export function overallFromUrl(url: URL): boolean {
+        return url.searchParams.get("season") == "overall";
+    }
 </script>
 
 <script lang="ts">
@@ -33,6 +37,7 @@
     import { setContext } from "svelte";
     import { SHOW_REMOTE_FOCUS_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import QuickStats from "./QuickStats.svelte";
+    import OverallStats from "./OverallStats.svelte";
     const toSeason = (n: number) => n as Season;
 
     export let data;
@@ -44,9 +49,10 @@
 
     $: sortedEvents = [...(team?.events ?? [])].sort(eventSorter);
 
-    let season: Writable<Season> = queryParam("season", {
+    let season: Writable<Season | "overall"> = queryParam("season", {
         encode: (val) => (val == CURRENT_SEASON ? null : "" + val),
-        decode: (val) => ALL_SEASONS.find((s) => "" + s == val) ?? CURRENT_SEASON,
+        decode: (val) =>
+            val == "overall" ? val : ALL_SEASONS.find((s) => "" + s == val) ?? CURRENT_SEASON,
         pushState: true,
         killHash: true,
     });
@@ -105,6 +111,7 @@
                         <SeasonSelect
                             bind:season={$season}
                             nonForm
+                            includeOverall
                             disabledValues={inactiveSeasons}
                         />
                     </Form>
@@ -112,89 +119,94 @@
             </div>
         </Card>
 
-        {#if team.quickStats}
-            <QuickStats stats={team.quickStats} season={$season} />
-        {/if}
+        {#if $season == "overall"}
+            <OverallStats history={team.quickStatsHistory ?? []} />
+        {:else}
+            {#if team.quickStats}
+                <QuickStats stats={team.quickStats} season={$season} />
+            {/if}
 
-        {#if sortedEvents.length}
-            <Card vis={false} style="margin-bottom: 0">
-                <h2 class="section-title">Events</h2>
-            </Card>
-        {/if}
+            {#if sortedEvents.length}
+                <Card vis={false} style="margin-bottom: 0">
+                    <h2 class="section-title">Events</h2>
+                </Card>
+            {/if}
 
-        {#each sortedEvents as tep}
-            {@const event = tep.event}
-            {@const href = `/events/${event.season}/${event.code}/matches`}
+            {#each sortedEvents as tep}
+                {@const event = tep.event}
+                {@const href = `/events/${event.season}/${event.code}/matches`}
 
-            {@const isFinalsDivision = (() => {
-                if (!event || !event.relatedEvents || event.relatedEvents.length === 0)
-                    return false;
-                const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
-                const prefix = longestCommonPrefix(names);
-                const sliced = event.name.slice(prefix.length).trim().replace(/\-\s*/, "");
-                const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
-                return mappedName === "Finals Division";
-            })()}
+                {@const isFinalsDivision = (() => {
+                    if (!event || !event.relatedEvents || event.relatedEvents.length === 0)
+                        return false;
+                    const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
+                    const prefix = longestCommonPrefix(names);
+                    const sliced = event.name.slice(prefix.length).trim().replace(/\-\s*/, "");
+                    const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
+                    return mappedName === "Finals Division";
+                })()}
 
-            {@const matchTableTeams = isFinalsDivision
-                ? (event.relatedEvents ?? []).flatMap((re) =>
-                      (re.teams ?? []).map((t) => ({
-                          ...t,
-                          teamNumber: t.team.number,
-                          season: re.season,
-                          eventCode: re.code,
-                      }))
-                  )
-                : event.teams ?? []}
-            <Card panel style="margin-top: var(--md-gap)">
-                <div class="event-head">
-                    <h3 id={event.code}><a {href}>{event.name}</a></h3>
+                {@const matchTableTeams = isFinalsDivision
+                    ? (event.relatedEvents ?? []).flatMap((re) =>
+                          (re.teams ?? []).map((t) => ({
+                              ...t,
+                              teamNumber: t.team.number,
+                              season: re.season,
+                              eventCode: re.code,
+                          }))
+                      )
+                    : event.teams ?? []}
+                <Card panel style="margin-top: var(--md-gap)">
+                    <div class="event-head">
+                        <h3 id={event.code}><a {href}>{event.name}</a></h3>
 
-                    <div class="meta-line">
-                        <span>{prettyPrintDateRangeString(event.start, event.end)}</span>
-                        <span class="sep">&middot;</span>
-                        <Location {...event.location} />
+                        <div class="meta-line">
+                            <span>{prettyPrintDateRangeString(event.start, event.end)}</span>
+                            <span class="sep">&middot;</span>
+                            <Location {...event.location} />
+                        </div>
+
+                        <TeamEventStats
+                            stats={tep.stats}
+                            season={toSeason(event.season)}
+                            remote={event.remote}
+                        />
+
+                        {#if tep.awards.length}
+                            <div>
+                                {#each tep.awards as award, i}
+                                    <Award
+                                        {award}
+                                        comma={i != tep.awards.length - 1}
+                                        season={event.season}
+                                    />
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
 
-                    <TeamEventStats
-                        stats={tep.stats}
-                        season={toSeason(event.season)}
-                        remote={event.remote}
+                    <MatchTable
+                        matches={tep.matches.map((m) => m.match)}
+                        allMatches={event.matches ?? []}
+                        {event}
+                        focusedTeam={team.number}
+                        eventTeams={matchTableTeams}
                     />
-
-                    {#if tep.awards.length}
-                        <div>
-                            {#each tep.awards as award, i}
-                                <Award
-                                    {award}
-                                    comma={i != tep.awards.length - 1}
-                                    season={event.season}
-                                />
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-
-                <MatchTable
-                    matches={tep.matches.map((m) => m.match)}
-                    allMatches={event.matches ?? []}
-                    {event}
-                    focusedTeam={team.number}
-                    eventTeams={matchTableTeams}
-                />
-            </Card>
-        {:else}
-            <Card>
-                <div class="no-events">
-                    <b>
-                        {team.name}
-                        {$season == CURRENT_SEASON ? "has not yet played" : "did not compete"} in any
-                        {DESCRIPTORS[$season].seasonName} events.
-                    </b>
-                    <p>Try choosing a different season from the dropdown menu.</p>
-                </div>
-            </Card>
-        {/each}
+                </Card>
+            {:else}
+                <Card>
+                    <div class="no-events">
+                        <b>
+                            {team.name}
+                            {$season == CURRENT_SEASON ? "has not yet played" : "did not compete"} in
+                            any
+                            {DESCRIPTORS[$season].seasonName} events.
+                        </b>
+                        <p>Try choosing a different season from the dropdown menu.</p>
+                    </div>
+                </Card>
+            {/each}
+        {/if}
     </Loading>
 </WidthProvider>
 

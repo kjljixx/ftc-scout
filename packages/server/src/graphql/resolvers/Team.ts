@@ -255,6 +255,15 @@ export const TeamGQL: GraphQLObjectType = new GraphQLObjectType({
                 return getQuickStats(team.number, season, region);
             },
         },
+        quickStatsHistory: {
+            type: list(nn(QuickStatsGQL)),
+            resolve: async (team) => {
+                let history = await Promise.all(
+                    ALL_SEASONS.map((season) => getQuickStats(team.number, season, null))
+                );
+                return history.filter((s) => s != null);
+            },
+        },
     }),
 });
 

@@ -1,4 +1,4 @@
-query Team($number: Int!, $season: Int!) {
+query Team($number: Int!, $season: Int!, $overall: Boolean!) {
     teamByNumber(number: $number) {
         name
         number
@@ -13,7 +13,15 @@ query Team($number: Int!, $season: Int!) {
         sponsors
         rookieYear
         activeSeasons
-        quickStats(season: $season) {
+        quickStatsHistory @include(if: $overall) {
+            season
+            tot {
+                value
+                rank
+            }
+            count
+        }
+        quickStats(season: $season) @skip(if: $overall) {
             tot {
                 value
                 rank
@@ -33,7 +41,7 @@ query Team($number: Int!, $season: Int!) {
             }
             count
         }
-        events(season: $season) {
+        events(season: $season) @skip(if: $overall) {
             season
             eventCode
             teamNumber

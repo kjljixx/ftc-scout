@@ -5,12 +5,13 @@ import { TeamDocument } from "$lib/graphql/generated/graphql-operations";
 import { getData } from "$lib/graphql/getData";
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
-import { seasonFromUrl } from "./+page.svelte";
+import { overallFromUrl, seasonFromUrl } from "./+page.svelte";
 
 export const load: PageLoad = async ({ url, params, fetch }) => {
     let teamData = await getData(getClient(fetch), TeamDocument, {
         number: +params.number,
         season: seasonFromUrl(url),
+        overall: overallFromUrl(url),
     });
 
     if (!browser && !get(teamData)?.data?.teamByNumber)

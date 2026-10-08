@@ -3,7 +3,7 @@
     import Card from "../../../lib/components/Card.svelte";
     import StdErrLabel from "../../../lib/components/stats/StdErrLabel.svelte";
     import type { TeamQuery } from "../../../lib/graphql/generated/graphql-operations";
-    import { prettyPrintFloat, prettyPrintOrdinal } from "../../../lib/printers/number";
+    import { percentile, prettyPrintFloat, prettyPrintOrdinal } from "../../../lib/printers/number";
 
     export let stats: NonNullable<NonNullable<TeamQuery["teamByNumber"]>["quickStats"]>;
     export let season: Season;
@@ -15,9 +15,6 @@
         { label: "Teleop", stat: stats.dc, stdErr: null },
         { label: "Endgame", stat: stats.eg, stdErr: null },
     ];
-
-    const percentile = (rank: number, count: number) =>
-        prettyPrintFloat((1 - (rank - 1) / (count - 1)) * 100);
 </script>
 
 <Card vis={false}>
@@ -30,7 +27,9 @@
                     {#if stdErr != null}<StdErrLabel {stdErr} inline />{/if}
                 </span>
                 <span class="rank">
-                    {prettyPrintOrdinal(stat.rank)} &middot; {percentile(stat.rank, stats.count)}%
+                    {prettyPrintOrdinal(stat.rank)} &middot; {prettyPrintFloat(
+                        percentile(stat.rank, stats.count)
+                    )}%
                 </span>
             </div>
         {/each}
