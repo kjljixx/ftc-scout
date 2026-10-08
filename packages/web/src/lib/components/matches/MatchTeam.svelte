@@ -190,6 +190,10 @@
         color: var(--alliance-text-color);
     }
 
+    td.trad.not-on-field .name {
+        color: var(--grayed-out-text-color);
+    }
+
     td.trad.compact .inner {
         padding: var(--compact-pad-y, 2px) var(--md-pad);
     }
