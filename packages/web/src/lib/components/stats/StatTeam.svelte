@@ -14,6 +14,10 @@
     let clickAction = getContext(TEAM_CLICK_ACTION_CTX) as
         | ((num: number, name: string, eventCode: string | null) => void)
         | undefined;
+
+    function blurActiveElement() {
+        (document.activeElement as HTMLElement | null)?.blur();
+    }
 </script>
 
 <td
@@ -24,6 +28,7 @@
         if (clickAction) {
             e.preventDefault();
             e.stopPropagation();
+            if (e.detail > 0) blurActiveElement();
             clickAction(number, name, eventCode);
         }
     }}

@@ -63,6 +63,7 @@
         on:click={(e) => {
             if (clickAction) {
                 e.preventDefault();
+                if (e.detail > 0) e.currentTarget.blur();
                 clickAction(number, name, eventCode);
             }
         }}

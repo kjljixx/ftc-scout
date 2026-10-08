@@ -37,11 +37,11 @@
 
     function onKeydown(e: KeyboardEvent) {
         let target = e.target as HTMLElement | null;
-        if (target?.closest("input, textarea, select, button, a, [contenteditable]")) return;
+        if (target?.closest("input, textarea, select, [contenteditable]")) return;
         if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
 
         if (e.key == "Escape") dispatch("close");
-        if (e.key == "Enter") goto(href);
+        if (e.key == "Enter" && !target?.closest("button, a")) goto(href);
     }
 </script>
 
