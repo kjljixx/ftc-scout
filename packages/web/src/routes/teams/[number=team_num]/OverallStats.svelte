@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { defineChart, dot, lineY, mountChart, type ChartHost } from "@tanstack/charts";
+    import { defineChart, dot, lineY, mountChart, ruleY, type ChartHost } from "@tanstack/charts";
     import { scaleLinear } from "@tanstack/charts/scales/linear";
     import { scalePoint } from "@tanstack/charts/scales/point";
     import { tooltip } from "@tanstack/charts/tooltip";
@@ -27,9 +27,17 @@
 
     $: topHeight = Math.max(3, Math.ceil(Math.max(...rows.map((r) => r.height))));
     $: heightTicks = Array.from({ length: topHeight + 1 }, (_, i) => i);
+    $: minorHeightTicks = heightTicks
+        .slice(0, -1)
+        .flatMap((major) => [2, 3, 4, 5, 6, 7, 8, 9].map((m) => major + 1 - Math.log10(m)));
 
     $: definition = defineChart({
         marks: [
+            ruleY(minorHeightTicks, {
+                y: (h: number) => h,
+                stroke: "currentColor",
+                strokeOpacity: 0.07,
+            }),
             lineY(rows, {
                 id: "opr-percentile",
                 x: "season",
