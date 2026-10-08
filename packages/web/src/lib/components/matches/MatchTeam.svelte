@@ -174,12 +174,14 @@
         font-style: normal;
         font-size: 1.05em;
         font-weight: 500;
+        line-height: var(--name-line-height, normal);
         color: inherit;
     }
 
     td.trad .num {
         font-size: 0.85em;
         font-weight: 400;
+        line-height: var(--number-line-height, normal);
         color: var(--grayed-out-text-color);
     }
 

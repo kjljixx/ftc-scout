@@ -19,16 +19,23 @@
     export let focusedTeam: number | null;
     export let showNonPenaltyScores = false;
 
-    const BOX_WIDTH = 184;
-    const BASE_BOX_HEIGHT = 172;
+    const PHONE_BOX_WIDTH = 184;
+    const MAX_BOX_WIDTH = 240;
+    const TEAMS_PER_ALLIANCE = 2;
+    const NAME_LINE_HEIGHT = 17;
+    const NUMBER_LINE_HEIGHT = 14;
+    const DESKTOP_CARD_PAD_Y = 2;
     const PHONE_TEAMS_HEIGHT_PER_TEXT_SCALE = 58;
     const BASE_TEXT_SCALE = 0.85;
-    const COLUMN_GAP = 26;
-    const ROW_GAP = 10;
+    const PHONE_COLUMN_GAP = 26;
+    const DESKTOP_COLUMN_GAP = 16;
+    const PHONE_ROW_GAP = 10;
+    const DESKTOP_ROW_GAP = 6;
     const MIN_SCALE = 0.65;
     const PHONE_WIDTH = 640;
     const BOX_PADDING = 4;
-    const ROW_MARGIN = 2;
+    const DESKTOP_BOX_PADDING = 2;
+    const ROW_MARGIN = 0;
     const PHONE_ROW_MARGIN = 6;
     const PHONE_RED_PAD_BOTTOM = 3;
     const ALLIANCES = [Alliance.Red, Alliance.Blue];
@@ -44,25 +51,39 @@
 
     let availableWidth = 0;
 
-    const left = (s: BracketSeries) => s.col * (BOX_WIDTH + COLUMN_GAP);
-    $: width = Math.max(...placed.map(left)) + BOX_WIDTH;
+    $: isPhone = availableWidth > 0 && availableWidth < PHONE_WIDTH;
+    $: columnGap = isPhone ? PHONE_COLUMN_GAP : DESKTOP_COLUMN_GAP;
+    $: rowGap = isPhone ? PHONE_ROW_GAP : DESKTOP_ROW_GAP;
+
+    $: columns = Math.max(...layout.series.map((s) => s.col)) + 1;
+    $: boxWidth = isPhone
+        ? PHONE_BOX_WIDTH
+        : Math.floor(
+              Math.min(
+                  MAX_BOX_WIDTH,
+                  Math.max(PHONE_BOX_WIDTH, (availableWidth - (columns - 1) * columnGap) / columns)
+              )
+          );
+
+    $: left = (s: BracketSeries) => s.col * (boxWidth + columnGap);
+    $: width = Math.max(...placed.map(left)) + boxWidth;
     $: scale = availableWidth ? Math.max(MIN_SCALE, Math.min(1, availableWidth / width)) : 1;
 
-    $: isPhone = availableWidth > 0 && availableWidth < PHONE_WIDTH;
     $: textScale = isPhone ? 1 / scale : BASE_TEXT_SCALE;
     $: rowMargin = isPhone ? PHONE_ROW_MARGIN : ROW_MARGIN;
-    $: boxHeight = isPhone
-        ? ALLIANCES.length * (PHONE_TEAMS_HEIGHT_PER_TEXT_SCALE * textScale + rowMargin) +
-          2 * BOX_PADDING
-        : BASE_BOX_HEIGHT;
+    $: teamsHeight = isPhone
+        ? PHONE_TEAMS_HEIGHT_PER_TEXT_SCALE * textScale
+        : TEAMS_PER_ALLIANCE * (NAME_LINE_HEIGHT + NUMBER_LINE_HEIGHT) + 2 * DESKTOP_CARD_PAD_Y;
+    $: boxPadding = isPhone ? BOX_PADDING : DESKTOP_BOX_PADDING;
+    $: boxHeight = ALLIANCES.length * (teamsHeight + rowMargin) + 2 * boxPadding;
 
-    $: top = (s: BracketSeries) => s.row * (boxHeight + ROW_GAP);
+    $: top = (s: BracketSeries) => s.row * (boxHeight + rowGap);
     $: height = Math.max(...placed.map(top)) + boxHeight;
 
     $: rowCenter = (s: BracketSeries, row: number | null): number => {
         if (row == null) return top(s) + boxHeight / 2;
-        let rowHeight = (boxHeight - 2 * BOX_PADDING) / ALLIANCES.length;
-        return top(s) + BOX_PADDING + row * rowHeight + (rowHeight - rowMargin) / 2;
+        let rowHeight = (boxHeight - 2 * boxPadding) / ALLIANCES.length;
+        return top(s) + boxPadding + row * rowHeight + (rowHeight - rowMargin) / 2;
     };
 
     $: linkPath = (from: BracketSeries, to: BracketSeries): string => {
@@ -78,11 +99,11 @@
               )
             : -1;
 
-        let startX = left(from) + BOX_WIDTH;
+        let startX = left(from) + boxWidth;
         let startY = rowCenter(from, winnerRow < 0 ? null : winnerRow);
         let endX = left(to);
         let endY = rowCenter(to, advancingRow < 0 ? null : advancingRow);
-        let bendX = endX - COLUMN_GAP / 2;
+        let bendX = endX - columnGap / 2;
         return `M${startX} ${startY} H${bendX} V${endY} H${endX}`;
     };
 
@@ -140,9 +161,12 @@
     bind:clientWidth={availableWidth}
     style:--text-scale={textScale}
     style:--pred-scale={isPhone ? 0.85 : 1}
-    style:--compact-pad-y={isPhone ? "0px" : "2px"}
+    style:--compact-pad-y="0px"
+    style:--name-line-height={isPhone ? null : `${NAME_LINE_HEIGHT}px`}
+    style:--number-line-height={isPhone ? null : `${NUMBER_LINE_HEIGHT}px`}
     style:--row-margin="{isPhone ? rowMargin - PHONE_RED_PAD_BOTTOM : rowMargin}px"
-    style:--red-pad-bottom="{isPhone ? PHONE_RED_PAD_BOTTOM : 0}px"
+    style:--card-pad-y="{isPhone ? 0 : DESKTOP_CARD_PAD_Y}px"
+    style:--red-pad-bottom="{isPhone ? PHONE_RED_PAD_BOTTOM : DESKTOP_CARD_PAD_Y}px"
 >
     <div
         class="bracket"
@@ -164,8 +188,9 @@
                 class:placeholder={!match}
                 style:left="{left(s)}px"
                 style:top="{top(s)}px"
-                style:width="{BOX_WIDTH}px"
+                style:width="{boxWidth}px"
                 style:height="{boxHeight}px"
+                style:padding={isPhone ? null : `${boxPadding}px`}
             >
                 {#if match}
                     {#each rowsOf(match) as row}
@@ -317,7 +342,7 @@
     }
 
     .alliance:not(.empty) {
-        padding: 0 var(--sm-pad);
+        padding: var(--card-pad-y, 0) var(--sm-pad);
     }
 
     .alliance.red:not(.empty) {
