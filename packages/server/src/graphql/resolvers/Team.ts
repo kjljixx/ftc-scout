@@ -52,13 +52,14 @@ const QuickStatsGQL = new GraphQLObjectType({
     },
 });
 
-let cachedQSCount: Partial<Record<Season, { count: number; time: number }>> = {};
+let cachedQSCount: Record<string, { count: number; time: number }> = {};
 let cacheTime = 1000 * 60 * 5; // 5 minutes
 
-async function getQuickStatCount(season: Season, region: RegionOption | null) {
+async function getQuickStatCount(season: Season, region: RegionOption | null, remote: boolean) {
     let specialRegion = region && region != RegionOption.All;
 
-    let cached = cachedQSCount[season];
+    let cacheKey = `${season}-${remote}`;
+    let cached = cachedQSCount[cacheKey];
     if (!specialRegion && cached && Date.now() - cached.time < cacheTime) {
         return cached.count;
     }
@@ -66,7 +67,7 @@ async function getQuickStatCount(season: Season, region: RegionOption | null) {
     let q = DATA_SOURCE.createQueryBuilder(`tep_${season}`, "t")
         .leftJoin("event", "e", "e.season = t.season AND e.code = t.event_code")
         .select("count(distinct team_number)")
-        .where("NOT is_remote")
+        .where("is_remote = :remote", { remote })
         .andWhere("has_stats")
         .andWhere("NOT e.modified_rules");
 
@@ -78,13 +79,29 @@ async function getQuickStatCount(season: Season, region: RegionOption | null) {
     let count = +raw.count;
 
     if (!specialRegion) {
-        cachedQSCount[season] = { count, time: Date.now() };
+        cachedQSCount[cacheKey] = { count, time: Date.now() };
     }
 
     return count;
 }
 
-export async function getQuickStats(number: number, season: Season, region: RegionOption | null) {
+async function isMostlyRemote(season: Season) {
+    let raw = await DATA_SOURCE.createQueryBuilder(`tep_${season}`, "t")
+        .select(
+            "count(*) filter (where is_remote) > count(*) filter (where not is_remote)",
+            "remote"
+        )
+        .where("has_stats")
+        .getRawOne();
+    return !!raw?.remote;
+}
+
+export async function getQuickStats(
+    number: number,
+    season: Season,
+    region: RegionOption | null,
+    remote = false
+) {
     let total = DESCRIPTORS[season].pensSubtract ? "total_points" : "total_points_np";
     let max = DATA_SOURCE.createQueryBuilder(`tep_${season}`, "t")
         .leftJoin("event", "e", "e.season = t.season AND e.code = t.event_code")
@@ -105,7 +122,7 @@ export async function getQuickStats(number: number, season: Season, region: Regi
     max = max.addSelect(`max(${egColumn})`, "eg");
 
     max = max
-        .where("NOT is_remote")
+        .where("is_remote = :remote", { remote })
         .andWhere("has_stats")
         .andWhere("NOT e.modified_rules")
         .groupBy("team_number");
@@ -138,7 +155,7 @@ export async function getQuickStats(number: number, season: Season, region: Regi
         .leftJoin("event", "e", "e.season = t.season AND e.code = t.event_code")
         .select(`opr_se_${total}`, "std_err")
         .where("team_number = :number", { number })
-        .andWhere("NOT is_remote")
+        .andWhere("is_remote = :remote", { remote })
         .andWhere("has_stats")
         .andWhere("NOT e.modified_rules")
         .orderBy(`opr_${total}`, "DESC")
@@ -161,7 +178,7 @@ export async function getQuickStats(number: number, season: Season, region: Regi
         auto: { value: res.auto, rank: +res.auto_rank },
         dc: { value: res.dc, rank: +res.dc_rank },
         eg: { value: res.eg, rank: +res.eg_rank },
-        count: await getQuickStatCount(season, region),
+        count: await getQuickStatCount(season, region, remote),
     };
 }
 
@@ -259,7 +276,9 @@ export const TeamGQL: GraphQLObjectType = new GraphQLObjectType({
             type: list(nn(QuickStatsGQL)),
             resolve: async (team) => {
                 let history = await Promise.all(
-                    ALL_SEASONS.map((season) => getQuickStats(team.number, season, null))
+                    ALL_SEASONS.map(async (season) =>
+                        getQuickStats(team.number, season, null, await isMostlyRemote(season))
+                    )
                 );
                 return history.filter((s) => s != null);
             },
