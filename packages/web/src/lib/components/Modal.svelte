@@ -16,9 +16,15 @@
             close();
         }
     }
+
+    function onKeydown(e: KeyboardEvent) {
+        if (e.key != "Escape" || !shown) return;
+        e.preventDefault();
+        _close();
+    }
 </script>
 
-<svelte:body on:keydown={(e) => (e.key == "Escape" ? _close() : undefined)} />
+<svelte:body on:keydown={onKeydown} />
 
 {#if shown}
     <div transition:fade={{ duration: 100 }} class="outer-wrapper">

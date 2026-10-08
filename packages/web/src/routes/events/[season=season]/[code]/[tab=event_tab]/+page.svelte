@@ -248,7 +248,11 @@
         </ErrorPage>
 
         {#if focusedTeam && focusedTeamData}
-            <FocusedTeam team={focusedTeamData} remote={event.remote} />
+            <FocusedTeam
+                team={focusedTeamData}
+                remote={event.remote}
+                on:close={() => (focusedTeam = null)}
+            />
         {/if}
 
         <Card vis={false}>

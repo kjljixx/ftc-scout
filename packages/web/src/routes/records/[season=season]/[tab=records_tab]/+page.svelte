@@ -111,6 +111,7 @@
             eventCode: focusedTeamEvent ?? undefined,
         }}
         remote={false}
+        on:close={() => (focusedTeam = focusedTeamName = focusedTeamEvent = null)}
     />
 {/if}
 

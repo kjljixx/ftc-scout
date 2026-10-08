@@ -35,7 +35,11 @@
     import { queryParam } from "$lib/util/search-params/search-params";
     import Head from "$lib/components/Head.svelte";
     import { setContext } from "svelte";
-    import { SHOW_REMOTE_FOCUS_CTX } from "$lib/components/matches/MatchTeam.svelte";
+    import {
+        SHOW_REMOTE_FOCUS_CTX,
+        TEAM_CLICK_ACTION_CTX,
+    } from "$lib/components/matches/MatchTeam.svelte";
+    import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import QuickStats from "./QuickStats.svelte";
     import OverallStats from "./OverallStats.svelte";
     const toSeason = (n: number) => n as Season;
@@ -58,6 +62,19 @@
     });
 
     setContext(SHOW_REMOTE_FOCUS_CTX, false);
+
+    let focused: { number: number; eventCode: string } | null = null;
+    setContext(TEAM_CLICK_ACTION_CTX, (number: number, _name: string, eventCode: string) => {
+        let alreadyFocused = focused?.number == number && focused.eventCode == eventCode;
+        focused = alreadyFocused ? null : { number, eventCode };
+    });
+    $: if ($season || team?.number) focused = null;
+
+    $: focusedEvent = sortedEvents.find((tep) => tep.event.code == focused?.eventCode)?.event;
+    $: focusedTeamData = [
+        ...(focusedEvent?.teams ?? []),
+        ...(focusedEvent?.relatedEvents ?? []).flatMap((re) => re.teams ?? []),
+    ].find((t) => t.teamNumber == focused?.number);
 </script>
 
 <Head
@@ -122,6 +139,14 @@
         {#if $season == "overall"}
             <OverallStats history={team.quickStatsHistory ?? []} />
         {:else}
+            {#if focusedEvent && focusedTeamData}
+                <FocusedTeam
+                    team={focusedTeamData}
+                    remote={focusedEvent.remote}
+                    on:close={() => (focused = null)}
+                />
+            {/if}
+
             {#if team.quickStats}
                 <QuickStats stats={team.quickStats} season={$season} />
             {/if}
@@ -189,7 +214,7 @@
                         matches={tep.matches.map((m) => m.match)}
                         allMatches={event.matches ?? []}
                         {event}
-                        focusedTeam={team.number}
+                        focusedTeam={focused?.eventCode == event.code ? focused.number : team.number}
                         eventTeams={matchTableTeams}
                     />
                 </Card>

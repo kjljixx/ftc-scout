@@ -38,7 +38,7 @@
         (surrogate ? " (Surrogate)" : "");
 
     let clickAction = getContext(TEAM_CLICK_ACTION_CTX) as
-        | ((num: number, name: string) => void)
+        | ((num: number, name: string, eventCode: string) => void)
         | undefined;
 </script>
 
@@ -63,7 +63,7 @@
         on:click={(e) => {
             if (clickAction) {
                 e.preventDefault();
-                clickAction(number, name);
+                clickAction(number, name, eventCode);
             }
         }}
     >

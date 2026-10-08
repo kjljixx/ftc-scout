@@ -3,9 +3,10 @@
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import Fa from "svelte-fa";
     import StdErrLabel from "./StdErrLabel.svelte";
-    import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-    import { preloadData } from "$app/navigation";
+    import { faXmark } from "@fortawesome/free-solid-svg-icons";
+    import { goto, preloadData } from "$app/navigation";
     import { fly } from "svelte/transition";
+    import { createEventDispatcher } from "svelte";
     import { prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
 
     type Team = Omit<NonNullable<EventPageQuery["eventByCode"]>["teams"][number], "__typename">;
@@ -31,51 +32,62 @@
     $: oprStdErr = (stats?.oprSe as Record<string, number | null | undefined> | undefined)?.[
         npStat
     ];
+
+    const dispatch = createEventDispatcher<{ close: void }>();
+
+    function onKeydown(e: KeyboardEvent) {
+        let target = e.target as HTMLElement | null;
+        if (target?.closest("input, textarea, select, button, a, [contenteditable]")) return;
+        if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+
+        if (e.key == "Escape") dispatch("close");
+        if (e.key == "Enter") goto(href);
+    }
 </script>
 
-<a {href} transition:fly={{ y: 100, duration: 300 }}>
-    <div class="team">
-        <span class="name">{name}</span>
-        <span class="number">{number}</span>
-    </div>
+<svelte:window on:keydown={onKeydown} />
 
-    {#if stats}
-        <div class="stats">
-            <div class="stat">
-                <span class="label">Rank</span>
-                <span class="value">{prettyPrintOrdinal(stats.rank)}</span>
-            </div>
-            {#if "wins" in stats}
-                <div class="stat">
-                    <span class="label">W-L-T</span>
-                    <span class="value">{stats.wins}-{stats.losses}-{stats.ties}</span>
-                </div>
-            {/if}
-            <div class="stat">
-                <span class="label">{useNp ? "np OPR" : "OPR"}</span>
-                <span class="value">
-                    {prettyPrintFloat(stats.opr[npStat])}
-                    <StdErrLabel stdErr={oprStdErr} inline />
-                </span>
-            </div>
-            <div class="stat">
-                <span class="label">{useNp ? "np AVG" : "AVG"}</span>
-                <span class="value">{prettyPrintFloat(stats.avg[npStat])}</span>
-            </div>
+<div class="card" transition:fly={{ y: 100, duration: 300 }}>
+    <a {href}>
+        <div class="team">
+            <span class="name">{name}</span>
+            <span class="number">{number}</span>
         </div>
-    {/if}
 
-    <span class="chevron"><Fa icon={faChevronRight} /></span>
-</a>
+        {#if stats}
+            <div class="stats">
+                <div class="stat">
+                    <span class="label">Rank</span>
+                    <span class="value">{prettyPrintOrdinal(stats.rank)}</span>
+                </div>
+                {#if "wins" in stats}
+                    <div class="stat">
+                        <span class="label">W-L-T</span>
+                        <span class="value">{stats.wins}-{stats.losses}-{stats.ties}</span>
+                    </div>
+                {/if}
+                <div class="stat">
+                    <span class="label">{useNp ? "np OPR" : "OPR"}</span>
+                    <span class="value">
+                        {prettyPrintFloat(stats.opr[npStat])}
+                        <StdErrLabel stdErr={oprStdErr} inline />
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="label">{useNp ? "np AVG" : "AVG"}</span>
+                    <span class="value">{prettyPrintFloat(stats.avg[npStat])}</span>
+                </div>
+            </div>
+        {/if}
+    </a>
+
+    <button class="close" title="Deselect team (Esc)" on:click={() => dispatch("close")}>
+        <Fa icon={faXmark} />
+    </button>
+</div>
 
 <style>
-    a {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--md-gap) var(--vl-gap);
-        text-decoration: none;
-
+    .card {
         position: fixed;
         bottom: 0;
         margin: var(--md-gap);
@@ -91,7 +103,6 @@
         background: var(--raised-bg-color);
         color: var(--text-color);
 
-        padding: var(--lg-pad) var(--vl-gap);
         border-radius: 12px;
         box-shadow: inset 0 0 0 2px var(--focused-team-ring-color), 0 16px 32px rgba(0, 0, 0, 0.45),
             0 2px 6px rgba(0, 0, 0, 0.4);
@@ -102,9 +113,44 @@
     }
 
     @media (max-width: 1500px) {
-        a {
+        .card {
             --team-bar-ss: 0px;
         }
+    }
+
+    a {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--md-gap) var(--vl-gap);
+        text-decoration: none;
+        color: inherit;
+
+        padding: var(--lg-pad) var(--vl-gap);
+        border-radius: 12px;
+    }
+
+    .close {
+        position: absolute;
+        top: var(--sm-gap);
+        right: var(--sm-gap);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+
+        border: none;
+        border-radius: 50%;
+        background: none;
+        color: var(--grayed-out-text-color);
+        cursor: pointer;
+    }
+
+    .close:hover {
+        background: color-mix(in srgb, currentColor 15%, transparent);
+        color: var(--text-color);
     }
 
     .team {
@@ -114,6 +160,7 @@
 
         flex: 1;
         min-width: 0;
+        padding-right: 1.5rem;
     }
 
     .name {
@@ -128,12 +175,6 @@
 
     .number {
         font-size: var(--md-font-size);
-        color: var(--grayed-out-text-color);
-    }
-
-    .chevron {
-        order: 1;
-        flex-shrink: 0;
         color: var(--grayed-out-text-color);
     }
 
