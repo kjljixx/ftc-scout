@@ -22,7 +22,8 @@ import { frontendMSFromDB } from "../graphql/dyn/match-score";
 import { FindOptionsWhere, In } from "typeorm";
 import { getQuickStats } from "../graphql/resolvers/Team";
 import { addTypename } from "../graphql/dyn/tep";
-import { getTeamComponents, randomConnectedPair } from "../game/team-components";
+import { getTeamGraph, randomConnectedPair } from "../game/team-graph";
+import { bestRoute } from "../game/best-route";
 
 const pre = "/rest/v1/";
 
@@ -54,7 +55,8 @@ export function setupRest(app: Express) {
     app.get(pre + "teams/:number(\\d+)/quick-stats", teamQuickStats);
     app.get(pre + "teams/search", teamSearch);
     app.get(pre + "game/pair", gamePair);
-    getTeamComponents().catch((e) => console.error("[game] component build failed", e));
+    app.get(pre + "game/solve", gameSolve);
+    getTeamGraph().catch((e) => console.error("[game] graph build failed", e));
 
     app.get(pre + "events/:season(\\d+)/:code", eventByCode);
     app.get(pre + "events/:season(\\d+)/:code/matches", eventMatches);
@@ -250,6 +252,24 @@ async function teamSearch(req: Request, res: Response) {
     }
 
     res.send(entities);
+}
+
+async function gameSolve(req: Request, res: Response) {
+    let from = req.query.from as string | undefined;
+    let to = req.query.to as string | undefined;
+
+    if (!from || !to || !isNumber(from) || !isNumber(to)) {
+        res.status(400).send("Query parameters from and to must be team numbers.");
+        return;
+    }
+
+    let route = await bestRoute(+from, +to);
+    if (!route) {
+        res.status(404).send(`No route from ${from} to ${to}.`);
+        return;
+    }
+
+    res.send(route);
 }
 
 async function eventByCode(req: Request<{ season: string; code: string }>, res: Response) {

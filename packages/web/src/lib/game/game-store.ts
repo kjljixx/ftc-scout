@@ -31,10 +31,13 @@ export type Hop = {
 
 export type PathStop = { number: number; name: string; hop?: Hop | undefined };
 
+export type BestRoute = { hops: number; path: PathStop[] };
+
 export type GameState = {
-    status: "idle" | "playing" | "won";
+    status: "idle" | "playing" | "won" | "gaveUp";
     pair: GamePair | null;
     path: PathStop[];
+    best: BestRoute | null;
     startedAt: number | null;
     elapsedMs: number | null;
     currentUrl: string | null;
@@ -51,6 +54,7 @@ const IDLE: GameState = {
     status: "idle",
     pair: null,
     path: [],
+    best: null,
     startedAt: null,
     elapsedMs: null,
     currentUrl: null,
@@ -101,6 +105,43 @@ export async function fetchPair(mode: GameMode, steps: number): Promise<GamePair
     return pair;
 }
 
+type BestRouteResponse = {
+    hops: number;
+    path: { number: number; name: string; hop: Hop | null }[];
+};
+
+export async function fetchBestRoute(pair: GamePair): Promise<BestRoute> {
+    let params = new URLSearchParams({
+        from: "" + pair.start.number,
+        to: "" + pair.destination.number,
+    });
+    let res = await fetch(`${SERVER_ORIGIN}/rest/v1/game/solve?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let route: BestRouteResponse = await res.json();
+    console.info(
+        `[game] best route ${pair.start.number} -> ${pair.destination.number} hops=${route.hops}`
+    );
+    return {
+        hops: route.hops,
+        path: route.path.map((s) => ({ number: s.number, name: s.name, hop: s.hop ?? undefined })),
+    };
+}
+
+export function setBestRoute(pair: GamePair, best: BestRoute) {
+    game.update((g) => {
+        let sameGame =
+            g.pair?.start.number == pair.start.number &&
+            g.pair?.destination.number == pair.destination.number;
+        if (g.status == "idle" || g.status == "playing" || !sameGame) {
+            console.warn(
+                `[game] dropped best route for ${pair.start.number} -> ${pair.destination.number}`
+            );
+            return g;
+        }
+        return { ...g, best };
+    });
+}
+
 export function teamUrl(number: number, season?: number | null): string {
     let seasonPart = season && season != CURRENT_SEASON ? `?season=${season}` : "";
     return `/teams/${number}${seasonPart}`;
@@ -120,6 +161,7 @@ export function startGame(pair: GamePair) {
         status: "playing",
         pair,
         path: [{ number: pair.start.number, name: pair.start.name }],
+        best: null,
         startedAt: Date.now(),
         elapsedMs: null,
         currentUrl: startUrl(pair),
@@ -141,6 +183,15 @@ export function visitTeam(number: number, name: string, url: string) {
         let elapsedMs = Date.now() - (g.startedAt ?? Date.now());
         console.info(`[game] won hops=${path.length - 1} elapsedMs=${elapsedMs}`);
         return { ...g, status: "won", path, elapsedMs, currentUrl: url, pendingHop: null };
+    });
+}
+
+export function giveUp() {
+    game.update((g) => {
+        if (g.status != "playing") return g;
+        let elapsedMs = Date.now() - (g.startedAt ?? Date.now());
+        console.info(`[game] gave up hops=${g.path.length - 1} elapsedMs=${elapsedMs}`);
+        return { ...g, status: "gaveUp", elapsedMs, pendingHop: null };
     });
 }
 

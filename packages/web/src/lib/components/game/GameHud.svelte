@@ -2,14 +2,14 @@
     import { goto } from "$app/navigation";
     import { faFlag } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
-    import { clock, formatClock, game, gameActive, resetGame } from "$lib/game/game-store";
+    import { clock, formatClock, game, gameActive, giveUp } from "$lib/game/game-store";
     import Button from "../ui/Button.svelte";
     import GameTeam from "./GameTeam.svelte";
 
     const SHOWN_STOPS = 4;
 
-    function giveUp() {
-        resetGame();
+    function giveUpAndShowResults() {
+        giveUp();
         goto("/speedrun");
     }
 
@@ -39,7 +39,7 @@
                 <span>{hops} {hops == 1 ? "hop" : "hops"}</span>
             </div>
 
-            <Button on:click={giveUp}>Give up</Button>
+            <Button on:click={giveUpAndShowResults}>Give up</Button>
         </div>
     </div>
 {/if}

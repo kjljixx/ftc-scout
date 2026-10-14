@@ -1,47 +1,24 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import { onMount } from "svelte";
-    import { createTippy } from "svelte-tippy";
-    import "tippy.js/dist/tippy.css";
-    import { DESCRIPTORS, type Season } from "@ftc-scout/common";
-    import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
-    import { HIDDEN_TIP } from "$lib/util/tippy";
     import Head from "$lib/components/Head.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
     import GameTeam from "$lib/components/game/GameTeam.svelte";
+    import RouteView from "$lib/components/game/RouteView.svelte";
     import {
+        fetchBestRoute,
         fetchPair,
         formatClock,
         game,
         resetGame,
+        setBestRoute,
         startGame,
         startUrl,
         type GameMode,
         type GamePair,
-        type Hop,
     } from "$lib/game/game-store";
 
     const STEP_OPTIONS = [3, 5, 7];
-
-    const tippy = createTippy({ placement: "top", touch: ["hold", 500] });
-
-    function hopTip(hop: Hop | undefined, theme: "light" | "dark") {
-        if (!hop) return HIDDEN_TIP;
-        let lines = [
-            hop.eventName,
-            `${hop.season} ${DESCRIPTORS[hop.season as Season]?.seasonName ?? ""} · ${hop.match}`,
-            hop.relation,
-        ];
-        let content = document.createElement("div");
-        lines.forEach((text, i) => {
-            if (!text) return;
-            let line = document.createElement("div");
-            line.textContent = text;
-            if (i == 0) line.style.fontWeight = "600";
-            content.append(line);
-        });
-        return { content, theme, maxWidth: 350 };
-    }
 
     let mode: GameMode = "global";
     let steps = STEP_OPTIONS[0];
@@ -49,8 +26,22 @@
     let loading = false;
     let error: string | null = null;
 
+    let bestFailed = false;
+
+    async function loadBestRoute(pair: GamePair) {
+        bestFailed = false;
+        try {
+            setBestRoute(pair, await fetchBestRoute(pair));
+        } catch (e) {
+            console.error("[game] could not load the best route:", e);
+            bestFailed = true;
+        }
+    }
+
     onMount(() => {
         if ($game.status == "playing" && $game.currentUrl) goto($game.currentUrl);
+        else if ($game.pair && !$game.best && ($game.status == "won" || $game.status == "gaveUp"))
+            loadBestRoute($game.pair);
     });
 
     function select(newMode: GameMode, newSteps = steps) {
@@ -79,40 +70,34 @@
         goto(startUrl(pair));
     }
 
-    $: won = $game.status == "won" && $game.pair;
+    $: ended = $game.status == "won" || $game.status == "gaveUp";
+    $: gaveUp = $game.status == "gaveUp";
     $: hops = $game.path.length - 1;
+    $: best = $game.best;
+    $: matchedBest = !gaveUp && !!best && hops <= best.hops;
+    $: extraHops = best ? hops - best.hops : 0;
+    $: if (best && !gaveUp && hops < best.hops) {
+        console.error(`[game] route of ${hops} hops beats the best route of ${best.hops} hops`);
+    }
+    $: yourBadge = gaveUp
+        ? { text: "Gave up", good: false }
+        : matchedBest
+        ? { text: "Best route", good: true }
+        : extraHops > 0
+        ? { text: `+${extraHops} ${extraHops == 1 ? "hop" : "hops"}`, good: false }
+        : null;
 </script>
 
 <Head title="Team Speedrun | 2iLScout" description="Race from one FTC team to another." />
 
 <WidthProvider>
-    {#if won && $game.pair}
+    {#if ended && $game.pair}
         <div class="pair">
             <GameTeam team={$game.pair.start} align="right" />
             <svg class="arrow" width="64" height="32" viewBox="0 0 64 32" aria-hidden="true">
                 <path d="M4 16h54M44 4l14 12-14 12" />
             </svg>
             <GameTeam team={$game.pair.destination} />
-        </div>
-
-        <div class="route">
-            {#each $game.path as stop, i}
-                {#if i > 0}
-                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                    <span
-                        class="chev"
-                        class:has-hop={!!stop.hop}
-                        tabindex={stop.hop ? 0 : -1}
-                        use:tippy={hopTip(stop.hop, $tippyTheme)}
-                    >
-                        &rsaquo;
-                    </span>
-                {/if}
-                <div class="stop" class:end={i == 0 || i == $game.path.length - 1}>
-                    <b>{stop.number}</b>
-                    <span>{stop.name}</span>
-                </div>
-            {/each}
         </div>
 
         <div class="results">
@@ -125,6 +110,15 @@
                 <span class="value">{hops}</span>
             </div>
         </div>
+
+        <RouteView title="Your route" path={$game.path} badge={yourBadge} stuckAtEnd={gaveUp} />
+        {#if !matchedBest}
+            <RouteView
+                title="Best route"
+                path={best?.path ?? null}
+                note={bestFailed ? "Unavailable" : "Finding…"}
+            />
+        {/if}
 
         <div class="actions">
             <button class="pill primary" on:click={resetGame}>Play again</button>
@@ -205,7 +199,6 @@
     .header,
     .modes,
     .pair,
-    .route,
     .results,
     .actions,
     .error {
@@ -289,62 +282,6 @@
         stroke-width: 3;
         stroke-linecap: round;
         stroke-linejoin: round;
-    }
-
-    .route {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: var(--lg-gap);
-
-        padding: var(--lg-pad);
-        margin-bottom: var(--vl-gap);
-
-        background: var(--fg-color);
-        border: 1px solid var(--sep-color);
-        border-radius: 12px;
-    }
-
-    .stop {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        line-height: 1.25;
-    }
-
-    .stop span {
-        max-width: 130px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-
-        font-size: 0.85em;
-        color: var(--grayed-out-text-color);
-    }
-
-    .stop.end b {
-        color: var(--focused-team-ring-color);
-    }
-
-    .chev {
-        padding: 2px 10px;
-        border-radius: 8px;
-
-        font-size: var(--lg-font-size);
-        color: var(--grayed-out-text-color);
-        user-select: none;
-    }
-
-    .chev.has-hop {
-        cursor: help;
-    }
-
-    .chev.has-hop:hover,
-    .chev.has-hop:focus-visible {
-        color: var(--text-color);
-        background: var(--hover-color);
-        outline: none;
     }
 
     .results {
