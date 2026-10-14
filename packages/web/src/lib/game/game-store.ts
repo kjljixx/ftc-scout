@@ -164,6 +164,11 @@ export function blockedNavigation(pathname: string) {
     showToast("Event pages are locked");
 }
 
+export function blockedShortcut(name: string) {
+    console.info(`[game] blocked ${name} shortcut`);
+    showToast(`${name[0].toUpperCase()}${name.slice(1)} is disabled during a run`);
+}
+
 export function formatClock(ms: number): string {
     let total = Math.max(0, Math.floor(ms / 1000));
     let seconds = `${total % 60}`.padStart(2, "0");

@@ -9,7 +9,13 @@
     import { sendAnalyticsRequest } from "./analytics";
     import GameHud from "$lib/components/game/GameHud.svelte";
     import GameToast from "$lib/components/game/GameToast.svelte";
-    import { blockedNavigation, game, gameActive, isAllowedPath } from "$lib/game/game-store";
+    import {
+        blockedNavigation,
+        blockedShortcut,
+        game,
+        gameActive,
+        isAllowedPath,
+    } from "$lib/game/game-store";
 
     if (browser) {
         // Svelte uses window.scrollTo to emulate the scroll resetting when navigation. However we
@@ -42,6 +48,14 @@
     });
 
     $: if ($game.status == "won" && $page.url.pathname != "/speedrun") goto("/speedrun");
+
+    function blockFind(e: KeyboardEvent) {
+        if (!$gameActive) return;
+        let findShortcut = (e.ctrlKey || e.metaKey) && (e.key == "f" || e.key == "g");
+        if (!findShortcut && e.key != "F3") return;
+        e.preventDefault();
+        blockedShortcut("find");
+    }
 </script>
 
 <svelte:head>
@@ -52,6 +66,8 @@
         rel="stylesheet"
     />
 </svelte:head>
+
+<svelte:window on:keydown={blockFind} />
 
 <Navbar />
 {#if !$gameActive}
