@@ -43,7 +43,7 @@
         return { content, theme, maxWidth: 350 };
     }
 
-    let mode: GameMode = "regional";
+    let mode: GameMode = "global";
     let steps = STEP_OPTIONS[0];
     let pair: GamePair | null = null;
     let loading = false;
@@ -139,6 +139,20 @@
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
                 class="mode"
+                class:on={mode == "global"}
+                role="radio"
+                aria-checked={mode == "global"}
+                tabindex="0"
+                on:click={() => select("global")}
+                on:keydown={(e) => e.key == "Enter" && select("global")}
+            >
+                <h3>Global</h3>
+                <span class="desc">Any two connected teams</span>
+            </div>
+
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div
+                class="mode"
                 class:on={mode == "regional"}
                 role="radio"
                 aria-checked={mode == "regional"}
@@ -159,20 +173,6 @@
                         </button>
                     {/each}
                 </div>
-            </div>
-
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <div
-                class="mode"
-                class:on={mode == "global"}
-                role="radio"
-                aria-checked={mode == "global"}
-                tabindex="0"
-                on:click={() => select("global")}
-                on:keydown={(e) => e.key == "Enter" && select("global")}
-            >
-                <h3>Global</h3>
-                <span class="desc">Any two connected teams</span>
             </div>
         </div>
 
