@@ -1,4 +1,4 @@
-query Team($number: Int!, $season: Int!, $overall: Boolean!) {
+query Team($number: Int!, $season: Int!, $overall: Boolean!, $lite: Boolean!) {
     teamByNumber(number: $number) {
         name
         number
@@ -59,7 +59,7 @@ query Team($number: Int!, $season: Int!, $overall: Boolean!) {
             }
             event {
                 ...BasicEventInfo
-                teams {
+                teams @skip(if: $lite) {
                     season
                     eventCode
                     teamNumber
@@ -80,7 +80,7 @@ query Team($number: Int!, $season: Int!, $overall: Boolean!) {
                     season
                     code
                     name
-                    teams {
+                    teams @skip(if: $lite) {
                         season
                         eventCode
                         teamNumber
@@ -98,7 +98,7 @@ query Team($number: Int!, $season: Int!, $overall: Boolean!) {
                         }
                     }
                 }
-                matches {
+                matches @skip(if: $lite) {
                     ...FullMatch
                 }
             }

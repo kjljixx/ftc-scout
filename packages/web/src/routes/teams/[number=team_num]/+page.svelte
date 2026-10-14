@@ -270,6 +270,10 @@
 </WidthProvider>
 
 <style>
+    :global(#content.game .pred) {
+        display: none;
+    }
+
     .header {
         display: flex;
         align-items: flex-start;
