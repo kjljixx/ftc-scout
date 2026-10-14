@@ -42,6 +42,10 @@
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import QuickStats from "./QuickStats.svelte";
     import OverallStats from "./OverallStats.svelte";
+    import { goto } from "$app/navigation";
+    import { browser } from "$app/environment";
+    import { gameActive, setPendingHop, teamUrl, visitTeam, type Hop } from "$lib/game/game-store";
+    import { Alliance, type FullMatchFragment } from "$lib/graphql/generated/graphql-operations";
     const toSeason = (n: number) => n as Season;
 
     export let data;
@@ -64,11 +68,41 @@
     setContext(SHOW_REMOTE_FOCUS_CTX, false);
 
     let focused: { number: number; eventCode: string } | null = null;
-    setContext(TEAM_CLICK_ACTION_CTX, (number: number, _name: string, eventCode: string) => {
-        let alreadyFocused = focused?.number == number && focused.eventCode == eventCode;
-        focused = alreadyFocused ? null : { number, eventCode };
-    });
+    function hopTo(number: number, eventCode: string, match: FullMatchFragment | null): Hop | null {
+        if (!match) return null;
+        let events = sortedEvents.flatMap((tep) => [tep.event, ...(tep.event.relatedEvents ?? [])]);
+        let mine = match.teams.find((t) => t.teamNumber == team.number);
+        let theirs = match.teams.find((t) => t.teamNumber == number);
+        let sameAlliance = mine?.alliance == theirs?.alliance;
+        let hasAlliances = mine && theirs && mine.alliance != Alliance.Solo;
+        return {
+            eventName: events.find((e) => e.code == eventCode)?.name ?? eventCode,
+            season: match.season,
+            match: match.description,
+            relation: hasAlliances ? (sameAlliance ? "Partners" : "Opponents") : null,
+        };
+    }
+
+    setContext(
+        TEAM_CLICK_ACTION_CTX,
+        (number: number, _name: string, eventCode: string, match: FullMatchFragment | null) => {
+            if ($gameActive) {
+                let hop = hopTo(number, eventCode, match);
+                if (hop) setPendingHop(number, hop);
+                let eventSeason = sortedEvents.find((tep) => tep.event.code == eventCode)?.event.season;
+                goto(teamUrl(number, eventSeason ?? ($season == "overall" ? null : $season)));
+                return;
+            }
+
+            let alreadyFocused = focused?.number == number && focused.eventCode == eventCode;
+            focused = alreadyFocused ? null : { number, eventCode };
+        }
+    );
     $: if ($season || team?.number) focused = null;
+
+    $: if (browser && team && team.number == +$page.params.number) {
+        visitTeam(team.number, team.name, $page.url.pathname + $page.url.search);
+    }
 
     $: focusedEvent = sortedEvents.find((tep) => tep.event.code == focused?.eventCode)?.event;
     $: focusedTeamData = [

@@ -213,6 +213,7 @@
                                                     {season}
                                                     {focusedTeam}
                                                     winner={row.won}
+                                                    {match}
                                                     span={1}
                                                     trad
                                                     compact

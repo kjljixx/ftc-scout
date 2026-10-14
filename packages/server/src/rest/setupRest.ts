@@ -22,6 +22,7 @@ import { frontendMSFromDB } from "../graphql/dyn/match-score";
 import { FindOptionsWhere, In } from "typeorm";
 import { getQuickStats } from "../graphql/resolvers/Team";
 import { addTypename } from "../graphql/dyn/tep";
+import { getTeamComponents, randomConnectedPair } from "../game/team-components";
 
 const pre = "/rest/v1/";
 
@@ -52,6 +53,8 @@ export function setupRest(app: Express) {
     app.get(pre + "teams/:number(\\d+)/matches", teamMatches);
     app.get(pre + "teams/:number(\\d+)/quick-stats", teamQuickStats);
     app.get(pre + "teams/search", teamSearch);
+    app.get(pre + "game/pair", gamePair);
+    getTeamComponents().catch((e) => console.error("[game] component build failed", e));
 
     app.get(pre + "events/:season(\\d+)/:code", eventByCode);
     app.get(pre + "events/:season(\\d+)/:code/matches", eventMatches);
@@ -250,6 +253,102 @@ async function teamSearch(req: Request, res: Response) {
 }
 
 async function eventByCode(req: Request<{ season: string; code: string }>, res: Response) {
+const GAME_DEFAULT_STEPS = 4;
+const GAME_MIN_STEPS = 1;
+const GAME_MAX_STEPS = 8;
+
+async function randomMatchPartnerOrOpponent(teamNumber: number): Promise<number | null> {
+    let rows: { team_number: number }[] = await DATA_SOURCE.query(
+        `SELECT b.team_number FROM team_match_participation a
+        JOIN team_match_participation b
+            ON a.season = b.season AND a.event_code = b.event_code AND a.match_id = b.match_id
+        WHERE a.team_number = $1 AND b.team_number <> $1
+        ORDER BY random() LIMIT 1`,
+        [teamNumber]
+    );
+    return rows[0]?.team_number ?? null;
+}
+
+async function gameTeamInfo(team: Team) {
+    let seasons: { season: number }[] = await DATA_SOURCE.query(
+        "SELECT DISTINCT season FROM team_match_participation WHERE team_number = $1 ORDER BY season",
+        [team.number]
+    );
+    return {
+        number: team.number,
+        name: team.name,
+        city: team.city,
+        state: team.state,
+        country: team.country,
+        seasons: seasons.map((s) => s.season),
+    };
+}
+
+async function regionalPair(steps: number): Promise<{ walk: number[]; log: string }> {
+    let [start] = await DATA_SOURCE.getRepository(Team)
+        .createQueryBuilder("t")
+        .where(
+            "EXISTS (SELECT 1 FROM team_match_participation m WHERE m.team_number = t.number)"
+        )
+        .orderBy("random()")
+        .limit(1)
+        .getMany();
+
+    let walk = [start.number];
+    for (let i = 0; i < steps; i++) {
+        let next = await randomMatchPartnerOrOpponent(walk[walk.length - 1]);
+        if (next == null) break;
+        walk.push(next);
+    }
+    return { walk, log: `requested=${steps} taken=${walk.length - 1} walk=${walk.join(">")}` };
+}
+
+async function gamePair(req: Request, res: Response) {
+    let mode = (req.query.mode as string | undefined) ?? "regional";
+    let stepsParam = req.query.steps as string | undefined;
+
+    if (mode != "regional" && mode != "global") {
+        res.status(400).send(`Invalid mode ${mode}.`);
+        return;
+    }
+
+    if (stepsParam && !isNumber(stepsParam)) {
+        res.status(400).send(`Invalid steps ${stepsParam}.`);
+        return;
+    }
+
+    let steps = Math.min(
+        GAME_MAX_STEPS,
+        Math.max(GAME_MIN_STEPS, +(stepsParam ?? GAME_DEFAULT_STEPS))
+    );
+
+    let startNumber: number;
+    let destinationNumber: number;
+    let pairSteps: number | null = null;
+
+    if (mode == "global") {
+        let { pair, attempts } = await randomConnectedPair();
+        [startNumber, destinationNumber] = pair;
+        console.info(`[game] pair mode=global attempts=${attempts} pair=${pair.join(">")}`);
+    } else {
+        let { walk, log } = await regionalPair(steps);
+        startNumber = walk[0];
+        destinationNumber = walk[walk.length - 1];
+        pairSteps = walk.length - 1;
+        console.info(`[game] pair mode=regional ${log}`);
+    }
+
+    let start = (await Team.findOneBy({ number: startNumber }))!;
+    let destination = (await Team.findOneBy({ number: destinationNumber }))!;
+
+    res.send({
+        mode,
+        steps: pairSteps,
+        start: await gameTeamInfo(start),
+        destination: await gameTeamInfo(destination),
+    });
+}
+
     let season = +req.params.season;
     let code = req.params.code;
 

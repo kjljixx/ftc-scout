@@ -3,16 +3,17 @@
     import Hamburger from "./Hamburger.svelte";
     import Logo from "./Logo.svelte";
     import Searchbar from "./search/Searchbar.svelte";
+    import { gameActive } from "$lib/game/game-store";
 </script>
 
 <nav>
     <div class="left">
-        <Hamburger />
+        <div class="hamburger" class:hidden={$gameActive}><Hamburger /></div>
         <Logo />
     </div>
 
     <div class="right">
-        <Searchbar />
+        <Searchbar disabled={$gameActive} />
         <DarkModeToggle />
     </div>
 </nav>
@@ -39,6 +40,10 @@
     .left {
         display: flex;
         align-items: center;
+    }
+
+    .hidden {
+        visibility: hidden;
     }
 
     .right {

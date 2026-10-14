@@ -3,8 +3,13 @@
     import { browser } from "$app/environment";
     import Sidebar from "$lib/components/nav/Sidebar.svelte";
     import TimestampToast from "$lib/components/TimestampToast.svelte";
-    import { afterNavigate } from "$app/navigation";
+    import { afterNavigate, beforeNavigate, goto } from "$app/navigation";
+    import { page } from "$app/stores";
+    import { onMount } from "svelte";
     import { sendAnalyticsRequest } from "./analytics";
+    import GameHud from "$lib/components/game/GameHud.svelte";
+    import GameToast from "$lib/components/game/GameToast.svelte";
+    import { blockedNavigation, game, gameActive, isAllowedPath } from "$lib/game/game-store";
 
     if (browser) {
         // Svelte uses window.scrollTo to emulate the scroll resetting when navigation. However we
@@ -22,6 +27,21 @@
     }
 
     afterNavigate(sendAnalyticsRequest);
+
+    beforeNavigate(({ to, cancel }) => {
+        if (!$gameActive || !to || to.url.origin != location.origin) return;
+        if (isAllowedPath(to.url.pathname)) return;
+        cancel();
+        blockedNavigation(to.url.pathname);
+    });
+
+    onMount(() => {
+        if ($gameActive && !isAllowedPath(location.pathname) && $game.currentUrl) {
+            goto($game.currentUrl);
+        }
+    });
+
+    $: if ($game.status == "won" && $page.url.pathname != "/speedrun") goto("/speedrun");
 </script>
 
 <svelte:head>
@@ -34,12 +54,16 @@
 </svelte:head>
 
 <Navbar />
-<Sidebar />
+{#if !$gameActive}
+    <Sidebar />
+{/if}
+<GameHud />
+<GameToast />
 <TimestampToast />
 
 <!-- Autofocus allows the document to be scrolled immediately without having to click. -->
 <!-- svelte-ignore a11y-autofocus -->
-<div id="content" tabindex="-1" autofocus>
+<div id="content" tabindex="-1" autofocus class:game={$gameActive}>
     <slot />
 </div>
 
@@ -74,6 +98,15 @@
             padding-right: 0;
             scrollbar-gutter: initial;
         }
+    }
+
+    #content.game {
+        margin-left: 0;
+        padding-top: calc(var(--md-pad) + var(--hud-size));
+    }
+
+    :global(body) {
+        --hud-size: 72px;
     }
 
     #content:focus,

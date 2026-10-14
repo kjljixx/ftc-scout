@@ -19,6 +19,8 @@
     import { afterNavigate, goto, preloadData } from "$app/navigation";
     import { focusWithinOut, watchForFocus } from "../../../util/directives";
 
+    export let disabled = false;
+
     let searchText = "";
     let shown = false;
 
@@ -80,7 +82,7 @@
     }
 
     function docKey(e: KeyboardEvent) {
-        if (e.key !== "/" || e.ctrlKey || e.metaKey) return;
+        if (disabled || e.key !== "/" || e.ctrlKey || e.metaKey) return;
         let tagname = e?.target && "tagName" in e?.target ? e.target.tagName + "" : "";
         if (/^(?:input|textarea|select|button)$/i.test(tagname)) return;
 
@@ -141,6 +143,7 @@
     use:focusWithinOut={() => setTimeout(() => (shown = false), 50)}
     class:has-text={searchText != ""}
     class:shown
+    class:disabled
 >
     <span class="input-icon"><Fa icon={faSearch} /></span>
     <input
@@ -152,6 +155,7 @@
         placeholder="Search for teams and events"
         type="search"
         autocomplete="off"
+        {disabled}
     />
 
     <!-- Submit the form on enter -->
@@ -205,6 +209,11 @@
         border-radius: 4px;
 
         position: relative;
+    }
+
+    form.disabled {
+        opacity: 0.4;
+        pointer-events: none;
     }
 
     form:focus-within {

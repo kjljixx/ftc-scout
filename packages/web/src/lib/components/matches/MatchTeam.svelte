@@ -19,6 +19,7 @@
     export let benched = false;
     export let compact = false;
     export let tinted = false;
+    export let match: FullMatchFragment | null = null;
 
     $: number = team.team.number;
     $: name = team.team.name;
@@ -38,7 +39,7 @@
         (surrogate ? " (Surrogate)" : "");
 
     let clickAction = getContext(TEAM_CLICK_ACTION_CTX) as
-        | ((num: number, name: string, eventCode: string) => void)
+        | ((num: number, name: string, eventCode: string, match: FullMatchFragment | null) => void)
         | undefined;
 </script>
 
@@ -64,7 +65,7 @@
             if (clickAction) {
                 e.preventDefault();
                 if (e.detail > 0) e.currentTarget.blur();
-                clickAction(number, name, eventCode);
+                clickAction(number, name, eventCode, match);
             }
         }}
     >

@@ -145,6 +145,7 @@
                                 trad
                                 tinted={!!redColorStyle && winner == Alliance.Blue}
                             />
+                                {match}
                         {/if}
                     {/each}
                 </div>
@@ -159,6 +160,7 @@
                         trad
                         benched
                     />
+                        {match}
                 {/each}
             </div>
         </div>
@@ -187,6 +189,7 @@
                                 trad
                                 tinted={!!blueColorStyle && winner == Alliance.Red}
                             />
+                                {match}
                         {/if}
                     {/each}
                 </div>
@@ -201,6 +204,7 @@
                         trad
                         benched
                     />
+                        {match}
                 {/each}
             </div>
 

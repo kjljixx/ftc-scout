@@ -11,6 +11,7 @@
         faTrophy,
         faEnvelope,
         faServer,
+        faStopwatch,
         faHandHoldingDollar,
     } from "@fortawesome/free-solid-svg-icons";
     import { faGithub, faDiscord } from "@fortawesome/free-brands-svg-icons";
@@ -33,6 +34,7 @@
 <SidebarItem icon={faCalendarAlt} name="Events" link="/events/{CURRENT_SEASON}" />
 <SidebarItem icon={faHashtag} name="Teams" link="/teams" />
 <SidebarItem icon={faTrophy} name="Season Records" link="/records/{CURRENT_SEASON}/teams" />
+<SidebarItem icon={faStopwatch} name="Team Speedrun" link="/speedrun" />
 
 <hr />
 
