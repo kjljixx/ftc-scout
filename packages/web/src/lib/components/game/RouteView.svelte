@@ -13,6 +13,8 @@
     export let badge: { text: string; good: boolean } | null = null;
     export let stuckAtEnd = false;
 
+    const LIFELINE_NAMES = { radar: "Radar", crosshair: "Crosshair", beacon: "Beacon" } as const;
+
     const tippy = createTippy({ placement: "top", touch: ["hold", 500] });
 
     function hopTip(hop: Hop | undefined, theme: "light" | "dark") {
@@ -66,43 +68,50 @@
                     class:end={!stuck && (i == 0 || i == path.length - 1)}
                     class:stuck
                 >
-                  <div class="stop-title">
                     <a class="team-link" href={teamUrl(stop.number, stop.hop?.season)}><b>{stop.number}</b></a>
-                    {#if stop.lifelines?.length}
-                      <div class="stop-lifelines" role="group" aria-label={`Lifelines used at team ${stop.number}`}>
-                        {#each stop.lifelines as lifeline}
-                          {@const name = lifeline === "radar" ? "Radar" : lifeline === "crosshair" ? "Crosshair" : "Beacon"}
-                          <span class="lifeline" role="img" aria-label={`${name} used here`} title={`${name} used here`}><LifelineIcon name={lifeline} /></span>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
                     <a class="name" href={teamUrl(stop.number, stop.hop?.season)}>{stop.name}</a>
                 </div>
+                {#each stop.lifelines ?? [] as lifeline}
+                    {@const detail = stop.lifelineDetails?.[lifeline]}
+                    {@const href = detail?.event
+                        ? `/events/${detail.event.season}/${encodeURIComponent(detail.event.code)}`
+                        : detail?.team
+                        ? teamUrl(detail.team.number)
+                        : null}
+                    {@const caption = detail?.event?.name ?? (detail?.team ? `${detail.team.number} ${detail.team.name}` : "")}
+                    <span class="chev">&rsaquo;</span>
+                    <div class="stop">
+                        <svelte:element this={href ? "a" : "span"} class="team-link" {href}>
+                            <b><span class="lifeline-icon"><LifelineIcon name={lifeline} /></span>{LIFELINE_NAMES[lifeline]}</b>
+                        </svelte:element>
+                        {#if caption}
+                            <svelte:element this={href ? "a" : "span"} class="name" {href}>{caption}</svelte:element>
+                        {/if}
+                    </div>
+                {/each}
             {/each}
         </div>
     {/if}
 </div>
 
 <style>
-  .stop-title,
-  .stop-lifelines {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+    .team-link b {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
 
-  .stop .lifeline {
-    display: flex;
-    width: 16px;
-    height: 16px;
-    color: var(--inline-theme-color);
-  }
+    .lifeline-icon {
+        display: flex;
+        width: 16px;
+        height: 16px;
+        color: var(--inline-theme-color);
+    }
 
-  .lifeline :global(svg) {
-    width: 100%;
-    height: 100%;
-  }
+    .lifeline-icon :global(svg) {
+        width: 100%;
+        height: 100%;
+    }
 
     .card {
         max-width: 1000px;
@@ -172,11 +181,13 @@
         color: var(--grayed-out-text-color);
     }
 
-    .stop a {
+    .stop a.name,
+    .stop a.team-link {
         color: inherit;
     }
 
-    .stop a:hover {
+    .stop a.name:hover,
+    .stop a.team-link:hover {
         text-decoration: underline;
     }
 

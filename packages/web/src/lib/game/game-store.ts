@@ -32,7 +32,14 @@ export type Hop = {
 );
 
 export type LifelineId = "radar" | "crosshair" | "beacon";
-export type PathStop = { number: number; name: string; hop?: Hop | undefined; lifelines?: LifelineId[] };
+export type LifelineDetail = { event?: GameEvent; team?: { number: number; name: string } };
+export type PathStop = {
+  number: number;
+  name: string;
+  hop?: Hop | undefined;
+  lifelines?: LifelineId[];
+  lifelineDetails?: Partial<Record<LifelineId, LifelineDetail>>;
+};
 
 export type BestRoute = { hops: number; path: PathStop[] };
 
@@ -59,25 +66,39 @@ function createLifelines(): Lifelines {
   return { radar: false, crosshair: null, beacon: null };
 }
 
-function markLifelineUsed(path: PathStop[], lifeline: LifelineId, index = path.length - 1): PathStop[] {
-  return path.map((stop, stopIndex) => stopIndex === index && !stop.lifelines?.includes(lifeline)
-    ? { ...stop, lifelines: [...(stop.lifelines ?? []), lifeline] }
-    : stop
-  );
+function markLifelineUsed(path: PathStop[], lifeline: LifelineId, index = path.length - 1, detail?: LifelineDetail): PathStop[] {
+  return path.map((stop, stopIndex) => stopIndex !== index ? stop : {
+    ...stop,
+    lifelines: stop.lifelines?.includes(lifeline) ? stop.lifelines : [...(stop.lifelines ?? []), lifeline],
+    ...(detail ? { lifelineDetails: { ...stop.lifelineDetails, [lifeline]: detail } } : {}),
+  });
+}
+
+function restoredDetail(path: PathStop[], lifeline: LifelineId, index: number, lifelines: Lifelines): LifelineDetail | undefined {
+  if (lifeline === "crosshair") return lifelines.crosshair ? { event: lifelines.crosshair.event } : undefined;
+  if (lifeline === "beacon") return lifelines.beacon ? { team: lifelines.beacon.team } : undefined;
+  const hop = path[index + 1]?.hop;
+  return hop?.kind === "radar" && hop.eventCode
+    ? { event: { season: hop.season, code: hop.eventCode, name: hop.eventName } }
+    : undefined;
 }
 
 function restoreLifelineMarkers(path: PathStop[], lifelines: Lifelines): PathStop[] {
   for (const lifeline of ["radar", "crosshair", "beacon"] as const) {
-    if (!lifelines[lifeline] || path.some((stop) => stop.lifelines?.includes(lifeline))) continue;
-    let index = -1;
-    if (lifeline === "radar") {
-      const hopIndex = path.findIndex((stop) => stop.hop?.kind === "radar");
-      if (hopIndex > 0) index = hopIndex - 1;
-    } else {
-      const matches = path.flatMap((stop, stopIndex) => stop.number === lifelines[lifeline]?.from ? [stopIndex] : []);
-      if (matches.length === 1) index = matches[0];
+    if (!lifelines[lifeline]) continue;
+    const marked = path.findIndex((stop) => stop.lifelines?.includes(lifeline));
+    if (marked >= 0 && path[marked].lifelineDetails?.[lifeline]) continue;
+    let index = marked;
+    if (index < 0) {
+      if (lifeline === "radar") {
+        const hopIndex = path.findIndex((stop) => stop.hop?.kind === "radar");
+        if (hopIndex > 0) index = hopIndex - 1;
+      } else {
+        const matches = path.flatMap((stop, stopIndex) => stop.number === lifelines[lifeline]?.from ? [stopIndex] : []);
+        if (matches.length === 1) index = matches[0];
+      }
     }
-    if (index >= 0) path = markLifelineUsed(path, lifeline, index);
+    if (index >= 0) path = markLifelineUsed(path, lifeline, index, restoredDetail(path, lifeline, index, lifelines));
     else console.warn(`[game] saved ${lifeline} use has no exact route position; showing summary icon only`);
   }
   return path;
@@ -378,7 +399,7 @@ export function confirmRadarVisit(event: GameEvent, roster: number[], url: strin
     return {
       ...state,
       currentUrl: url,
-      path: state.lifelines.radar ? state.path : markLifelineUsed(state.path, "radar"),
+      path: state.lifelines.radar ? state.path : markLifelineUsed(state.path, "radar", state.path.length - 1, { event }),
       lifelines: { ...state.lifelines, radar: true },
       radarVisit: { ...visit, roster: visit.roster ?? roster },
     };
@@ -441,7 +462,7 @@ export async function requestLifeline(kind: "crosshair" | "beacon"): Promise<boo
       : { from, team: (result as Extract<BeaconResponse, { alreadyAdjacent: false }>).team };
     game.update((currentState) => ({
       ...currentState,
-      path: markLifelineUsed(currentState.path, kind),
+      path: markLifelineUsed(currentState.path, kind, currentState.path.length - 1, "event" in clue ? { event: clue.event } : { team: clue.team }),
       lifelines: { ...currentState.lifelines, [kind]: clue },
     }));
     console.info(`[game] ${kind} used from=${from} destination=${state.pair.destination.number}`);
