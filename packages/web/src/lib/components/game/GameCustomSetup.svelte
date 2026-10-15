@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { faArrowRightArrowLeft } from "@fortawesome/free-solid-svg-icons";
+  import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { getClient } from "$lib/graphql/client";
   import { TeamsSearchDocument, type TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
@@ -46,11 +46,6 @@
     }
   }
 
-  function swapTeams() {
-    [startTeam, endTeam] = [endTeam, startTeam];
-    error = null;
-  }
-
   async function startCustomGame() {
     if (disabled || duplicate || !startTeam || !endTeam) return;
     const from = startTeam.number;
@@ -79,11 +74,10 @@
 
 <form on:submit|preventDefault={startCustomGame} aria-label="Choose start and end teams" aria-busy={loadingTeams || submitting}>
   <div class="team-pickers">
-    <GameTeamPicker id="custom-start-team" label="Start team" {teams} bind:team={startTeam} {disabled} on:change={() => error = null} />
-    <button class="swap" type="button" {disabled} aria-label="Swap start and end teams" title="Swap teams" on:click={swapTeams}><Fa icon={faArrowRightArrowLeft} /></button>
-    <GameTeamPicker id="custom-end-team" label="End team" {teams} bind:team={endTeam} {disabled} on:change={() => error = null} />
+    <GameTeamPicker id="custom-start-team" label="Start team" {teams} bind:team={startTeam} {disabled} loading={loadingTeams} on:change={() => error = null} />
+    <span class="direction" aria-hidden="true"><Fa icon={faArrowRight} size="lg" /></span>
+    <GameTeamPicker id="custom-end-team" label="End team" {teams} bind:team={endTeam} {disabled} loading={loadingTeams} on:change={() => error = null} />
   </div>
-  {#if loadingTeams}<p class="status" role="status">Loading teams…</p>{/if}
   {#if loadError}<p class="error" role="alert">{loadError} <button type="button" class="retry" on:click={loadTeams}>Retry</button></p>{/if}
   {#if duplicate}<p class="error" role="alert">Choose two different teams.</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -92,18 +86,15 @@
 
 <style>
   form { max-width: 1000px; margin: 32px auto 0; }
-  .team-pickers { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); align-items: start; gap: 20px; }
-  .swap { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 27px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--grayed-out-text-color); cursor: pointer; }
-  .swap:hover:not(:disabled) { background: var(--hover-color); color: var(--text-color); }
-  .swap:disabled { opacity: 0.4; cursor: default; }
+  .team-pickers { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 20px; }
+  .direction { margin-top: 38px; color: var(--grayed-out-text-color); }
   .actions { margin-top: 24px; text-align: center; }
   .start { padding: 11px 30px; border: 0; border-radius: var(--pill-border-radius); background: var(--inline-theme-color); color: #17111f; font: inherit; font-size: calc(var(--md-font-size) * 1.15); font-weight: 600; cursor: pointer; }
   .start:disabled { opacity: var(--form-disabled-opacity); cursor: default; }
-  .status { color: var(--grayed-out-text-color); font-size: 13px; }
   .error { margin: 12px 0 0; color: var(--red-team-color); font-size: 13px; }
   .retry { padding: 0; border: 0; background: none; color: var(--text-color); font: inherit; text-decoration: underline; cursor: pointer; }
   @media (max-width: 600px) {
-    .team-pickers { grid-template-columns: minmax(0, 1fr); gap: 12px; position: relative; }
-    .swap { position: absolute; top: -8px; right: 0; margin: 0; }
+    .team-pickers { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .direction { margin-top: 0; justify-self: center; transform: rotate(90deg); }
   }
 </style>

@@ -77,6 +77,7 @@
         let hasAlliances = mine && theirs && mine.alliance != Alliance.Solo;
         return {
             eventName: events.find((e) => e.code == eventCode)?.name ?? eventCode,
+            eventCode,
             season: match.season,
             match: match.description,
             relation: hasAlliances ? (sameAlliance ? "Partners" : "Opponents") : null,

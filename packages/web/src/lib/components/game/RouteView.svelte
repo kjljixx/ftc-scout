@@ -4,7 +4,7 @@
     import { DESCRIPTORS, type Season } from "@ftc-scout/common";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
     import { HIDDEN_TIP } from "$lib/util/tippy";
-    import type { Hop, PathStop } from "$lib/game/game-store";
+    import { teamUrl, type Hop, type PathStop } from "$lib/game/game-store";
   import LifelineIcon from "./LifelineIcon.svelte";
 
     export let title: string;
@@ -48,15 +48,17 @@
         <div class="route">
             {#each path as stop, i}
                 {#if i > 0}
-                    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-                    <span
-                        class="chev"
-                        class:has-hop={!!stop.hop}
-                        tabindex={stop.hop ? 0 : -1}
-                        use:tippy={hopTip(stop.hop, $tippyTheme)}
-                    >
-                        &rsaquo;
-                    </span>
+                    {#if stop.hop?.eventCode}
+                        <a
+                            class="chev has-hop"
+                            href={`/events/${stop.hop.season}/${encodeURIComponent(stop.hop.eventCode)}`}
+                            use:tippy={hopTip(stop.hop, $tippyTheme)}
+                        >
+                            &rsaquo;
+                        </a>
+                    {:else}
+                        <span class="chev" use:tippy={hopTip(stop.hop, $tippyTheme)}>&rsaquo;</span>
+                    {/if}
                 {/if}
                 {@const stuck = stuckAtEnd && i == path.length - 1}
                 <div
@@ -65,7 +67,7 @@
                     class:stuck
                 >
                   <div class="stop-title">
-                    <b>{stop.number}</b>
+                    <a class="team-link" href={teamUrl(stop.number, stop.hop?.season)}><b>{stop.number}</b></a>
                     {#if stop.lifelines?.length}
                       <div class="stop-lifelines" role="group" aria-label={`Lifelines used at team ${stop.number}`}>
                         {#each stop.lifelines as lifeline}
@@ -75,7 +77,7 @@
                       </div>
                     {/if}
                   </div>
-                    <span>{stop.name}</span>
+                    <a class="name" href={teamUrl(stop.number, stop.hop?.season)}>{stop.name}</a>
                 </div>
             {/each}
         </div>
@@ -159,7 +161,8 @@
         line-height: 1.25;
     }
 
-    .stop span {
+    .stop .name {
+        display: block;
         max-width: 130px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -167,6 +170,14 @@
 
         font-size: 0.85em;
         color: var(--grayed-out-text-color);
+    }
+
+    .stop a {
+        color: inherit;
+    }
+
+    .stop a:hover {
+        text-decoration: underline;
     }
 
     .stop.end b {
@@ -187,7 +198,11 @@
     }
 
     .chev.has-hop {
-        cursor: help;
+        cursor: pointer;
+    }
+
+    a.chev:hover {
+        text-decoration: none;
     }
 
     .chev.has-hop:hover,
