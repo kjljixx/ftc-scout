@@ -5,6 +5,8 @@
     import WidthProvider from "$lib/components/WidthProvider.svelte";
     import GameTeam from "$lib/components/game/GameTeam.svelte";
     import RouteView from "$lib/components/game/RouteView.svelte";
+  import GameCustomSetup from "$lib/components/game/GameCustomSetup.svelte";
+  import LifelineIcon from "$lib/components/game/LifelineIcon.svelte";
     import {
         fetchBestRoute,
         fetchPair,
@@ -24,9 +26,15 @@
     let steps = STEP_OPTIONS[0];
     let pair: GamePair | null = null;
     let loading = false;
+  let customBusy = false;
     let error: string | null = null;
 
     let bestFailed = false;
+  const lifelines = [
+    { id: "radar", name: "Radar" },
+    { id: "crosshair", name: "Crosshair" },
+    { id: "beacon", name: "Beacon" },
+  ] as const;
 
     async function loadBestRoute(pair: GamePair) {
         bestFailed = false;
@@ -45,6 +53,7 @@
     });
 
     function select(newMode: GameMode, newSteps = steps) {
+      if (loading || customBusy) return;
         if (newMode == mode && newSteps == steps) return;
         mode = newMode;
         steps = newSteps;
@@ -52,6 +61,7 @@
     }
 
     async function generate() {
+      if (mode === "custom") return;
         loading = true;
         error = null;
         try {
@@ -74,9 +84,11 @@
     $: gaveUp = $game.status == "gaveUp";
     $: hops = $game.path.length - 1;
     $: best = $game.best;
-    $: matchedBest = !gaveUp && !!best && hops <= best.hops;
+    $: usedRadarHop = $game.path.some((stop) => stop.hop?.kind === "radar");
+  $: lifelinesUsed = lifelines.filter((lifeline) => !!$game.lifelines[lifeline.id]);
+  $: matchedBest = !gaveUp && !!best && hops <= best.hops;
     $: extraHops = best ? hops - best.hops : 0;
-    $: if (best && !gaveUp && hops < best.hops) {
+    $: if (best && !gaveUp && !usedRadarHop && hops < best.hops) {
         console.error(`[game] route of ${hops} hops beats the best route of ${best.hops} hops`);
     }
     $: yourBadge = gaveUp
@@ -111,6 +123,14 @@
             </div>
         </div>
 
+      <div class="lifelines-used">
+        <span>Lifelines used:</span>
+        {#each lifelinesUsed as lifeline}
+          <span class="lifeline" role="img" aria-label={lifeline.name} title={lifeline.name}><LifelineIcon name={lifeline.id} /></span>
+        {:else}
+          <span>None</span>
+        {/each}
+      </div>
         <RouteView title="Your route" path={$game.path} badge={yourBadge} stuckAtEnd={gaveUp} />
         {#if !matchedBest}
             <RouteView
@@ -129,14 +149,15 @@
             <div class="sub">Click through matches to reach the destination team.</div>
         </div>
 
-        <div class="modes">
+        <div class="modes" role="radiogroup" aria-label="Game mode">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
                 class="mode"
                 class:on={mode == "global"}
                 role="radio"
                 aria-checked={mode == "global"}
-                tabindex="0"
+                aria-disabled={loading || customBusy}
+                tabindex={loading || customBusy ? -1 : 0}
                 on:click={() => select("global")}
                 on:keydown={(e) => e.key == "Enter" && select("global")}
             >
@@ -150,7 +171,8 @@
                 class:on={mode == "regional"}
                 role="radio"
                 aria-checked={mode == "regional"}
-                tabindex="0"
+                aria-disabled={loading || customBusy}
+                tabindex={loading || customBusy ? -1 : 0}
                 on:click={() => select("regional")}
                 on:keydown={(e) => e.key == "Enter" && select("regional")}
             >
@@ -160,6 +182,7 @@
                     {#each STEP_OPTIONS as n}
                         <button
                             class="pill"
+                            disabled={loading || customBusy}
                             class:on={mode == "regional" && steps == n}
                             on:click|stopPropagation={() => select("regional", n)}
                         >
@@ -168,8 +191,23 @@
                     {/each}
                 </div>
             </div>
+
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <div
+            class="mode" class:on={mode === "custom"} role="radio"
+            aria-checked={mode === "custom"} aria-disabled={loading || customBusy}
+            tabindex={loading || customBusy ? -1 : 0}
+            on:click={() => select("custom")}
+            on:keydown={(event) => event.key === "Enter" && select("custom")}
+          >
+            <h3>Custom</h3>
+            <span class="desc">Choose your start and end teams</span>
+          </div>
         </div>
 
+      {#if mode === "custom"}
+        <GameCustomSetup on:busy={(event) => customBusy = event.detail} />
+      {:else}
         {#if pair}
             <div class="pair">
                 <GameTeam team={pair.start} align="right" />
@@ -192,10 +230,28 @@
                 </button>
             {/if}
         </div>
+      {/if}
     {/if}
 </WidthProvider>
 
 <style>
+    .lifelines-used {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      max-width: 1000px;
+      margin: 20px auto 0;
+      color: var(--grayed-out-text-color);
+      text-align: center;
+      font-size: 13px;
+    }
+
+  .lifelines-used .lifeline {
+    display: flex;
+    color: var(--inline-theme-color);
+  }
+
     .header,
     .modes,
     .pair,
@@ -226,7 +282,7 @@
 
     .modes {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--lg-gap);
         margin-top: var(--lg-gap);
         margin-bottom: var(--vl-gap);
@@ -249,6 +305,17 @@
         border-color: var(--focused-team-ring-color);
         box-shadow: 0 0 0 1px var(--focused-team-ring-color);
     }
+
+  .mode[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  @media (max-width: 600px) {
+    .modes {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  }
 
     h3 {
         margin: 0;

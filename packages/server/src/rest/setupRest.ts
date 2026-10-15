@@ -23,7 +23,7 @@ import { FindOptionsWhere, In } from "typeorm";
 import { getQuickStats } from "../graphql/resolvers/Team";
 import { addTypename } from "../graphql/dyn/tep";
 import { getTeamGraph, randomConnectedPair } from "../game/team-graph";
-import { bestRoute } from "../game/best-route";
+import { bestRoute, getBeaconHint, getCrosshairHint } from "../game/best-route";
 
 const pre = "/rest/v1/";
 
@@ -56,6 +56,8 @@ export function setupRest(app: Express) {
     app.get(pre + "teams/search", teamSearch);
     app.get(pre + "game/pair", gamePair);
     app.get(pre + "game/solve", gameSolve);
+    app.get(pre + "game/crosshair", gameCrosshair);
+    app.get(pre + "game/beacon", gameBeacon);
     getTeamGraph().catch((e) => console.error("[game] graph build failed", e));
 
     app.get(pre + "events/:season(\\d+)/:code", eventByCode);
@@ -254,25 +256,6 @@ async function teamSearch(req: Request, res: Response) {
     res.send(entities);
 }
 
-async function gameSolve(req: Request, res: Response) {
-    let from = req.query.from as string | undefined;
-    let to = req.query.to as string | undefined;
-
-    if (!from || !to || !isNumber(from) || !isNumber(to)) {
-        res.status(400).send("Query parameters from and to must be team numbers.");
-        return;
-    }
-
-    let route = await bestRoute(+from, +to);
-    if (!route) {
-        res.status(404).send(`No route from ${from} to ${to}.`);
-        return;
-    }
-
-    res.send(route);
-}
-
-async function eventByCode(req: Request<{ season: string; code: string }>, res: Response) {
 const GAME_DEFAULT_STEPS = 4;
 const GAME_MIN_STEPS = 1;
 const GAME_MAX_STEPS = 8;
@@ -327,6 +310,11 @@ async function gamePair(req: Request, res: Response) {
     let mode = (req.query.mode as string | undefined) ?? "regional";
     let stepsParam = req.query.steps as string | undefined;
 
+  if (mode === "custom") {
+    await customGamePair(req, res);
+    return;
+  }
+
     if (mode != "regional" && mode != "global") {
         res.status(400).send(`Invalid mode ${mode}.`);
         return;
@@ -369,6 +357,102 @@ async function gamePair(req: Request, res: Response) {
     });
 }
 
+async function customGamePair(req: Request, res: Response) {
+  const started = Date.now();
+  const from = typeof req.query.from === "string" ? Number(req.query.from) : NaN;
+  const to = typeof req.query.to === "string" ? Number(req.query.to) : NaN;
+  res.setHeader("Cache-Control", "no-store");
+  if (!Number.isSafeInteger(from) || from <= 0 || !Number.isSafeInteger(to) || to <= 0) {
+    console.warn("[game] custom pair rejected invalid team numbers");
+    res.status(400).send("Choose a valid start team and end team.");
+    return;
+  }
+  if (from === to) {
+    console.warn(`[game] custom pair rejected identical teams number=${from}`);
+    res.status(400).send("Choose two different teams.");
+    return;
+  }
+  try {
+    const [start, destination, graph] = await Promise.all([
+      Team.findOneBy({ number: from }),
+      Team.findOneBy({ number: to }),
+      getTeamGraph(),
+    ]);
+    if (!start || !destination) {
+      console.info(`[game] custom pair rejected missing team ${from}>${to}`);
+      res.status(404).send(`Team ${!start ? from : to} was not found.`);
+      return;
+    }
+    if (!graph.rootOf.has(from) || !graph.rootOf.has(to)) {
+      console.info(`[game] custom pair rejected missing matches ${from}>${to}`);
+      res.status(422).send("Both teams must have recorded matches. Choose a different pair.");
+      return;
+    }
+    if (graph.rootOf.get(from) !== graph.rootOf.get(to)) {
+      console.info(`[game] custom pair rejected disconnected teams ${from}>${to}`);
+      res.status(422).send("These teams have no shared-match route. Choose a different pair.");
+      return;
+    }
+    const [startInfo, destinationInfo] = await Promise.all([gameTeamInfo(start), gameTeamInfo(destination)]);
+    console.info(`[game] pair mode=custom pair=${from}>${to} connected=true ms=${Date.now() - started}`);
+    res.send({ mode: "custom", steps: null, start: startInfo, destination: destinationInfo });
+  } catch (error) {
+    console.error(`[game] custom pair failed ${from}>${to}`, error);
+    res.status(500).send("Could not check these teams. Try again.");
+  }
+}
+
+function gameCrosshair(req: Request, res: Response) {
+  return gameHint(req, res, "crosshair");
+}
+
+function gameBeacon(req: Request, res: Response) {
+  return gameHint(req, res, "beacon");
+}
+
+async function gameHint(req: Request, res: Response, kind: "crosshair" | "beacon") {
+  const from = typeof req.query.from === "string" ? Number(req.query.from) : NaN;
+  const to = typeof req.query.to === "string" ? Number(req.query.to) : NaN;
+  if (!Number.isSafeInteger(from) || from <= 0 || !Number.isSafeInteger(to) || to <= 0 || from === to) {
+    console.warn(`[game] ${kind} rejected invalid or identical team numbers`);
+    res.status(400).send("from and to must be different positive integer team numbers.");
+    return;
+  }
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const hint = kind === "crosshair"
+      ? await getCrosshairHint(from, to)
+      : await getBeaconHint(from, to);
+    if (!hint) {
+      res.status(404).send(`No route from ${from} to ${to}.`);
+      return;
+    }
+    res.send(hint);
+  } catch (error) {
+    console.error(`[game] ${kind} failed ${from}>${to}`, error);
+    res.status(500).send("Could not load this lifeline. Try again.");
+  }
+}
+
+async function gameSolve(req: Request, res: Response) {
+    let from = req.query.from as string | undefined;
+    let to = req.query.to as string | undefined;
+
+    if (!from || !to || !isNumber(from) || !isNumber(to)) {
+        res.status(400).send("Query parameters from and to must be team numbers.");
+        return;
+    }
+
+    let route = await bestRoute(+from, +to);
+    if (!route) {
+        res.status(404).send(`No route from ${from} to ${to}.`);
+        return;
+    }
+
+    res.send(route);
+}
+
+async function eventByCode(req: Request<{ season: string; code: string }>, res: Response) {
     let season = +req.params.season;
     let code = req.params.code;
 

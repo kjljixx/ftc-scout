@@ -4,7 +4,7 @@
 </script>
 
 {#if $toast}
-    <div class="toast" transition:fly={{ y: 40, duration: 200 }}>{$toast}</div>
+    <div class="toast" role="status" aria-live="polite" transition:fly={{ y: 40, duration: 200 }}>{$toast}</div>
 {/if}
 
 <style>
@@ -21,6 +21,8 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 
         padding: var(--md-pad) calc(var(--md-pad) * 2);
-        white-space: nowrap;
+        white-space: normal;
+        max-width: calc(100vw - 24px);
+        text-align: center;
     }
 </style>

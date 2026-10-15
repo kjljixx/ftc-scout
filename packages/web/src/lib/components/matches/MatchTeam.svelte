@@ -8,6 +8,7 @@
     import { Alliance, type FullMatchFragment } from "../../graphql/generated/graphql-operations";
     import { getContext } from "svelte";
     import { browser } from "$app/environment";
+  import { beaconTeam } from "$lib/game/game-store";
 
     export let team: FullMatchFragment["teams"][number];
     export let eventCode: string;
@@ -36,7 +37,8 @@
         (noShow ? " (No Show)" : "") +
         (dq && !noShow ? " (Disqualified)" : "") +
         (!onField && !dq && !noShow ? " (Not on Field)" : "") +
-        (surrogate ? " (Surrogate)" : "");
+        (surrogate ? " (Surrogate)" : "") +
+        ($beaconTeam === number ? " (Beacon)" : "");
 
     let clickAction = getContext(TEAM_CLICK_ACTION_CTX) as
         | ((num: number, name: string, eventCode: string, match: FullMatchFragment | null) => void)
@@ -55,6 +57,7 @@
     class:benched
     class:compact
     class:tinted
+  class:beacon={$beaconTeam === number}
     {title}
 >
     <a
@@ -231,6 +234,12 @@
         order: 0;
         font-weight: 400;
     }
+
+  td.beacon,
+  td.beacon:hover {
+    outline: 2px solid hsl(48, 100%, 50%);
+    outline-offset: -2px;
+  }
 
     @media (max-width: 1000px) {
         td:not(.trad) .name {

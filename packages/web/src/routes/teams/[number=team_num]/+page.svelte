@@ -34,7 +34,7 @@
     import type { Writable } from "svelte/store";
     import { queryParam } from "$lib/util/search-params/search-params";
     import Head from "$lib/components/Head.svelte";
-    import { setContext } from "svelte";
+    import { onDestroy, setContext, tick } from "svelte";
     import {
         SHOW_REMOTE_FOCUS_CTX,
         TEAM_CLICK_ACTION_CTX,
@@ -44,7 +44,7 @@
     import OverallStats from "./OverallStats.svelte";
     import { goto } from "$app/navigation";
     import { browser } from "$app/environment";
-    import { gameActive, setPendingHop, teamUrl, visitTeam, type Hop } from "$lib/game/game-store";
+    import { game, gameActive, setGamePageContext, setPendingHop, teamUrl, visitTeam, type Hop } from "$lib/game/game-store";
     import { Alliance, type FullMatchFragment } from "$lib/graphql/generated/graphql-operations";
     const toSeason = (n: number) => n as Season;
 
@@ -101,7 +101,27 @@
     $: if ($season || team?.number) focused = null;
 
     $: if (browser && team && team.number == +$page.params.number) {
-        visitTeam(team.number, team.name, $page.url.pathname + $page.url.search);
+        const url = $page.url.pathname + $page.url.search + $page.url.hash;
+        visitTeam(team.number, team.name, url);
+        setGamePageContext({
+          number: team.number,
+          url,
+          events: sortedEvents.map(({ event }) => ({ season: event.season, code: event.code, name: event.name })),
+        });
+    }
+
+    onDestroy(() => {
+      if (browser) setGamePageContext(null);
+    });
+
+    $: crosshairHint = $game.lifelines.crosshair && $game.lifelines.crosshair.from === team?.number ? $game.lifelines.crosshair.event : null;
+    $: if (browser && crosshairHint && sortedEvents.length && $page.url.hash === `#crosshair-${encodeURIComponent(crosshairHint.code)}`) {
+      scrollToHint(crosshairHint.code);
+    }
+
+    async function scrollToHint(code: string) {
+      await tick();
+      document.getElementById(`crosshair-${code}`)?.scrollIntoView({ block: "start" });
     }
 
     $: focusedEvent = sortedEvents.find((tep) => tep.event.code == focused?.eventCode)?.event;
@@ -193,6 +213,7 @@
 
             {#each sortedEvents as tep}
                 {@const event = tep.event}
+                {@const hinted = crosshairHint && event.season === crosshairHint.season && (event.code === crosshairHint.code || event.relatedEvents?.some((related) => related.code === crosshairHint?.code))}
                 {@const href = `/events/${event.season}/${event.code}/matches`}
 
                 {@const isFinalsDivision = (() => {
@@ -215,8 +236,8 @@
                           }))
                       )
                     : event.teams ?? []}
-                <Card panel style="margin-top: var(--md-gap)">
-                    <div class="event-head">
+                <Card panel style={`margin-top: var(--md-gap); ${hinted ? "outline: 2px solid var(--inline-theme-color); outline-offset: 3px;" : ""}`}>
+                    <div class="event-head" class:hinted id={hinted && crosshairHint ? `crosshair-${crosshairHint.code}` : undefined}>
                         <h3 id={event.code}><a {href}>{event.name}</a></h3>
 
                         <div class="meta-line">
@@ -270,6 +291,10 @@
 </WidthProvider>
 
 <style>
+    .event-head.hinted {
+      scroll-margin-top: calc(var(--hud-size) + 24px);
+    }
+
     :global(#content.game .pred) {
         display: none;
     }

@@ -6,6 +6,7 @@ import { Team } from "../db/entities/Team";
 import { getTeamGraph, type TeamGraph } from "./team-graph";
 
 type Hop = {
+    eventCode: string;
     eventName: string;
     season: number;
     match: string;
@@ -66,6 +67,7 @@ async function hopBetween(from: number, to: number): Promise<Hop> {
     });
     let hasAlliances = row.from_alliance != Alliance.Solo;
     return {
+        eventCode: match.eventCode,
         eventName: match.event.name,
         season: match.eventSeason,
         match: match.description,
@@ -75,6 +77,41 @@ async function hopBetween(from: number, to: number): Promise<Hop> {
                 : "Opponents"
             : null,
     };
+}
+
+export type CrosshairHint = { season: number; code: string; name: string };
+export type BeaconHint =
+  | { alreadyAdjacent: true; team: null }
+  | { alreadyAdjacent: false; team: { number: number; name: string } };
+
+export async function getCrosshairHint(from: number, to: number): Promise<CrosshairHint | null> {
+  const started = Date.now();
+  const graph = await getTeamGraph();
+  const { path, visited } = shortestPath(graph, from, to);
+  if (!path || path.length < 2) {
+    console.info(`[game] crosshair unavailable ${from}>${to} visited=${visited}`);
+    return null;
+  }
+  const hop = await hopBetween(path[0], path[1]);
+  console.info(`[game] crosshair ${from}>${to} event=${hop.season}/${hop.eventCode} visited=${visited} ms=${Date.now() - started}`);
+  return { season: hop.season, code: hop.eventCode, name: hop.eventName };
+}
+
+export async function getBeaconHint(from: number, to: number): Promise<BeaconHint | null> {
+  const started = Date.now();
+  const graph = await getTeamGraph();
+  const { path, visited } = shortestPath(graph, from, to);
+  if (!path || path.length < 2) {
+    console.info(`[game] beacon unavailable ${from}>${to} visited=${visited}`);
+    return null;
+  }
+  if (path.length === 2) {
+    console.info(`[game] beacon already adjacent ${from}>${to} visited=${visited} ms=${Date.now() - started}`);
+    return { alreadyAdjacent: true, team: null };
+  }
+  const team = await Team.findOneByOrFail({ number: path[path.length - 2] });
+  console.info(`[game] beacon ${from}>${to} team=${team.number} visited=${visited} ms=${Date.now() - started}`);
+  return { alreadyAdjacent: false, team: { number: team.number, name: team.name } };
 }
 
 export async function bestRoute(from: number, to: number): Promise<BestRoute | null> {

@@ -15,6 +15,7 @@
         game,
         gameActive,
         isAllowedPath,
+        setGamePageContext,
     } from "$lib/game/game-store";
 
     if (browser) {
@@ -34,15 +35,20 @@
 
     afterNavigate(sendAnalyticsRequest);
 
-    beforeNavigate(({ to, cancel }) => {
+    beforeNavigate(({ from, to, cancel }) => {
         if (!$gameActive || !to || to.url.origin != location.origin) return;
-        if (isAllowedPath(to.url.pathname)) return;
+        if (isAllowedPath(to.url.pathname, $game)) {
+          if (to.url.pathname !== from?.url.pathname || to.url.search !== from?.url.search) {
+            setGamePageContext(null);
+          }
+          return;
+        }
         cancel();
         blockedNavigation(to.url.pathname);
     });
 
     onMount(() => {
-        if ($gameActive && !isAllowedPath(location.pathname) && $game.currentUrl) {
+        if ($gameActive && !isAllowedPath(location.pathname, $game) && $game.currentUrl) {
             goto($game.currentUrl);
         }
     });
@@ -122,8 +128,20 @@
     }
 
     :global(body) {
-        --hud-size: 72px;
+      --hud-size: 88px;
     }
+
+  @media (max-width: 850px) {
+    :global(body) {
+      --hud-size: 152px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    :global(body) {
+      --hud-size: 184px;
+    }
+  }
 
     #content:focus,
     #content:focus-visible {

@@ -34,6 +34,16 @@
         gap: 0 var(--md-gap);
     }
 
+  @media (max-width: 550px) {
+    .hud .number,
+    .hud .meta {
+      display: none;
+    }
+    .hud h1 {
+      font-size: 14px;
+    }
+  }
+
     .right {
         text-align: right;
     }
@@ -56,7 +66,7 @@
     }
 
     .hud h1 {
-        font-size: calc(var(--lg-font-size) * 1.2);
+      font-size: calc(var(--lg-font-size) * 1.2);
     }
 
     .number {

@@ -5,6 +5,7 @@
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
     import { HIDDEN_TIP } from "$lib/util/tippy";
     import type { Hop, PathStop } from "$lib/game/game-store";
+  import LifelineIcon from "./LifelineIcon.svelte";
 
     export let title: string;
     export let path: PathStop[] | null;
@@ -18,8 +19,8 @@
         if (!hop) return HIDDEN_TIP;
         let lines = [
             hop.eventName,
-            `${hop.season} ${DESCRIPTORS[hop.season as Season]?.seasonName ?? ""} · ${hop.match}`,
-            hop.relation,
+            `${hop.season} ${DESCRIPTORS[hop.season as Season]?.seasonName ?? ""}${hop.kind === "radar" ? "" : ` · ${hop.match}`}`,
+            hop.kind === "radar" ? "Radar roster hop" : hop.relation,
         ];
         let content = document.createElement("div");
         lines.forEach((text, i) => {
@@ -63,7 +64,17 @@
                     class:end={!stuck && (i == 0 || i == path.length - 1)}
                     class:stuck
                 >
+                  <div class="stop-title">
                     <b>{stop.number}</b>
+                    {#if stop.lifelines?.length}
+                      <div class="stop-lifelines" role="group" aria-label={`Lifelines used at team ${stop.number}`}>
+                        {#each stop.lifelines as lifeline}
+                          {@const name = lifeline === "radar" ? "Radar" : lifeline === "crosshair" ? "Crosshair" : "Beacon"}
+                          <span class="lifeline" role="img" aria-label={`${name} used here`} title={`${name} used here`}><LifelineIcon name={lifeline} /></span>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
                     <span>{stop.name}</span>
                 </div>
             {/each}
@@ -72,6 +83,25 @@
 </div>
 
 <style>
+  .stop-title,
+  .stop-lifelines {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stop .lifeline {
+    display: flex;
+    width: 16px;
+    height: 16px;
+    color: var(--inline-theme-color);
+  }
+
+  .lifeline :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
     .card {
         max-width: 1000px;
         margin: var(--lg-gap) auto;

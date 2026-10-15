@@ -42,6 +42,7 @@
     import Preview from "./Preview.svelte";
     import { isNonCompetition } from "$lib/util/event-type";
     import Head from "$lib/components/Head.svelte";
+    import { confirmRadarVisit, endRadar, game, gameActive, isRadarEvent, showToast, teamUrl } from "$lib/game/game-store";
     import Insights from "./Insights.svelte";
     import { getMatchScores } from "$lib/components/stats/getMatchScores";
     // import { unsubscribe, watchEvent } from "./watchEvent";
@@ -55,6 +56,24 @@
     $: event = $eventStore?.data?.eventByCode!;
 
     $: season = +$page.params.season as Season;
+
+    $: if (browser && event && event.code === $page.params.code && event.season === season) {
+      confirmRadarVisit(
+        { season, code: event.code, name: event.name },
+        event.teams.map((team) => team.teamNumber),
+        $page.url.pathname + $page.url.search
+      );
+    }
+
+    $: if (browser && $gameActive && $game.radarVisit && $eventStore && !event) {
+      showToast($game.lifelines.radar ? "Could not load this event. Returning to your team." : "Could not open this event. Radar is still available.");
+      returnFromRadar();
+    }
+
+    async function returnFromRadar() {
+      const url = endRadar();
+      if (url) await goto(url);
+    }
 
     const picklistSync = createPicklistSyncHandle();
     $: if (event?.code) picklistSync.sync(season, event.code);
@@ -116,7 +135,18 @@
     $: focusedTeamData =
         event?.teams?.find((t) => t.teamNumber == focusedTeam) ??
         event?.awards?.find((a) => a.teamNumber == focusedTeam)!;
-    setContext(TEAM_CLICK_ACTION_CTX, (t: number) => (focusedTeam = focusedTeam == t ? null : t));
+    function handleEventTeamClick(number: number) {
+      if ($gameActive) {
+        if (!isRadarEvent($page.url.pathname, $game) || !$game.radarVisit?.roster?.includes(number)) {
+          showToast("Choose a team from this event's roster.");
+          return;
+        }
+        goto(teamUrl(number, season));
+        return;
+      }
+      focusedTeam = focusedTeam === number ? null : number;
+    }
+    setContext(TEAM_CLICK_ACTION_CTX, handleEventTeamClick);
 
     // $: if (event && !event.remote) watchEvent(event, refresh);
     // onMount(() => {

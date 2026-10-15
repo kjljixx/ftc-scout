@@ -1,0 +1,287 @@
+<div id="team-setup-mockup" class="viz-carousel" aria-label="Manual team setup designs">
+  <section data-variant="Custom mode" aria-label="Custom mode">
+    <div class="setup-app" data-design="mode"></div>
+  </section>
+  <section data-variant="Choose or generate" aria-label="Choose or generate" hidden>
+    <div class="setup-app" data-design="switch"></div>
+  </section>
+</div>
+
+<template id="team-setup-template">
+  <header class="setup-nav"><span>2iLScout</span><i data-lucide="sun" aria-hidden="true"></i></header>
+  <main class="setup-main">
+    <h1>Team Speedrun</h1>
+    <p class="intro">Click through matches to reach the destination team.</p>
+    <div class="method-switch" role="group" aria-label="How to choose teams" hidden>
+      <button class="cursor-interaction" type="button" data-method="random" aria-pressed="false">Random</button>
+      <button class="cursor-interaction" type="button" data-method="custom" aria-pressed="true">Choose teams</button>
+    </div>
+    <div class="mode-options" role="group" aria-label="Game mode">
+      <button class="mode-option cursor-interaction" data-mode="global" type="button" aria-pressed="false">
+        <strong>Global</strong><span>Any two connected teams</span>
+      </button>
+      <button class="mode-option cursor-interaction" data-mode="regional" type="button" aria-pressed="false">
+        <strong>Regional</strong><span>Teams that are close together</span>
+      </button>
+      <button class="mode-option cursor-interaction" data-mode="custom" type="button" aria-pressed="true">
+        <strong>Custom</strong><span>Choose your start and end teams</span>
+      </button>
+    </div>
+    <div class="regional-options" role="group" aria-label="Regional route length" hidden>
+      <button class="cursor-interaction" type="button" aria-pressed="true">3</button>
+      <button class="cursor-interaction" type="button" aria-pressed="false">5</button>
+      <button class="cursor-interaction" type="button" aria-pressed="false">7</button>
+    </div>
+    <form class="team-form" novalidate>
+      <div class="team-pickers">
+        <div class="team-picker" data-endpoint="start">
+          <label>Start team</label>
+          <div class="search-field"><i data-lucide="search" aria-hidden="true"></i><input type="search" autocomplete="off" placeholder="Team number or name" role="combobox" aria-autocomplete="list" aria-expanded="false" /></div>
+          <div class="suggestions" role="listbox" hidden></div>
+          <div class="team-identity"><strong></strong><span></span></div>
+        </div>
+        <button class="swap-teams cursor-interaction" type="button" aria-label="Swap start and end teams" data-tooltip="Swap teams"><i data-lucide="arrow-right-left" aria-hidden="true"></i></button>
+        <div class="team-picker" data-endpoint="end">
+          <label>End team</label>
+          <div class="search-field"><i data-lucide="search" aria-hidden="true"></i><input type="search" autocomplete="off" placeholder="Team number or name" role="combobox" aria-autocomplete="list" aria-expanded="false" /></div>
+          <div class="suggestions" role="listbox" hidden></div>
+          <div class="team-identity"><strong></strong><span></span></div>
+        </div>
+      </div>
+      <p class="validation" role="alert" hidden>Choose two different teams.</p>
+      <div class="setup-actions"><button class="start-button cursor-interaction" type="submit">Start</button></div>
+    </form>
+    <div class="random-actions" hidden><button class="generate-button cursor-interaction" type="button">Generate</button></div>
+    <p class="setup-status" role="status" aria-live="polite"></p>
+  </main>
+</template>
+
+<style>
+  #team-setup-mockup {
+    --setup-bg: light-dark(#f8f6fa, #121015);
+    --setup-surface: light-dark(#ffffff, #1b1720);
+    --setup-text: light-dark(#251d2e, #f4f1f7);
+    --setup-muted: light-dark(#746c7d, #aaa3b2);
+    --setup-border: light-dark(#ddd7e3, #3b3343);
+    --setup-accent: light-dark(#824dbd, #bc92f4);
+    --setup-accent-text: light-dark(#ffffff, #17111f);
+    --setup-hover: light-dark(#f0eaf6, #28212f);
+    --setup-error: light-dark(#b42c48, #f395a7);
+    font-family: Inter, system-ui, sans-serif;
+  }
+  #team-setup-mockup * { box-sizing: border-box; }
+  #team-setup-mockup [hidden] { display: none !important; }
+  #team-setup-mockup .setup-app { min-height: 620px; background: var(--setup-bg); color: var(--setup-text); container-type: inline-size; }
+  #team-setup-mockup .setup-app.mobile { max-width: 390px; margin: auto; }
+  #team-setup-mockup .setup-nav { height: 60px; border-bottom: 1px solid var(--setup-border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; }
+  #team-setup-mockup .setup-nav span { font-size: 22px; font-weight: 700; }
+  #team-setup-mockup .setup-nav svg { width: 20px; height: 20px; color: var(--setup-muted); }
+  #team-setup-mockup .setup-main { max-width: 1000px; padding: 36px 36px 48px; margin: auto; }
+  #team-setup-mockup h1 { margin: 0; font-size: 32px; font-weight: 600; line-height: 1.15; }
+  #team-setup-mockup .intro { margin: 10px 0 28px; font-size: 14px; color: var(--setup-muted); }
+  #team-setup-mockup button, #team-setup-mockup input { font-family: inherit; }
+  #team-setup-mockup .mode-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  #team-setup-mockup .mode-option { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-height: 104px; text-align: left; padding: 18px; background: var(--setup-surface); color: var(--setup-text); border: 1px solid var(--setup-border); border-radius: 12px; }
+  #team-setup-mockup .mode-option[aria-pressed="true"] { border-color: var(--setup-accent); box-shadow: 0 0 0 1px var(--setup-accent); }
+  #team-setup-mockup .mode-option strong { font-size: 24px; font-weight: 600; }
+  #team-setup-mockup .mode-option span { font-size: 13px; color: var(--setup-muted); line-height: 1.5; }
+  #team-setup-mockup .team-form { margin-top: 32px; }
+  #team-setup-mockup .team-pickers { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); gap: 20px; align-items: start; }
+  #team-setup-mockup .team-picker { position: relative; min-width: 0; }
+  #team-setup-mockup .team-picker label { display: block; margin-bottom: 10px; color: var(--setup-muted); font-size: 13px; }
+  #team-setup-mockup .search-field { display: flex; gap: 10px; align-items: center; height: 48px; border: 1px solid var(--setup-border); border-radius: 8px; background: var(--setup-surface); padding: 0 12px; }
+  #team-setup-mockup .search-field:focus-within { border-color: var(--setup-accent); }
+  #team-setup-mockup .search-field > svg { width: 18px; height: 18px; color: var(--setup-muted); flex: none; }
+  #team-setup-mockup input { width: 100%; min-width: 0; padding: 0; font-size: 16px; color: var(--setup-text); border: 0; background: transparent; }
+  #team-setup-mockup input::placeholder { color: var(--setup-muted); }
+  #team-setup-mockup .team-identity { min-height: 72px; margin-top: 16px; }
+  #team-setup-mockup .team-identity strong { display: block; font-size: 24px; font-weight: 600; overflow-wrap: anywhere; }
+  #team-setup-mockup .team-identity > span { display: block; color: var(--setup-muted); font-size: 13px; margin-top: 6px; }
+  #team-setup-mockup .swap-teams { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 27px; background: transparent; border: 0; border-radius: 50%; color: var(--setup-muted); }
+  #team-setup-mockup .swap-teams:hover { color: var(--setup-text); background: var(--setup-hover); }
+  #team-setup-mockup .swap-teams svg { width: 20px; height: 20px; }
+  #team-setup-mockup .setup-actions, #team-setup-mockup .random-actions { margin-top: 24px; text-align: center; }
+  #team-setup-mockup .start-button, #team-setup-mockup .generate-button { border: 0; border-radius: 999px; padding: 11px 32px; font-size: 18px; font-weight: 600; color: var(--setup-accent-text); background: var(--setup-accent); }
+  #team-setup-mockup .start-button:disabled { opacity: 0.4; }
+  #team-setup-mockup .validation { margin: 12px 0 0; color: var(--setup-error); font-size: 13px; }
+  #team-setup-mockup .setup-status { min-height: 20px; margin: 16px 0 0; color: var(--setup-muted); font-size: 13px; text-align: center; }
+  #team-setup-mockup .suggestions { position: absolute; z-index: 5; top: 76px; width: 100%; max-height: 230px; overflow: auto; padding: 4px; border: 1px solid var(--setup-border); border-radius: 8px; background: var(--setup-surface); }
+  #team-setup-mockup .suggestion { display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left; padding: 12px 8px; background: transparent; color: var(--setup-text); border: 0; border-radius: 4px; }
+  #team-setup-mockup .suggestion:hover, #team-setup-mockup .suggestion.active { background: var(--setup-hover); }
+  #team-setup-mockup .suggestion > span { color: var(--setup-muted); font-size: 12px; }
+  #team-setup-mockup .suggestion strong { font-size: 14px; font-weight: 600; }
+  #team-setup-mockup .no-matches { padding: 12px; font-size: 13px; color: var(--setup-muted); }
+  #team-setup-mockup .method-switch { display: flex; width: fit-content; gap: 4px; border-bottom: 1px solid var(--setup-border); margin-bottom: 28px; }
+  #team-setup-mockup .method-switch button { padding: 10px 16px; color: var(--setup-muted); border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 15px; }
+  #team-setup-mockup .method-switch button[aria-pressed="true"] { border-bottom-color: var(--setup-accent); color: var(--setup-text); }
+  #team-setup-mockup .regional-options { display: flex; gap: 8px; margin-top: 16px; }
+  #team-setup-mockup .regional-options button { background: var(--setup-surface); border: 1px solid var(--setup-border); border-radius: 999px; padding: 7px 14px; color: var(--setup-text); }
+  #team-setup-mockup .regional-options button[aria-pressed="true"] { border-color: var(--setup-accent); }
+  #team-setup-mockup [data-design="switch"] .mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #team-setup-mockup [data-design="switch"] .team-form { margin-top: 0; }
+  @container (max-width: 600px) {
+    #team-setup-mockup .setup-main { padding: 28px 20px 36px; }
+    #team-setup-mockup h1 { font-size: 28px; }
+    #team-setup-mockup .mode-options { grid-template-columns: 1fr; gap: 10px; }
+    #team-setup-mockup .mode-option { min-height: 0; padding: 14px 16px; gap: 5px; }
+    #team-setup-mockup .mode-option strong { font-size: 20px; }
+    #team-setup-mockup .team-pickers { grid-template-columns: minmax(0, 1fr) 44px; gap: 16px; }
+    #team-setup-mockup .team-picker { grid-column: 1 / -1; }
+    #team-setup-mockup .swap-teams { grid-column: 2; grid-row: 1; justify-self: end; margin: -6px 0 0; z-index: 1; }
+    #team-setup-mockup .team-identity { min-height: 60px; }
+    #team-setup-mockup .team-identity strong { font-size: 22px; }
+    #team-setup-mockup [data-design="switch"] .mode-options { grid-template-columns: 1fr; }
+    #team-setup-mockup .setup-app { min-height: 860px; }
+  }
+</style>
+
+<script>
+  (() => {
+    const root = document.getElementById("team-setup-mockup");
+    const template = document.getElementById("team-setup-template");
+    const teams = [
+      { number: 5009, name: "Helios", location: "Edmonton, AB, Canada" },
+      { number: 28675, name: "BrainPower", location: "Macaresti, Moldova" },
+      { number: 22518, name: "The Quackers", location: "New York, NY, USA" },
+      { number: 25679, name: "The Cosmobots", location: "Tomball, TX, USA" },
+      { number: 27705, name: "Brooklyn ByteKnights", location: "Brooklyn, NY, USA" },
+    ];
+    for (const [index, app] of Array.from(root.querySelectorAll(".setup-app")).entries()) {
+      app.append(template.content.cloneNode(true));
+      const splitMethod = app.dataset.design === "switch";
+      const state = { mode: "custom", start: teams[0], end: teams[1], mobile: false };
+      const form = app.querySelector(".team-form");
+      const status = app.querySelector(".setup-status");
+      const pickers = Array.from(app.querySelectorAll(".team-picker"));
+      const modeOptions = app.querySelector(".mode-options");
+      const methodSwitch = app.querySelector(".method-switch");
+      methodSwitch.hidden = !splitMethod;
+      if (splitMethod) app.querySelector('[data-mode="custom"]').hidden = true;
+
+      function render() {
+        app.classList.toggle("mobile", state.mobile);
+        form.hidden = state.mode !== "custom";
+        app.querySelector(".random-actions").hidden = state.mode === "custom";
+        app.querySelector(".regional-options").hidden = state.mode !== "regional";
+        modeOptions.hidden = splitMethod && state.mode === "custom";
+        app.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode)));
+        app.querySelectorAll("[data-method]").forEach(button => button.setAttribute("aria-pressed", String((button.dataset.method === "custom") === (state.mode === "custom"))));
+        const duplicate = !!state.start && !!state.end && state.start.number === state.end.number;
+        app.querySelector(".validation").hidden = !duplicate;
+        app.querySelector(".start-button").disabled = !state.start || !state.end || duplicate;
+        for (const picker of pickers) {
+          const team = state[picker.dataset.endpoint];
+          picker.querySelector(".team-identity strong").textContent = team?.name ?? "";
+          picker.querySelector(".team-identity > span").textContent = team?.location ?? "";
+          picker.querySelector("input").setAttribute("aria-invalid", String(duplicate));
+        }
+      }
+
+      function selectTeam(picker, team) {
+        state[picker.dataset.endpoint] = team;
+        picker.querySelector("input").value = String(team.number);
+        closeSuggestions(picker);
+        status.textContent = "";
+        render();
+      }
+
+      function closeSuggestions(picker) {
+        picker.querySelector(".suggestions").hidden = true;
+        picker.querySelector("input").setAttribute("aria-expanded", "false");
+      }
+
+      for (const picker of pickers) {
+        const input = picker.querySelector("input");
+        const list = picker.querySelector(".suggestions");
+        const id = `team-setup-${index}-${picker.dataset.endpoint}`;
+        input.id = id;
+        list.id = `${id}-options`;
+        picker.querySelector("label").htmlFor = id;
+        input.setAttribute("aria-controls", list.id);
+        input.value = String(state[picker.dataset.endpoint].number);
+        let matches = [];
+
+        function showSuggestions() {
+          const query = input.value.trim().toLowerCase();
+          matches = teams.filter(team => `${team.number} ${team.name}`.toLowerCase().includes(query));
+          list.replaceChildren();
+          for (const team of matches) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "suggestion cursor-interaction";
+            button.setAttribute("role", "option");
+            button.setAttribute("aria-selected", String(state[picker.dataset.endpoint]?.number === team.number));
+            const number = document.createElement("span");
+            number.textContent = String(team.number);
+            const name = document.createElement("strong");
+            name.textContent = team.name;
+            button.append(number, name);
+            button.addEventListener("mousedown", event => event.preventDefault());
+            button.addEventListener("click", () => selectTeam(picker, team));
+            list.append(button);
+          }
+          if (!matches.length) {
+            const empty = document.createElement("div");
+            empty.className = "no-matches";
+            empty.textContent = "No matching teams.";
+            list.append(empty);
+          }
+          list.hidden = false;
+          input.setAttribute("aria-expanded", "true");
+        }
+
+        input.addEventListener("focus", showSuggestions);
+        input.addEventListener("input", () => {
+          state[picker.dataset.endpoint] = teams.find(team => String(team.number) === input.value.trim()) ?? null;
+          status.textContent = "";
+          render();
+          showSuggestions();
+        });
+        input.addEventListener("blur", () => setTimeout(() => closeSuggestions(picker), 100));
+        input.addEventListener("keydown", event => {
+          if (event.key === "Escape") closeSuggestions(picker);
+          if (event.key === "Enter" && !list.hidden && matches.length) {
+            event.preventDefault();
+            selectTeam(picker, matches[0]);
+          }
+        });
+      }
+
+      app.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => {
+        state.mode = button.dataset.mode;
+        status.textContent = "";
+        render();
+      }));
+      app.querySelectorAll("[data-method]").forEach(button => button.addEventListener("click", () => {
+        state.mode = button.dataset.method === "custom" ? "custom" : "global";
+        status.textContent = "";
+        render();
+      }));
+      app.querySelectorAll(".regional-options button").forEach(button => button.addEventListener("click", () => {
+        app.querySelectorAll(".regional-options button").forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+      }));
+      app.querySelector(".swap-teams").addEventListener("click", () => {
+        [state.start, state.end] = [state.end, state.start];
+        pickers.forEach(picker => { picker.querySelector("input").value = state[picker.dataset.endpoint]?.number ?? ""; closeSuggestions(picker); });
+        status.textContent = "";
+        render();
+      });
+      app.querySelector(".generate-button").addEventListener("click", () => {
+        state.mode = "custom";
+        pickers.forEach((picker, teamIndex) => selectTeam(picker, teams[teamIndex + 2]));
+        render();
+      });
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!state.start || !state.end || state.start.number === state.end.number) return;
+        status.textContent = `Starting at ${state.start.name}. Destination: ${state.end.name}.`;
+      });
+      render();
+      if (globalThis.Tweak) {
+        const tweak = new Tweak({ container: app, onChange: render });
+        tweak.addToggle(state, "mobile", { label: "Mobile preview" });
+      }
+    }
+    if (globalThis.lucide) lucide.createIcons({ attrs: { width: 18, height: 18 } });
+  })();
+</script>
