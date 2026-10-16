@@ -144,8 +144,8 @@
                                 span={1}
                                 trad
                                 tinted={!!redColorStyle && winner == Alliance.Blue}
-                            />
                                 {match}
+                            />
                         {/if}
                     {/each}
                 </div>
@@ -159,8 +159,8 @@
                         span={1}
                         trad
                         benched
-                    />
                         {match}
+                    />
                 {/each}
             </div>
         </div>
@@ -188,8 +188,8 @@
                                 span={1}
                                 trad
                                 tinted={!!blueColorStyle && winner == Alliance.Red}
-                            />
                                 {match}
+                            />
                         {/if}
                     {/each}
                 </div>
@@ -203,8 +203,8 @@
                         span={1}
                         trad
                         benched
-                    />
                         {match}
+                    />
                 {/each}
             </div>
 
