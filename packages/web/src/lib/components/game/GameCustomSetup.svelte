@@ -5,10 +5,11 @@
   import Fa from "svelte-fa";
   import { getClient } from "$lib/graphql/client";
   import { TeamsSearchDocument, type TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
-  import { fetchCustomPair, startGame, startUrl } from "$lib/game/game-store";
+  import { fetchCustomPair, startGame, startUrl, type GamePair } from "$lib/game/game-store";
   import GameTeamPicker from "./GameTeamPicker.svelte";
 
-  const dispatch = createEventDispatcher<{ busy: boolean }>();
+  export let duel = false;
+  const dispatch = createEventDispatcher<{ busy: boolean; pair: GamePair }>();
   let teams: TeamsSearchTeamFragment[] = [];
   let startTeam: TeamsSearchTeamFragment | null = null;
   let endTeam: TeamsSearchTeamFragment | null = null;
@@ -57,6 +58,10 @@
     try {
       const pair = await fetchCustomPair(from, to, controller.signal);
       if (destroyed) return;
+      if (duel) {
+        dispatch("pair", pair);
+        return;
+      }
       startGame(pair);
       await goto(startUrl(pair));
     } catch (cause) {
@@ -81,7 +86,7 @@
   {#if loadError}<p class="error" role="alert">{loadError} <button type="button" class="retry" on:click={loadTeams}>Retry</button></p>{/if}
   {#if duplicate}<p class="error" role="alert">Choose two different teams.</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
-  <div class="actions"><button class="start" type="submit" disabled={disabled || duplicate || !startTeam || !endTeam}>{submitting ? "Checking teams…" : "Start"}</button></div>
+  <div class="actions"><button class="start" type="submit" disabled={disabled || duplicate || !startTeam || !endTeam}>{submitting ? "Checking teams…" : duel ? "Create duel" : "Start"}</button></div>
 </form>
 
 <style>

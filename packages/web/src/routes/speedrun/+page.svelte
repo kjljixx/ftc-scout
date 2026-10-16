@@ -1,6 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
+    import { page } from "$app/stores";
     import Head from "$lib/components/Head.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
     import GameTeam from "$lib/components/game/GameTeam.svelte";
@@ -17,8 +18,21 @@
         startGame,
         startUrl,
         type GameMode,
+        showToast,
         type GamePair,
     } from "$lib/game/game-store";
+    import {
+        createDuel,
+        duelLink,
+        duelMe,
+        duelOpponent,
+        duelSession,
+        duelView,
+        joinDuel,
+        leaveDuel,
+        requestRematch,
+        startDuel,
+    } from "$lib/game/duel-store";
 
     const STEP_OPTIONS = [3, 5, 7];
 
@@ -30,6 +44,11 @@
     let error: string | null = null;
 
     let bestFailed = false;
+  let duelMode = false;
+  let joinCode = "";
+  let duelBusy = false;
+  let now = Date.now();
+  let ticker: ReturnType<typeof setInterval> | undefined;
   const lifelines = [
     { id: "radar", name: "Radar" },
     { id: "crosshair", name: "Crosshair" },
@@ -45,6 +64,38 @@
             bestFailed = true;
         }
     }
+
+  onMount(() => {
+    const code = $page.url.searchParams.get("duel");
+    if (!code || $game.status === "playing" || $duelSession) return;
+    duelMode = true;
+    joinDuel(code).then(() => goto("/speedrun", { replaceState: true }));
+  });
+
+  onDestroy(() => clearInterval(ticker));
+
+  async function makeDuel(duelPair: GamePair) {
+    duelBusy = true;
+    await createDuel(duelPair);
+    duelBusy = false;
+  }
+
+  async function submitJoin() {
+    if (!joinCode.trim()) return;
+    duelBusy = true;
+    await joinDuel(joinCode);
+    duelBusy = false;
+  }
+
+  async function copyLink(code: string) {
+    await navigator.clipboard.writeText(duelLink(code));
+    showToast("Link copied");
+  }
+
+  function leaveGame() {
+    leaveDuel();
+    resetGame();
+  }
 
     onMount(() => {
         if ($game.status == "playing" && $game.currentUrl) goto($game.currentUrl);
@@ -80,7 +131,35 @@
         goto(startUrl(pair));
     }
 
+  $: view = $duelView;
+  $: you = $duelSession?.you ?? 0;
+  $: duelOutcome = view?.status === "done" ? (view.winner === you ? "won" : "lost") : null;
+  $: if (view?.status === "countdown" && !ticker) {
+    now = Date.now();
+    ticker = setInterval(() => (now = Date.now()), 250);
+  }
+  $: if (view?.status !== "countdown" && ticker) {
+    clearInterval(ticker);
+    ticker = undefined;
+  }
+  $: countdown = view?.countdownEndsAt
+    ? Math.max(0, Math.ceil((view.countdownEndsAt - view.serverNow - (now - view.receivedAt)) / 1000))
+    : null;
+  $: rematchNote = $duelOpponent?.left
+    ? "Your opponent left."
+    : $duelMe?.rematch
+    ? "Waiting for your opponent…"
+    : $duelOpponent?.rematch
+    ? "Your opponent wants a rematch."
+    : "";
+  $: opponentText = !$duelOpponent ? "Waiting for a player…" : $duelOpponent.connected ? "Ready" : "Disconnected";
+  $: duelReason = view?.reason === "gaveUp"
+    ? `${view.winner === you ? "Your opponent" : "You"} gave up.`
+    : view?.reason === "disconnected"
+    ? `${view.winner === you ? "Your opponent" : "You"} disconnected.`
+    : "";
     $: ended = $game.status == "won" || $game.status == "gaveUp";
+  $: if (view?.status === "done" && !ended) leaveDuel();
     $: gaveUp = $game.status == "gaveUp";
     $: hops = $game.path.length - 1;
     $: best = $game.best;
@@ -91,7 +170,9 @@
     $: if (best && !gaveUp && !usedRadarHop && hops < best.hops) {
         console.error(`[game] route of ${hops} hops beats the best route of ${best.hops} hops`);
     }
-    $: yourBadge = gaveUp
+    $: yourBadge = duelOutcome
+        ? { text: duelOutcome === "won" ? "Winner" : "Lost", good: duelOutcome === "won" }
+        : gaveUp
         ? { text: "Gave up", good: false }
         : matchedBest
         ? { text: "Best route", good: true }
@@ -113,6 +194,12 @@
         </div>
 
         <div class="results">
+            {#if duelOutcome}
+                <div>
+                    <span class="label">Result</span>
+                    <span class="value">{duelOutcome === "won" ? "Won" : "Lost"}</span>
+                </div>
+            {/if}
             <div>
                 <span class="label">Time</span>
                 <span class="value">{formatClock($game.elapsedMs ?? 0)}</span>
@@ -121,7 +208,15 @@
                 <span class="label">Hops</span>
                 <span class="value">{hops}</span>
             </div>
+            {#if duelOutcome && view?.paths}
+                <div>
+                    <span class="label">Opponent hops</span>
+                    <span class="value">{view.players[1 - you].hops}</span>
+                </div>
+            {/if}
         </div>
+
+      {#if duelReason}<div class="lifelines-used">{duelReason}</div>{/if}
 
       <div class="lifelines-used">
         <span>Lifelines used:</span>
@@ -132,6 +227,14 @@
         {/each}
       </div>
         <RouteView title="Your route" path={$game.path} badge={yourBadge} stuckAtEnd={gaveUp} />
+        {#if duelOutcome && view?.paths}
+            <RouteView
+                title="Opponent's route"
+                path={view.paths[1 - you]}
+                badge={duelOutcome === "lost" ? { text: "Winner", good: true } : null}
+                stuckAtEnd={duelOutcome === "won"}
+            />
+        {/if}
         {#if !matchedBest}
             <RouteView
                 title="Best route"
@@ -141,12 +244,85 @@
         {/if}
 
         <div class="actions">
-            <button class="pill primary" on:click={resetGame}>Play again</button>
+            {#if view}
+                <button class="pill big" on:click={leaveGame}>Leave</button>
+                <button
+                    class="pill primary"
+                    disabled={view.status !== "done" || !!$duelMe?.rematch || !!$duelOpponent?.left}
+                    on:click={requestRematch}
+                >
+                    Rematch
+                </button>
+            {:else}
+                <button class="pill primary" on:click={leaveGame}>Play again</button>
+            {/if}
         </div>
+        {#if view && rematchNote}<div class="sub waiting">{rematchNote}</div>{/if}
+    {:else if view && view.status !== "done"}
+        <div class="header">
+            <h1>Team Speedrun</h1>
+            <div class="sub">Duel &middot; the first player to reach the destination wins.</div>
+        </div>
+
+        <div class="pair">
+            <GameTeam team={view.pair.start} align="right" />
+            <svg class="arrow" width="64" height="32" viewBox="0 0 64 32" aria-hidden="true">
+                <path d="M4 16h54M44 4l14 12-14 12" />
+            </svg>
+            <GameTeam team={view.pair.destination} />
+        </div>
+
+        <div class="modes two">
+            <div class="mode static" class:on={view.players[you]?.connected}>
+                <h3>You</h3>
+                <span class="desc">{you === 0 ? "Host" : "Guest"}</span>
+            </div>
+            <div class="mode static" class:on={!!$duelOpponent?.connected}>
+                <h3>Opponent</h3>
+                <span class="desc">{opponentText}</span>
+            </div>
+        </div>
+
+        <div class="results">
+            <div>
+                <span class="label">Code</span>
+                <span class="value">{view.code}</span>
+            </div>
+            {#if view.status === "countdown" || view.status === "racing"}
+                <div>
+                    <span class="label">Starting in</span>
+                    <span class="value">{countdown ?? 0}</span>
+                </div>
+            {/if}
+        </div>
+
+        <div class="actions">
+            <button class="pill big" disabled={view.status !== "lobby"} on:click={leaveDuel}>Leave</button>
+            <button class="pill big" on:click={() => copyLink(view?.code ?? "")}>Copy link</button>
+            {#if you === 0}
+                <button
+                    class="pill primary"
+                    disabled={view.status !== "lobby" || !$duelOpponent?.connected}
+                    on:click={startDuel}
+                >
+                    Start
+                </button>
+            {/if}
+        </div>
+        {#if you === 1}<div class="sub waiting">Waiting for the host to start…</div>{/if}
     {:else}
         <div class="header">
             <h1>Team Speedrun</h1>
             <div class="sub">Click through matches to reach the destination team.</div>
+        </div>
+
+        <div class="play-type" role="radiogroup" aria-label="Players">
+            <button class="pill" class:on={!duelMode} disabled={loading || customBusy} on:click={() => (duelMode = false)}>
+                Solo
+            </button>
+            <button class="pill" class:on={duelMode} disabled={loading || customBusy} on:click={() => (duelMode = true)}>
+                Duel
+            </button>
         </div>
 
         <div class="modes" role="radiogroup" aria-label="Game mode">
@@ -206,7 +382,7 @@
         </div>
 
       {#if mode === "custom"}
-        <GameCustomSetup on:busy={(event) => customBusy = event.detail} />
+        <GameCustomSetup duel={duelMode} on:busy={(event) => customBusy = event.detail} on:pair={(event) => makeDuel(event.detail)} />
       {:else}
         {#if pair}
             <div class="pair">
@@ -223,13 +399,27 @@
         <div class="actions">
             {#if pair}
                 <button class="pill big" disabled={loading} on:click={generate}>Regenerate</button>
-                <button class="pill primary" on:click={start}>Start</button>
+                {#if duelMode}
+                    <button class="pill primary" disabled={duelBusy} on:click={() => pair && makeDuel(pair)}>
+                        Create duel
+                    </button>
+                {:else}
+                    <button class="pill primary" on:click={start}>Start</button>
+                {/if}
             {:else}
                 <button class="pill primary" disabled={loading} on:click={generate}>
                     Generate
                 </button>
             {/if}
         </div>
+      {/if}
+
+      {#if duelMode}
+        <form class="join" on:submit|preventDefault={submitJoin}>
+          <span class="sub">Have a code?</span>
+          <input bind:value={joinCode} maxlength="5" placeholder="Code" aria-label="Duel code" autocomplete="off" />
+          <button class="pill" type="submit" disabled={duelBusy || !joinCode.trim()}>Join duel</button>
+        </form>
       {/if}
     {/if}
 </WidthProvider>
@@ -254,6 +444,8 @@
 
     .header,
     .modes,
+    .play-type,
+    .join,
     .pair,
     .results,
     .actions,
@@ -278,6 +470,38 @@
         margin-top: var(--md-gap);
         font-size: 0.9em;
         color: var(--grayed-out-text-color);
+    }
+
+    .play-type {
+        display: flex;
+        gap: var(--md-gap);
+        margin-top: var(--lg-gap);
+    }
+
+    .join {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--md-gap);
+        margin-top: var(--vl-gap);
+    }
+
+    .join input {
+        width: 7em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .waiting {
+        text-align: center;
+    }
+
+    .modes.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mode.static {
+        cursor: default;
     }
 
     .modes {

@@ -3,6 +3,7 @@
   import { faFlag } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { clock, formatClock, game, gameActive, giveUp } from "$lib/game/game-store";
+  import { duelOpponent } from "$lib/game/duel-store";
   import Button from "../ui/Button.svelte";
   import GameTeam from "./GameTeam.svelte";
   import GameLifelines from "./GameLifelines.svelte";
@@ -42,7 +43,10 @@
 
       <div class="clock" role="group" aria-label="Time and hops">
         <b aria-label="Elapsed time">{formatClock(elapsed)}</b>
-        <span>{hops} {hops === 1 ? "hop" : "hops"}</span>
+        <span>
+          {hops} {hops === 1 ? "hop" : "hops"}
+          {#if $duelOpponent}&middot; Opponent {$duelOpponent.connected ? $duelOpponent.hops : "offline"}{/if}
+        </span>
       </div>
 
       <div class="actions" role="group" aria-label="Actions">

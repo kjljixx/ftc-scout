@@ -120,7 +120,7 @@ export type GameState = {
 
 const STORAGE_KEY = "ftc-scout:speedrun";
 const TOAST_MS = 2500;
-const SERVER_ORIGIN = PUBLIC_SERVER_ORIGIN.startsWith("http")
+export const SERVER_ORIGIN = PUBLIC_SERVER_ORIGIN.startsWith("http")
     ? PUBLIC_SERVER_ORIGIN
     : `http${IS_DEV ? "" : "s"}://${PUBLIC_SERVER_ORIGIN}`;
 
