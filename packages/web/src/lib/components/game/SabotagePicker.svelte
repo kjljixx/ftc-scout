@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getClient } from "$lib/graphql/client";
-  import { TeamsSearchDocument, type EventsSearchEventFragment, type TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
+  import { loadSearchData } from "$lib/graphql/search-data";
+  import type { EventsSearchEventFragment, TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
   import { game } from "$lib/game/game-store";
   import { castSabotage } from "$lib/game/duel-store";
   import Modal from "../Modal.svelte";
@@ -25,7 +25,7 @@
 
   async function load() {
     try {
-      const result = await getClient(fetch).query({ query: TeamsSearchDocument });
+      const result = await loadSearchData();
       if (!destroyed) teams = result.data.teamsSearch;
     } catch (error) {
       console.error("[game] sniper search failed to load", error);

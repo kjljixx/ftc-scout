@@ -1,23 +1,22 @@
 <script lang="ts">
     import { faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
-    import {
-        CombinedSearchDocument,
-        type CombinedSearchQuery,
-        type TeamsSearchTeamFragment,
-        type EventsSearchEventFragment,
+    import type {
+        CombinedSearchQuery,
+        TeamsSearchTeamFragment,
+        EventsSearchEventFragment,
     } from "../../../graphql/generated/graphql-operations";
-    import { CURRENT_SEASON, fuzzySearch, type FuzzyResult, calcCutoff } from "@ftc-scout/common";
-    import { getClient } from "../../../graphql/client";
-    import { getDataSync } from "../../../graphql/getData";
+    import { fuzzySearch, type FuzzyResult, calcCutoff } from "@ftc-scout/common";
+    import { loadSearchData } from "../../../graphql/search-data";
     import { browser } from "$app/environment";
-    import { readable, writable, type Readable } from "svelte/store";
+    import { writable } from "svelte/store";
     import type { ApolloQueryResult } from "@apollo/client";
     import SearchRes from "./SearchRes.svelte";
     import { isCompetition } from "../../../util/event-type";
     import SkeletonRow from "../../skeleton/SkeletonRow.svelte";
     import { afterNavigate, goto, preloadData } from "$app/navigation";
     import { focusWithinOut, watchForFocus } from "../../../util/directives";
+    import { onMount } from "svelte";
 
     export let disabled = false;
 
@@ -25,23 +24,38 @@
     let shown = false;
 
     let resultsLoading = false;
-    let results: Readable<ApolloQueryResult<CombinedSearchQuery> | null> = readable(null);
+    const results = writable<ApolloQueryResult<CombinedSearchQuery> | null>(null);
 
     function loadData() {
-        if (!browser) return;
+        if (!browser || resultsLoading) return;
 
-        if (!resultsLoading) {
-            resultsLoading = true;
-            results = getDataSync(
-                getClient(),
-                CombinedSearchDocument,
-                { season: CURRENT_SEASON },
-                "searchbar"
-            );
+        resultsLoading = true;
+        loadSearchData()
+            .then((res) => results.set(res))
+            .catch(() => (resultsLoading = false));
+    }
+
+    function prefetch(reason: string) {
+        if (!browser || resultsLoading) return;
+        console.debug(`[searchbar] prefetching search data (${reason})`);
+        loadData();
+    }
+
+    function prefetchWhenIdle() {
+        if ((navigator as any).connection?.saveData) {
+            console.debug("[searchbar] idle prefetch skipped (data saver on)");
+            return;
+        }
+        if ("requestIdleCallback" in window) {
+            requestIdleCallback(() => prefetch("idle"), { timeout: 2000 });
+        } else {
+            setTimeout(() => prefetch("idle"), 1500);
         }
     }
 
-    function getURL(res: FuzzyResult<EventsSearchEventFragment | TeamsSearchTeamFragment>): string {
+    onMount(prefetchWhenIdle);
+
+    function getURL(res:FuzzyResult<EventsSearchEventFragment | TeamsSearchTeamFragment>): string {
         let r = res.document;
         if (r.__typename == "Event") {
             return `/events/${r.season}/${r.code}/matches`;
@@ -140,6 +154,8 @@
 
 <form
     on:submit|preventDefault={submit}
+    on:pointerenter={() => prefetch("pointer")}
+    on:touchstart|passive={() => prefetch("touch")}
     use:focusWithinOut={() => setTimeout(() => (shown = false), 50)}
     class:has-text={searchText != ""}
     class:shown
@@ -190,7 +206,12 @@
     </div>
 </form>
 
-<button class="search-btn" on:click={show}>
+<button
+    class="search-btn"
+    on:click={show}
+    on:pointerenter={() => prefetch("pointer")}
+    on:touchstart|passive={() => prefetch("touch")}
+>
     <Fa icon={faSearch} size="1.5x" />
 </button>
 

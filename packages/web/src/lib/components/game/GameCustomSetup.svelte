@@ -3,8 +3,8 @@
   import { goto } from "$app/navigation";
   import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
-  import { getClient } from "$lib/graphql/client";
-  import { TeamsSearchDocument, type TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
+  import { loadSearchData } from "$lib/graphql/search-data";
+  import type { TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
   import { fetchCustomPair, startGame, startUrl, type GamePair } from "$lib/game/game-store";
   import GameTeamPicker from "./GameTeamPicker.svelte";
 
@@ -35,7 +35,7 @@
     loadingTeams = true;
     loadError = null;
     try {
-      const result = await getClient(fetch).query({ query: TeamsSearchDocument });
+      const result = await loadSearchData();
       if (destroyed) return;
       teams = result.data.teamsSearch;
       console.info(`[game] custom setup teams=${teams.length} search=number-or-name connectionCheck=shared-matches`);
