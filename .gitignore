@@ -10,3 +10,8 @@ packages/*/dist/
 !.env.example
 db.sql
 /compose
+
+video-poc
+/strength-eval/cache/
+/mockups
+/strength-eval
