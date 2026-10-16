@@ -45,6 +45,7 @@
     import { goto } from "$app/navigation";
     import { browser } from "$app/environment";
     import { game, gameActive, setGamePageContext, setPendingHop, teamUrl, visitTeam, type Hop } from "$lib/game/game-store";
+    import { tryHop } from "$lib/game/duel-store";
     import { Alliance, type FullMatchFragment } from "$lib/graphql/generated/graphql-operations";
     const toSeason = (n: number) => n as Season;
 
@@ -86,9 +87,10 @@
 
     setContext(
         TEAM_CLICK_ACTION_CTX,
-        (number: number, _name: string, eventCode: string, match: FullMatchFragment | null) => {
+        async (number: number, name: string, eventCode: string, match: FullMatchFragment | null) => {
             if ($gameActive) {
                 let hop = hopTo(number, eventCode, match);
+                if (!(await tryHop(number, name, hop ?? undefined))) return;
                 if (hop) setPendingHop(number, hop);
                 let eventSeason = sortedEvents.find((tep) => tep.event.code == eventCode)?.event.season;
                 goto(teamUrl(number, eventSeason ?? ($season == "overall" ? null : $season)));

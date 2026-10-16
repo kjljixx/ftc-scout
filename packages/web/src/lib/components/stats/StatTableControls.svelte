@@ -17,6 +17,7 @@
     import FilterModal from "./filter/FilterModal.svelte";
     import Select from "../ui/form/Select.svelte";
     import ExportCsv from "./ExportCsv.svelte";
+    import { radarReach } from "$lib/game/game-store";
 
     type T = $$Generic;
 
@@ -64,6 +65,8 @@
         }
     }
 
+    $: radar = $radarReach !== null;
+
     $: updateRankComponents(rankTy);
     $: computeRankTy(skip, rankAfterFilters);
 </script>
@@ -77,37 +80,39 @@
 />
 <FilterModal bind:shown={filtersShown} root={filter} {stats} on:new-filter />
 
-<div class="controls" class:extras={!isDefaultStats || filter != null}>
-    <Button icon={faEdit} on:click={() => (chooseStatsModalShown = true)}>Statistics</Button>
-    {#if !isDefaultStats}
-        <Button icon={faXmark} on:click={() => dispatch("reset-stats")}>Reset Stats</Button>
-    {/if}
+{#if !radar}
+    <div class="controls" class:extras={!isDefaultStats || filter != null}>
+        <Button icon={faEdit} on:click={() => (chooseStatsModalShown = true)}>Statistics</Button>
+        {#if !isDefaultStats}
+            <Button icon={faXmark} on:click={() => dispatch("reset-stats")}>Reset Stats</Button>
+        {/if}
 
-    <Button icon={faFilter} on:click={() => (filtersShown = true)}>Filters</Button>
+        <Button icon={faFilter} on:click={() => (filtersShown = true)}>Filters</Button>
 
-    {#if filter != null}
-        <Button icon={faXmark} on:click={() => dispatch("new-filter", null)}>Clear Filters</Button>
-        <Select
-            bind:value={rankAfterFilters}
-            options={[
-                { value: "no", name: "Pre Filter Rank" },
-                { value: "yes", name: "Post Filter Rank" },
-            ]}
-        />
-    {/if}
-    {#if includeSkipRankTys}
-        <Select
-            bind:value={skip}
-            options={[
-                { value: "skip", name: "Rank Best Results" },
-                { value: "keep", name: "Rank All Results" },
-            ]}
-        />
-    {/if}
-    <div>
-        <ExportCsv {data} {shownStats} {csv} />
+        {#if filter != null}
+            <Button icon={faXmark} on:click={() => dispatch("new-filter", null)}>Clear Filters</Button>
+            <Select
+                bind:value={rankAfterFilters}
+                options={[
+                    { value: "no", name: "Pre Filter Rank" },
+                    { value: "yes", name: "Post Filter Rank" },
+                ]}
+            />
+        {/if}
+        {#if includeSkipRankTys}
+            <Select
+                bind:value={skip}
+                options={[
+                    { value: "skip", name: "Rank Best Results" },
+                    { value: "keep", name: "Rank All Results" },
+                ]}
+            />
+        {/if}
+        <div>
+            <ExportCsv {data} {shownStats} {csv} />
+        </div>
     </div>
-</div>
+{/if}
 
 <StatTable
     {data}
@@ -115,8 +120,8 @@
     {currentSort}
     {focusedTeam}
     rankStat={showRank ? RANK_STATS[rankTy] : null}
-    on:change_sort
-    on:move_column
+    on:change_sort={(e) => !radar && dispatch("change_sort", e.detail)}
+    on:move_column={(e) => !radar && dispatch("move_column", e.detail)}
     on:row_click={rowClick}
 />
 

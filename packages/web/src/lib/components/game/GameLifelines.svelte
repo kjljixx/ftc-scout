@@ -12,7 +12,7 @@
   import LifelineIcon from "./LifelineIcon.svelte";
 
   const lifelines = [
-    { id: "radar", name: "Radar", description: "Open one event and hop to any team on its roster" },
+    { id: "radar", name: "Radar", description: "Open one event's rankings and hop to one of its top 10 teams" },
     { id: "crosshair", name: "Crosshair", description: "Find the event with your best next hop" },
     { id: "beacon", name: "Beacon", description: "Reveal your closest connection to the destination" },
   ] as const;
@@ -97,7 +97,7 @@
 <Modal shown={panel !== null} titleText={panel === "radar" ? "Radar" : "Beacon"} close={closePanel}>
   <div class="lifeline-content">
     {#if panel === "radar"}
-      <p>Choose an event. You will be given access to that event's full page</p>
+      <p>Choose an event. You will see its rankings and can hop to one of its top 10 teams.</p>
       {#if $gamePageContext?.events.length}
         <div class="events">
           {#each $gamePageContext.events as event}

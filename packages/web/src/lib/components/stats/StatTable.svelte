@@ -2,6 +2,9 @@
     import type { SortDir, StatColumn, StatData } from "@ftc-scout/common";
     import StatHeader from "./StatHeader.svelte";
     import StatRow from "./StatRow.svelte";
+    import { faLock } from "@fortawesome/free-solid-svg-icons";
+    import Fa from "svelte-fa";
+    import { RADAR_REACH, radarReach } from "$lib/game/game-store";
 
     type T = $$Generic;
 
@@ -11,6 +14,14 @@
     export let stats: StatColumn<T>[];
     export let currentSort: { id: string; dir: SortDir };
     export let rankStat: StatColumn<T> | null;
+
+    $: lastReachIndex =
+        $radarReach === null
+            ? -1
+            : data.reduce((last, row, i) => {
+                  const number = (row.data as { teamNumber?: number }).teamNumber;
+                  return number !== undefined && $radarReach!.includes(number) ? i : last;
+              }, -1);
 </script>
 
 <table class:no-data={stats.length == 0}>
@@ -32,8 +43,15 @@
         </tbody>
     {:else}
         <tbody>
-            {#each data as dataRow}
+            {#each data as dataRow, i}
                 <StatRow data={dataRow} {stats} {focusedTeam} {rankStat} on:row_click />
+                {#if i === lastReachIndex}
+                    <tr class="radar-cutoff">
+                        <td colspan="999">
+                            <Fa icon={faLock} scale="0.8x" /> Radar only accesses the top {RADAR_REACH} teams
+                        </td>
+                    </tr>
+                {/if}
             {/each}
         </tbody>
     {/if}
@@ -92,6 +110,21 @@
 
     tbody > :global(:nth-child(even)) {
         background-color: var(--zebra-stripe-opacity);
+    }
+
+    .radar-cutoff td {
+        padding: var(--md-pad) var(--lg-pad);
+        text-align: left;
+        font-size: var(--sm-font-size);
+        color: var(--grayed-out-text-color);
+        background: var(--fg-color);
+        border-top: 1px solid var(--inline-theme-color);
+        border-bottom: 1px solid var(--sep-color);
+    }
+
+    .radar-cutoff td :global(svg) {
+        margin-right: var(--sm-gap);
+        color: var(--inline-theme-color);
     }
 
     .no-data b {

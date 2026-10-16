@@ -8,7 +8,10 @@
     import { Alliance, type FullMatchFragment } from "../../graphql/generated/graphql-operations";
     import { getContext } from "svelte";
     import { browser } from "$app/environment";
+  import { faPersonRifle } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
   import { beaconTeam } from "$lib/game/game-store";
+  import { blockedTeams, frozenSeconds } from "$lib/game/duel-store";
 
     export let team: FullMatchFragment["teams"][number];
     export let eventCode: string;
@@ -23,6 +26,8 @@
     export let match: FullMatchFragment | null = null;
 
     $: number = team.team.number;
+    $: sniped = $blockedTeams.includes(number);
+    $: frozen = $frozenSeconds > 0;
     $: name = team.team.name;
 
     $: surrogate = team.surrogate;
@@ -57,6 +62,8 @@
     class:benched
     class:compact
     class:tinted
+    class:sniped
+    class:frozen
   class:beacon={$beaconTeam === number}
     {title}
 >
@@ -65,6 +72,10 @@
         href="/teams/{number}{season == CURRENT_SEASON ? '' : `?season=${season}`}#{eventCode}"
         role={browser && clickAction ? "button" : "link"}
         on:click={(e) => {
+            if (sniped || frozen) {
+                e.preventDefault();
+                return;
+            }
             if (clickAction) {
                 e.preventDefault();
                 if (e.detail > 0) e.currentTarget.blur();
@@ -75,6 +86,7 @@
         <span class="num" class:dq={dq || noShow}>{number}{surrogate ? "*" : ""}</span>
         <em class="name">{name}</em>
     </a>
+    {#if sniped}<span class="snipe-mark"><Fa icon={faPersonRifle} /></span>{/if}
 </td>
 
 <style>
@@ -120,6 +132,23 @@
 
     td:hover {
         z-index: 1;
+    }
+
+    td.sniped {
+        position: relative;
+    }
+    td.sniped .inner,
+    td.frozen .inner {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+    .snipe-mark {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        color: #e0701e;
+        font-size: 14px;
+        pointer-events: none;
     }
     .red:hover {
         outline: 2px solid var(--red-team-color);

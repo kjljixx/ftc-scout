@@ -42,7 +42,8 @@
     import Preview from "./Preview.svelte";
     import { isNonCompetition } from "$lib/util/event-type";
     import Head from "$lib/components/Head.svelte";
-    import { confirmRadarVisit, endRadar, game, gameActive, isRadarEvent, showToast, teamUrl } from "$lib/game/game-store";
+    import { RADAR_REACH, confirmRadarVisit, endRadar, game, gameActive, isRadarEvent, showToast, teamUrl } from "$lib/game/game-store";
+    import { tryHop } from "$lib/game/duel-store";
     import Insights from "./Insights.svelte";
     import { getMatchScores } from "$lib/components/stats/getMatchScores";
     // import { unsubscribe, watchEvent } from "./watchEvent";
@@ -57,12 +58,26 @@
 
     $: season = +$page.params.season as Season;
 
-    $: if (browser && event && event.code === $page.params.code && event.season === season) {
+    $: radarMode = $gameActive && !!$game.radarVisit;
+    $: radarTeams = radarMode
+        ? [...(event?.teams ?? [])]
+              .filter((team) => notEmpty(team.stats))
+              .sort((a, b) => a.stats!.rank - b.stats!.rank || a.teamNumber - b.teamNumber)
+              .slice(0, RADAR_REACH)
+              .map((team) => team.teamNumber)
+        : [];
+
+    $: if (browser && event && event.code === $page.params.code && event.season === season && radarTeams.length) {
       confirmRadarVisit(
         { season, code: event.code, name: event.name },
-        event.teams.map((team) => team.teamNumber),
+        radarTeams,
         $page.url.pathname + $page.url.search
       );
+    }
+
+    $: if (browser && radarMode && event && event.code === $page.params.code && !radarTeams.length) {
+      showToast("This event has no rankings. Radar is still available.");
+      returnFromRadar();
     }
 
     $: if (browser && $gameActive && $game.radarVisit && $eventStore && !event) {
@@ -135,12 +150,15 @@
     $: focusedTeamData =
         event?.teams?.find((t) => t.teamNumber == focusedTeam) ??
         event?.awards?.find((a) => a.teamNumber == focusedTeam)!;
-    function handleEventTeamClick(number: number) {
+    async function handleEventTeamClick(number: number) {
       if ($gameActive) {
         if (!isRadarEvent($page.url.pathname, $game) || !$game.radarVisit?.roster?.includes(number)) {
-          showToast("Choose a team from this event's roster.");
+          showToast(`Radar only accesses the top ${RADAR_REACH} teams.`);
           return;
         }
+        const name = event?.teams?.find((team) => team.teamNumber === number)?.team.name ?? "";
+        const radarHop = { kind: "radar" as const, eventName: event.name, eventCode: event.code, season };
+        if (!(await tryHop(number, name, radarHop))) return;
         goto(teamUrl(number, season));
         return;
       }
@@ -389,23 +407,25 @@
             </div>
         </Card>
 
-        <RelatedEvents
-            relatedEvents={event.relatedEvents}
-            thisEventName={event.name}
-            thisEventCode={event.code}
-            {season}
-            tab={selectedTab}
-        />
+        {#if !radarMode}
+            <RelatedEvents
+                relatedEvents={event.relatedEvents}
+                thisEventName={event.name}
+                thisEventCode={event.code}
+                {season}
+                tab={selectedTab}
+            />
+        {/if}
 
         <TabbedCard
             tabs={[
-                [faChartLine, "Preview", "preview", shouldShowPreviewTab],
-                [faBolt, "Matches", "matches", (event?.matches?.length ?? 0) > 0],
+                [faChartLine, "Preview", "preview", !radarMode && shouldShowPreviewTab],
+                [faBolt, "Matches", "matches", !radarMode && (event?.matches?.length ?? 0) > 0],
                 [faTrophy, "Rankings", "rankings", !!stats.length],
-                [faList, "Picklist", "picklist", !!event.teams.length && !isFinalsDivision],
-                [faLightbulb, "Insights", "insights", !!insights.length],
-                [faMedal, "Awards", "awards", (event?.awards?.length ?? 0) > 0],
-                [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
+                [faList, "Picklist", "picklist", !radarMode && !!event.teams.length && !isFinalsDivision],
+                [faLightbulb, "Insights", "insights", !radarMode && !!insights.length],
+                [faMedal, "Awards", "awards", !radarMode && (event?.awards?.length ?? 0) > 0],
+                [faHashtag, `Teams (${event.teams.length})`, "teams", !radarMode && !!event.teams.length],
             ]}
             bind:selectedTab
         >

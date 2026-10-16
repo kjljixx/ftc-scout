@@ -33,12 +33,19 @@ export type Hop = {
 
 export type LifelineId = "radar" | "crosshair" | "beacon";
 export type LifelineDetail = { event?: GameEvent; team?: { number: number; name: string } };
+export type SabotageMark = {
+  kind: "sniper" | "disorient" | "spy";
+  type: "cast" | "trigger";
+  team?: { number: number; name: string };
+  event?: { season: number; code: string; name: string };
+};
 export type PathStop = {
   number: number;
   name: string;
   hop?: Hop | undefined;
   lifelines?: LifelineId[];
   lifelineDetails?: Partial<Record<LifelineId, LifelineDetail>>;
+  sabotages?: SabotageMark[];
 };
 
 export type BestRoute = { hops: number; path: PathStop[] };
@@ -118,6 +125,7 @@ export type GameState = {
     pendingHop: { number: number; hop: Hop } | null;
 };
 
+export const RADAR_REACH = 10;
 const STORAGE_KEY = "ftc-scout:speedrun";
 const TOAST_MS = 2500;
 export const SERVER_ORIGIN = PUBLIC_SERVER_ORIGIN.startsWith("http")
@@ -175,6 +183,9 @@ if (browser) {
 }
 
 export const gameActive = derived(game, (g) => g.status == "playing");
+export const radarReach = derived(game, (state) =>
+  state.status === "playing" && state.radarVisit ? state.radarVisit.roster ?? [] : null
+);
 export const beaconTeam = derived(game, (state) =>
   state.status === "playing" && !state.lifelines.beacon?.reached
     ? state.lifelines.beacon?.team.number ?? null
@@ -268,8 +279,8 @@ export function startUrl(pair: GamePair): string {
 export function isRadarEvent(pathname: string, state = get(game)): boolean {
   const visit = state.radarVisit;
   if (!visit) return false;
-  const match = /^\/events\/(\d+)\/([^/]+)(?:\/[^/]+)?\/?$/.exec(pathname);
-  return !!match && +match[1] === visit.event.season && match[2] === encodeURIComponent(visit.event.code);
+  const match = /^\/events\/(\d+)\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
+  return !!match && match[3] === "rankings" && +match[1] === visit.event.season && match[2] === encodeURIComponent(visit.event.code);
 }
 
 export function isAllowedPath(pathname: string, state = get(game)): boolean {
@@ -299,7 +310,7 @@ export function startGame(pair: GamePair) {
         currentUrl: startUrl(pair),
         pendingHop: null,
     });
-    console.info(`[game] started ${pair.start.number} -> ${pair.destination.number} lifelines=Radar,Crosshair,Beacon usesEach=1 radarHops=1 hintScope=all-seasons`);
+    console.info(`[game] started ${pair.start.number} -> ${pair.destination.number} lifelines=Radar,Crosshair,Beacon usesEach=1 radarHops=1 radarReach=top${RADAR_REACH} hintScope=all-seasons`);
 }
 
 export function visitTeam(number: number, name: string, url: string) {
@@ -333,6 +344,27 @@ export function visitTeam(number: number, name: string, url: string) {
         let elapsedMs = Date.now() - (g.startedAt ?? Date.now());
         console.info(`[game] won hops=${path.length - 1} elapsedMs=${elapsedMs}`);
         return { ...g, status: "won", path, elapsedMs, currentUrl: url, pendingHop: null, radarVisit: null };
+    });
+}
+
+export function disorientTo(number: number, name: string): boolean {
+    let moved = false;
+    game.update((g) => {
+        if (g.status != "playing" || g.path[g.path.length - 1]?.number == number) return g;
+        moved = true;
+        console.info(`[game] disoriented ${g.path[g.path.length - 1]?.number} -> ${number}, hops=${g.path.length}`);
+        return { ...g, path: [...g.path, { number, name }], currentUrl: teamUrl(number), radarVisit: null, pendingHop: null };
+    });
+    return moved;
+}
+
+export function winAt(stop: PathStop) {
+    game.update((g) => {
+        if (g.status != "playing") return g;
+        const path = g.path[g.path.length - 1]?.number == stop.number ? g.path : [...g.path, stop];
+        const elapsedMs = Date.now() - (g.startedAt ?? Date.now());
+        console.info(`[game] won at server confirmation hops=${path.length - 1} elapsedMs=${elapsedMs}`);
+        return { ...g, status: "won", path, elapsedMs, pendingHop: null, radarVisit: null };
     });
 }
 
@@ -379,7 +411,7 @@ export function beginRadar(event: GameEvent): string | null {
     console.warn("[game] rejected unavailable Radar activation");
     return null;
   }
-  const url = `/events/${event.season}/${encodeURIComponent(event.code)}/teams`;
+  const url = `/events/${event.season}/${encodeURIComponent(event.code)}/rankings`;
   game.update((current) => ({
     ...current,
     pendingHop: null,

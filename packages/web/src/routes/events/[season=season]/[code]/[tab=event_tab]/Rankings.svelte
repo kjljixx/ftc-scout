@@ -2,6 +2,7 @@
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import { DESCRIPTORS, getTepStatSet, SortDir, type Season } from "@ftc-scout/common";
     import LocalStatTableControls from "$lib/components/stats/LocalStatTableControls.svelte";
+    import { radarReach } from "$lib/game/game-store";
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -25,7 +26,7 @@
         totalPoints + "Max",
     ];
 
-    $: saveId = `eventPageTep${season}${remote ? "Remote" : "Trad"}`;
+    $: saveId = `eventPageTep${season}${remote ? "Remote" : "Trad"}${$radarReach ? "Radar" : ""}`;
 
     $: underscoreEventName = eventName.replace(" ", "_");
     $: filename = `${season}_${underscoreEventName}_Team_Stats`;

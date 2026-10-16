@@ -5,6 +5,8 @@
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
     import { HIDDEN_TIP } from "$lib/util/tippy";
     import { teamUrl, type Hop, type PathStop } from "$lib/game/game-store";
+  import { faEye, faPersonRifle, faShuffle } from "@fortawesome/free-solid-svg-icons";
+  import Fa from "svelte-fa";
   import LifelineIcon from "./LifelineIcon.svelte";
 
     export let title: string;
@@ -12,8 +14,13 @@
     export let note = "";
     export let badge: { text: string; good: boolean } | null = null;
     export let stuckAtEnd = false;
+    export let plain = false;
+    export let links = true;
 
     const LIFELINE_NAMES = { radar: "Radar", crosshair: "Crosshair", beacon: "Beacon" } as const;
+    const SABOTAGE_ICONS = { sniper: faPersonRifle, disorient: faShuffle, spy: faEye } as const;
+    const SABOTAGE_NAMES = { sniper: "Sniper", disorient: "Disorient", spy: "Spy" } as const;
+    const TRIGGERED_LABELS = { sniper: "Sniped", disorient: "Disoriented", spy: "Spied" } as const;
 
     const tippy = createTippy({ placement: "top", touch: ["hold", 500] });
 
@@ -39,7 +46,7 @@
     $: hopsText = path ? `${hops} ${hops == 1 ? "hop" : "hops"}` : note;
 </script>
 
-<div class="card">
+<div class="card" class:plain>
     <div class="head">
         <b>{title}</b>
         <span class="hops">{hopsText}</span>
@@ -50,7 +57,7 @@
         <div class="route">
             {#each path as stop, i}
                 {#if i > 0}
-                    {#if stop.hop?.eventCode}
+                    {#if links && stop.hop?.eventCode}
                         <a
                             class="chev has-hop"
                             href={`/events/${stop.hop.season}/${encodeURIComponent(stop.hop.eventCode)}`}
@@ -68,8 +75,8 @@
                     class:end={!stuck && (i == 0 || i == path.length - 1)}
                     class:stuck
                 >
-                    <a class="team-link" href={teamUrl(stop.number, stop.hop?.season)}><b>{stop.number}</b></a>
-                    <a class="name" href={teamUrl(stop.number, stop.hop?.season)}>{stop.name}</a>
+                    <svelte:element this={links ? "a" : "span"} class="team-link" href={links ? teamUrl(stop.number, stop.hop?.season) : undefined}><b>{stop.number}</b></svelte:element>
+                    <svelte:element this={links ? "a" : "span"} class="name" href={links ? teamUrl(stop.number, stop.hop?.season) : undefined}>{stop.name}</svelte:element>
                 </div>
                 {#each stop.lifelines ?? [] as lifeline}
                     {@const detail = stop.lifelineDetails?.[lifeline]}
@@ -87,6 +94,16 @@
                         {#if caption}
                             <svelte:element this={href ? "a" : "span"} class="name" {href}>{caption}</svelte:element>
                         {/if}
+                    </div>
+                {/each}
+                {#each stop.sabotages ?? [] as mark}
+                    {@const caption = mark.team ? `${mark.team.number} ${mark.team.name}` : ""}
+                    <span class="chev">&rsaquo;</span>
+                    <div class="stop">
+                        <span class="team-link">
+                            <b><span class="sabotage-icon"><Fa icon={SABOTAGE_ICONS[mark.kind]} /></span>{mark.type === "trigger" ? TRIGGERED_LABELS[mark.kind] : SABOTAGE_NAMES[mark.kind]}</b>
+                        </span>
+                        {#if caption}<span class="name">{caption}</span>{/if}
                     </div>
                 {/each}
             {/each}
@@ -108,6 +125,14 @@
         color: var(--inline-theme-color);
     }
 
+    .sabotage-icon {
+        display: flex;
+        width: 14px;
+        height: 14px;
+        font-size: 14px;
+        color: #e0701e;
+    }
+
     .lifeline-icon :global(svg) {
         width: 100%;
         height: 100%;
@@ -121,6 +146,12 @@
         background: var(--fg-color);
         border: 1px solid var(--sep-color);
         border-radius: 12px;
+    }
+
+    .card.plain {
+        margin: 0;
+        padding: 0;
+        border: none;
     }
 
     .head {

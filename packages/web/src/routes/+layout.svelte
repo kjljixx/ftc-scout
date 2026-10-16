@@ -135,11 +135,19 @@
     :global(body) {
       --hud-size: 152px;
     }
+
+    :global(body.duel-hud) {
+      --hud-size: 208px;
+    }
   }
 
   @media (max-width: 600px) {
     :global(body) {
       --hud-size: 184px;
+    }
+
+    :global(body.duel-hud) {
+      --hud-size: 240px;
     }
   }
 

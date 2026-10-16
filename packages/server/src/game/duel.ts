@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID } from "crypto";
 import type { Server as HttpServer } from "http";
 import { Server, type Socket } from "socket.io";
-import { getTeamGraph } from "./team-graph";
+import { Team as TeamEntity } from "../db/entities/Team";
+import { getTeamGraph, pickDisorientTarget } from "./team-graph";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 5;
@@ -9,6 +10,9 @@ const COUNTDOWN_MS = 3000;
 const DISCONNECT_GRACE_MS = 30_000;
 const FINISHED_TTL_MS = 10 * 60 * 1000;
 const MAX_DUELS = 500;
+const SABOTAGE_MS = 20_000;
+const FREEZE_MS = 12_000;
+const SPY_NOTICE_MS = 10_000;
 
 type Team = {
   number: number;
@@ -30,12 +34,34 @@ type Hop = {
   relation?: "Partners" | "Opponents" | null;
 };
 
-type Stop = { number: number; name: string; hop?: Hop };
+type Stop = { number: number; name: string; hop?: Hop; lifelines?: LifelineId[]; lifelineDetails?: Mark["details"]; sabotages?: Omit<SabotageLogEntry, "player" | "index">[] };
 
 const LIFELINES = ["radar", "crosshair", "beacon"] as const;
 type LifelineId = (typeof LIFELINES)[number];
 type LifelineDetail = { event?: { season: number; code: string; name: string }; team?: { number: number; name: string } };
 type Mark = { index: number; lifelines: LifelineId[]; details: Partial<Record<LifelineId, LifelineDetail>> };
+
+const SABOTAGES = ["sniper", "disorient", "spy"] as const;
+type SabotageId = (typeof SABOTAGES)[number];
+type SabotageLogEntry = {
+  player: number;
+  index: number;
+  kind: SabotageId;
+  type: "cast" | "trigger";
+  team?: { number: number; name: string };
+};
+type Effect = {
+  id: number;
+  kind: SabotageId;
+  caster: number;
+  target: number;
+  team?: number;
+  teamName?: string;
+  expiresAt: number;
+  revealed: boolean;
+  spent: boolean;
+  hits: number;
+};
 
 type Player = {
   token: string;
@@ -43,6 +69,8 @@ type Player = {
   path: Stop[];
   marks: Mark[];
   radarUsed: boolean;
+  used: Record<SabotageId, boolean>;
+  frozenUntil: number;
   gaveUp: boolean;
   rematch: boolean;
   left: boolean;
@@ -62,12 +90,15 @@ type Duel = {
   countdownEndsAt: number | null;
   winner: number | null;
   reason: Reason | null;
+  effects: Effect[];
+  log: SabotageLogEntry[];
+  nextEffectId: number;
   nextPair: Pair | null;
   countdownTimer: NodeJS.Timeout | null;
   expiryTimer: NodeJS.Timeout | null;
 };
 
-type Ack = (response: { ok: true; [key: string]: unknown } | { ok: false; error: string }) => void;
+type Ack = (response: { ok: true; [key: string]: unknown } | { ok: false; error: string; [key: string]: unknown }) => void;
 type Credentials = { code?: unknown; token?: unknown };
 
 const duels = new Map<string, Duel>();
@@ -130,15 +161,46 @@ function sanitizeMarks(raw: unknown): Mark[] {
   return marks;
 }
 
-function pathWithMarks(player: Player): Stop[] {
+function pathWithMarks(duel: Duel, playerIndex: number): Stop[] {
+  const player = duel.players[playerIndex];
   return player.path.map((stop, index) => {
     const mark = player.marks.find((m) => m.index === index);
-    return mark ? { ...stop, lifelines: mark.lifelines, lifelineDetails: mark.details } : stop;
+    const sabotages = duel.log
+      .filter((entry) => entry.player === playerIndex && entry.index === index)
+      .map(({ kind, type, team }) => ({ kind, type, ...(team ? { team } : {}) }));
+    return { ...stop, ...(mark ? { lifelines: mark.lifelines, lifelineDetails: mark.details } : {}), ...(sabotages.length ? { sabotages } : {}) };
   });
 }
 
+const freshUsed = (): Record<SabotageId, boolean> => ({ sniper: false, disorient: false, spy: false });
+
 function newPlayer(): Player {
-  return { token: randomUUID(), socketId: null, path: [], marks: [], radarUsed: false, gaveUp: false, rematch: false, left: false, finishedAt: null, graceTimer: null };
+  return { token: randomUUID(), socketId: null, path: [], marks: [], radarUsed: false, used: freshUsed(), frozenUntil: 0, gaveUp: false, rematch: false, left: false, finishedAt: null, graceTimer: null };
+}
+
+function activeEffects(duel: Duel): Effect[] {
+  const now = Date.now();
+  duel.effects = duel.effects.filter((effect) => effect.expiresAt > now);
+  return duel.effects;
+}
+
+function mineOf(duel: Duel, index: number) {
+  const effects = activeEffects(duel);
+  const frozenUntil = duel.players[index].frozenUntil;
+  return {
+    used: duel.players[index].used,
+    frozenUntil: frozenUntil > Date.now() ? frozenUntil : null,
+    outgoing: effects
+      .filter((e) => e.caster === index && e.kind === "sniper")
+      .map((e) => ({ id: e.id, kind: e.kind, team: e.team, expiresAt: e.expiresAt, hits: e.hits })),
+    incoming: effects
+      .filter((e) => e.target === index)
+      .map((e) => ({ id: e.id, kind: e.kind, expiresAt: e.expiresAt, spent: e.spent, ...(e.revealed ? { team: e.team, ...(e.kind === "disorient" ? { teamName: e.teamName } : {}) } : {}) })),
+  };
+}
+
+function findBlock(duel: Duel, index: number, number: number): Effect | undefined {
+  return activeEffects(duel).find((e) => e.kind === "sniper" && e.target === index && !e.spent && e.team === number);
 }
 
 function newCode(): string {
@@ -148,6 +210,10 @@ function newCode(): string {
     if (!duels.has(code)) return code;
   }
   throw new Error("Could not allocate a duel code.");
+}
+
+function pathOf(player: Player): Stop[] {
+  return player.path.map((stop) => ({ number: stop.number, name: stop.name, ...(stop.hop && stop.hop.kind !== "radar" ? { hop: stop.hop } : {}) }));
 }
 
 function viewOf(duel: Duel) {
@@ -168,9 +234,11 @@ function viewOf(duel: Duel) {
       left: p.left,
       finishedMs: p.finishedAt !== null && duel.startedAt !== null ? p.finishedAt - duel.startedAt : null,
     })),
-    paths: duel.status === "done" ? duel.players.map(pathWithMarks) : null,
+    paths: duel.status === "done" ? duel.players.map((_, index) => pathWithMarks(duel, index)) : null,
   };
 }
+
+const viewFor = (duel: Duel, index: number) => ({ ...viewOf(duel), mine: mineOf(duel, index) });
 
 async function validatePair(raw: any): Promise<Pair | null> {
   const start = sanitizeTeam(raw?.start);
@@ -187,11 +255,13 @@ async function validatePair(raw: any): Promise<Pair | null> {
 export function setupDuels(httpServer: HttpServer) {
   const io = new Server(httpServer, { path: "/socket.io", cors: { origin: true, credentials: false } });
   console.info(
-    `[duel] ready path=/socket.io countdownMs=${COUNTDOWN_MS} graceMs=${DISCONNECT_GRACE_MS} finishedTtlMs=${FINISHED_TTL_MS} maxDuels=${MAX_DUELS}`
+    `[duel] ready path=/socket.io countdownMs=${COUNTDOWN_MS} graceMs=${DISCONNECT_GRACE_MS} finishedTtlMs=${FINISHED_TTL_MS} maxDuels=${MAX_DUELS} sabotages=${SABOTAGES.join(",")} sabotageMs=${SABOTAGE_MS} freezeMs=${FREEZE_MS} spyNoticeMs=${SPY_NOTICE_MS}`
   );
 
   function broadcast(duel: Duel) {
-    io.to(duel.code).emit("state", viewOf(duel));
+    duel.players.forEach((player, index) => {
+      if (player.socketId) io.to(player.socketId).emit("state", viewFor(duel, index));
+    });
   }
 
   function removeDuel(duel: Duel, reason: string) {
@@ -270,13 +340,13 @@ export function setupDuels(httpServer: HttpServer) {
         leave(socket);
         const duel: Duel = {
           code: newCode(), pair, status: "lobby", players: [newPlayer()], startedAt: null, countdownEndsAt: null,
-          winner: null, reason: null, nextPair: null, countdownTimer: null, expiryTimer: null,
+          winner: null, reason: null, effects: [], log: [], nextEffectId: 1, nextPair: null, countdownTimer: null, expiryTimer: null,
         };
         duel.players[0].path = [{ number: pair.start.number, name: pair.start.name }];
         duels.set(duel.code, duel);
         bind(socket, duel, 0);
         console.info(`[duel] ${duel.code} created pair=${pair.start.number}>${pair.destination.number} mode=${pair.mode} active=${duels.size}`);
-        ack?.({ ok: true, code: duel.code, token: duel.players[0].token, you: 0, view: viewOf(duel) });
+        ack?.({ ok: true, code: duel.code, token: duel.players[0].token, you: 0, view: viewFor(duel, 0) });
       } catch (error) {
         console.error("[duel] create failed", error);
         ack?.({ ok: false, error: "Could not create the duel. Try again." });
@@ -296,7 +366,7 @@ export function setupDuels(httpServer: HttpServer) {
       duel.players.push(player);
       bind(socket, duel, 1);
       console.info(`[duel] ${duel.code} joined`);
-      ack?.({ ok: true, code: duel.code, token: player.token, you: 1, view: viewOf(duel) });
+      ack?.({ ok: true, code: duel.code, token: player.token, you: 1, view: viewFor(duel, 1) });
       broadcast(duel);
     });
 
@@ -308,7 +378,7 @@ export function setupDuels(httpServer: HttpServer) {
       }
       bind(socket, found.duel, found.index);
       console.info(`[duel] ${found.duel.code} player=${found.index} rejoined status=${found.duel.status}`);
-      ack?.({ ok: true, code: found.duel.code, you: found.index, view: viewOf(found.duel) });
+      ack?.({ ok: true, code: found.duel.code, you: found.index, view: viewFor(found.duel, found.index) });
       broadcast(found.duel);
     });
 
@@ -344,6 +414,11 @@ export function setupDuels(httpServer: HttpServer) {
       const last = player.path[player.path.length - 1].number;
       if (number === null || player.gaveUp || player.finishedAt !== null) return ack?.({ ok: false, error: "Invalid hop." });
       if (number === last) return ack?.({ ok: true });
+      const frozenMs = player.frozenUntil - Date.now();
+      if (frozenMs > 0) {
+        console.info(`[duel] ${duel.code} player=${index} hop ${last}>${number} rejected: frozen for ${frozenMs} more ms`);
+        return ack?.({ ok: false, error: "Frozen", frozenMs });
+      }
 
       const hop = sanitizeHop(rawStop.hop);
       if (hop?.kind === "radar") {
@@ -358,6 +433,19 @@ export function setupDuels(httpServer: HttpServer) {
           return ack?.({ ok: false, error: "No shared match." });
         }
       }
+      const block = findBlock(duel, index, number);
+      if (block) {
+        block.revealed = true;
+        block.hits++;
+        block.spent = true;
+        duel.log.push({ player: index, index: player.path.length - 1, kind: block.kind, type: "trigger", team: { number: block.team!, name: block.teamName ?? "" } });
+        player.frozenUntil = Date.now() + FREEZE_MS;
+        block.expiresAt = Math.max(block.expiresAt, player.frozenUntil);
+        console.info(`[duel] ${duel.code} player=${index} hop ${last}>${number} triggered ${block.kind}; frozen ${FREEZE_MS} ms`);
+        ack?.({ ok: false, error: "Hop failed", blocked: { kind: block.kind, team: block.team }, frozenMs: FREEZE_MS });
+        return broadcast(duel);
+      }
+      duel.effects = duel.effects.filter((e) => !(e.kind === "disorient" && e.target === index));
       if (hop?.kind === "radar") player.radarUsed = true;
       player.path.push({ number, name: str(rawStop.name, 100), ...(hop ? { hop } : {}) });
       console.info(`[duel] ${duel.code} player=${index} hop ${last}>${number} hops=${player.path.length - 1}${hop?.kind === "radar" ? " radar" : ""}`);
@@ -368,6 +456,62 @@ export function setupDuels(httpServer: HttpServer) {
       } else {
         broadcast(duel);
       }
+    });
+
+    socket.on("sabotage", async (creds: Credentials, rawKind: unknown, rawTarget: any, ack: Ack) => {
+      const graph = await getTeamGraph();
+      const found = resolve(creds);
+      if (!found || found.duel.status !== "racing") return ack?.({ ok: false, error: "No active race." });
+      const { duel, index } = found;
+      const player = duel.players[index];
+      const kind = SABOTAGES.find((id) => id === rawKind);
+      if (!kind || player.used[kind] || player.gaveUp || player.finishedAt !== null) {
+        return ack?.({ ok: false, error: "Sabotage unavailable." });
+      }
+      const target = 1 - index;
+      const opponent = duel.players[target];
+      const opponentAt = opponent.path[opponent.path.length - 1].number;
+      const destination = duel.pair.destination.number;
+      const now = Date.now();
+      const effect: Effect = { id: duel.nextEffectId++, kind, caster: index, target, expiresAt: now + SABOTAGE_MS, revealed: false, spent: false, hits: 0 };
+      const reject = (error: string) => {
+        console.warn(`[duel] ${duel.code} player=${index} rejected ${kind}: ${error}`);
+        return ack?.({ ok: false, error });
+      };
+
+      if (kind === "sniper") {
+        const team = positiveInt(rawTarget?.team);
+        if (team === null || !graph.rootOf.has(team)) return reject("Unknown team.");
+        if (team === duel.pair.start.number || team === destination) return reject("The start and destination cannot be marked.");
+        if (player.path.some((stop) => stop.number === team)) return reject("You have already visited that team.");
+        effect.team = team;
+        effect.teamName = str(rawTarget?.name, 100);
+      } else if (kind === "disorient") {
+        const pick = pickDisorientTarget(graph, opponentAt, destination);
+        if (!pick) return reject("No place to send your opponent.");
+        const row = await TeamEntity.findOneBy({ number: pick.team });
+        const stale = duel.status !== "racing" || player.used[kind] || opponent.path[opponent.path.length - 1].number !== opponentAt;
+        if (stale) return reject("The race changed. Try again.");
+        effect.team = pick.team;
+        effect.teamName = row?.name ?? `${pick.team}`;
+        effect.revealed = true;
+        effect.spent = true;
+        effect.expiresAt = now + SPY_NOTICE_MS;
+        duel.log.push({ player: target, index: opponent.path.length - 1, kind, type: "trigger" });
+        opponent.path.push({ number: pick.team, name: effect.teamName });
+        console.info(`[duel] ${duel.code} player=${target} disoriented ${opponentAt}>${pick.team} distance=${pick.distance} candidates=${pick.candidates} hops=${opponent.path.length - 1}`);
+      } else {
+        effect.expiresAt = now + SPY_NOTICE_MS;
+      }
+
+      player.used[kind] = true;
+      duel.effects.push(effect);
+      duel.log.push({ player: index, index: player.path.length - 1, kind, type: "cast", ...(effect.team ? { team: { number: effect.team, name: effect.teamName ?? "" } } : {}) });
+      console.info(
+        `[duel] ${duel.code} player=${index} cast ${kind}${effect.team ? ` team=${effect.team}` : ""} opponentAt=${opponentAt}`
+      );
+      ack?.({ ok: true, ...(kind === "spy" ? { path: pathOf(opponent) } : {}) });
+      broadcast(duel);
     });
 
     socket.on("lifelines", (creds: Credentials, rawMarks: unknown, ack: Ack) => {
@@ -407,10 +551,14 @@ export function setupDuels(httpServer: HttpServer) {
       duel.reason = null;
       duel.startedAt = null;
       duel.countdownEndsAt = null;
+      duel.effects = [];
+      duel.log = [];
       for (const p of duel.players) {
         p.path = [{ number: duel.pair.start.number, name: duel.pair.start.name }];
         p.marks = [];
         p.radarUsed = false;
+        p.used = freshUsed();
+        p.frozenUntil = 0;
         p.gaveUp = false;
         p.rematch = false;
         p.finishedAt = null;

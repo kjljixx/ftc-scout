@@ -132,6 +132,12 @@
     }
 
   $: view = $duelView;
+  $: ownPath = view?.paths
+    ? $game.path.map((stop, index) => {
+        const sabotages = view?.paths?.[$duelSession?.you ?? 0]?.[index]?.sabotages;
+        return sabotages ? { ...stop, sabotages } : stop;
+      })
+    : $game.path;
   $: you = $duelSession?.you ?? 0;
   $: duelOutcome = view?.status === "done" ? (view.winner === you ? "won" : "lost") : null;
   $: if (view?.status === "countdown" && !ticker) {
@@ -226,7 +232,7 @@
           <span>None</span>
         {/each}
       </div>
-        <RouteView title="Your route" path={$game.path} badge={yourBadge} stuckAtEnd={gaveUp} />
+        <RouteView title="Your route" path={ownPath} badge={yourBadge} stuckAtEnd={gaveUp} />
         {#if duelOutcome && view?.paths}
             <RouteView
                 title="Opponent's route"

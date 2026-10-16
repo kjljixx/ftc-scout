@@ -3,6 +3,7 @@
     import { createEventDispatcher } from "svelte";
     import { stickTableHead } from "../../util/directives";
     import SortButton from "./SortButton.svelte";
+    import { radarReach } from "$lib/game/game-store";
     import type { StatColumn } from "@ftc-scout/common";
 
     type T = $$Generic;
@@ -189,11 +190,13 @@
             use:draggable={i}
         >
             {stat.columnName}
-            <SortButton
-                name={stat.columnName}
-                {sort}
-                on:click={() => dispatch("change_sort", stat.id)}
-            />
+            {#if $radarReach === null}
+                <SortButton
+                    name={stat.columnName}
+                    {sort}
+                    on:click={() => dispatch("change_sort", stat.id)}
+                />
+            {/if}
         </th>
     {/each}
 </thead>

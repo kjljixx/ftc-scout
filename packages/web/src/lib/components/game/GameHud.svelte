@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { browser } from "$app/environment";
   import { faFlag } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { clock, formatClock, game, gameActive, giveUp } from "$lib/game/game-store";
@@ -7,6 +8,7 @@
   import Button from "../ui/Button.svelte";
   import GameTeam from "./GameTeam.svelte";
   import GameLifelines from "./GameLifelines.svelte";
+  import GameSabotages from "./GameSabotages.svelte";
 
   const SHOWN_STOPS = 4;
 
@@ -19,10 +21,12 @@
   $: hops = $game.path.length - 1;
   $: shownStops = $game.path.slice(-SHOWN_STOPS);
   $: elapsed = ($clock - ($game.startedAt ?? $clock)) | 0;
+  $: inDuel = !!$duelOpponent;
+  $: if (browser) document.body.classList.toggle("duel-hud", inDuel);
 </script>
 
 {#if $gameActive && pair}
-  <div class="hud" role="region" aria-label="Game status">
+  <div class="hud" class:duel={inDuel} role="region" aria-label="Game status">
     <div class="inner">
       <section class="destination" aria-label="Destination">
         <span class="flag"><Fa icon={faFlag} /></span>
@@ -51,6 +55,7 @@
 
       <div class="actions" role="group" aria-label="Actions">
         <GameLifelines />
+        <GameSabotages />
         <span class="give-up"><Button on:click={giveUpAndShowResults}>Give up</Button></span>
         <button class="give-up-icon" type="button" aria-label="Give up" title="Give up" on:click={giveUpAndShowResults}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
@@ -75,7 +80,7 @@
 
   .inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 20px;
     height: 100%;
@@ -212,7 +217,23 @@
     }
   }
 
+  @media (max-width: 850px) {
+    .hud.duel .actions {
+      grid-column: 1 / -1;
+      padding-left: 0;
+      justify-content: flex-end;
+    }
+
+    .hud.duel .actions::before {
+      display: none;
+    }
+  }
+
   @media (max-width: 600px) {
+    .hud.duel .actions {
+      grid-row: 4;
+    }
+
     .hud {
       padding: 0 12px;
     }
