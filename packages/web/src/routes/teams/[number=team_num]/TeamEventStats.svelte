@@ -4,7 +4,8 @@
     import { prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
     import { DESCRIPTORS, type Season } from "@ftc-scout/common";
 
-    type Stats = NonNullable<TeamQuery["teamByNumber"]>["events"][number]["stats"];
+    type Events = NonNullable<NonNullable<TeamQuery["teamByNumber"]>["events"]>;
+    type Stats = Events[number]["stats"];
 
     export let season: Season;
     export let remote: boolean;

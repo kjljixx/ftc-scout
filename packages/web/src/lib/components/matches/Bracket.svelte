@@ -110,7 +110,8 @@
     $: linkStyle = (from: BracketSeries): string | null => {
         let match = latestBySeries[from.series];
         let winner = match && computeWinner(match.scores);
-        let advancing = winner == Alliance.Red || winner == Alliance.Blue ? winner : null;
+        let advancing =
+            winner == Alliance.Red ? Alliance.Red : winner == Alliance.Blue ? Alliance.Blue : null;
         return match && advancing ? allianceColorStyle(seeds, match, advancing) : null;
     };
 

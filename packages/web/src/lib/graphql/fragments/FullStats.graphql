@@ -19,6 +19,10 @@ fragment FullStats on TeamEventStats {
         opr {
             ...FullTeamEventStats2026Group
         }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
         min {
             ...FullTeamEventStats2026Group
         }

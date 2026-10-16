@@ -9,6 +9,9 @@ fragment TeamPageStats on TeamEventStats {
         opr {
             totalPointsNp
         }
+        oprSe {
+            totalPointsNp
+        }
         avg {
             totalPointsNp
         }
