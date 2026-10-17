@@ -10,7 +10,7 @@
     let requestedWidth: Readable<string> = getContext(REQUESTED_WIDTH);
 </script>
 
-<div style:--requested-width={$requestedWidth} {style} class:vis class:panel>
+<div data-card style:--requested-width={$requestedWidth} {style} class:vis class:panel>
     <slot />
 </div>
 

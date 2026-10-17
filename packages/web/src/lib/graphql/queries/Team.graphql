@@ -58,6 +58,7 @@ query Team($number: Int!, $season: Int!, $overall: Boolean!) {
                 personName
             }
             event {
+                type
                 ...BasicEventInfo
                 relatedEvents {
                     season
