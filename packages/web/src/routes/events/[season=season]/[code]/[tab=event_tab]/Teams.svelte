@@ -2,7 +2,6 @@
     import { getContext } from "svelte";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
-    import { CURRENT_SEASON } from "@ftc-scout/common";
     import { browser } from "$app/environment";
     import Location from "../../../../../lib/components/Location.svelte";
 
@@ -18,9 +17,7 @@
     {#each teams as team}
         <li>
             <a
-                href="/teams/{team.teamNumber}{team.season == CURRENT_SEASON
-                    ? ''
-                    : `?season=${team.season}`}#{team.eventCode}"
+                href="/teams/{team.teamNumber}?season={team.season}#{team.eventCode}"
                 class:selected={focusedTeam == team.teamNumber}
                 role={browser && clickAction ? "button" : "link"}
                 on:click={(e) => {

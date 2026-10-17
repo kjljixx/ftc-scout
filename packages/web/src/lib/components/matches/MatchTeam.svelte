@@ -4,7 +4,6 @@
 </script>
 
 <script lang="ts">
-    import { CURRENT_SEASON } from "@ftc-scout/common";
     import { Alliance, type FullMatchFragment } from "../../graphql/generated/graphql-operations";
     import { getContext } from "svelte";
     import { browser } from "$app/environment";
@@ -69,7 +68,7 @@
 >
     <a
         class="inner"
-        href="/teams/{number}{season == CURRENT_SEASON ? '' : `?season=${season}`}#{eventCode}"
+        href="/teams/{number}?season={season}#{eventCode}"
         role={browser && clickAction ? "button" : "link"}
         on:click={(e) => {
             if (sniped || frozen) {

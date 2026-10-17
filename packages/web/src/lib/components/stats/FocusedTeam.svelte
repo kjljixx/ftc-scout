@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CURRENT_SEASON, DESCRIPTORS, Season } from "@ftc-scout/common";
+    import { DESCRIPTORS, Season } from "@ftc-scout/common";
     import type { TeamPageEventTeamFragment } from "$lib/graphql/generated/graphql-operations";
     import Fa from "svelte-fa";
     import StdErrLabel from "./StdErrLabel.svelte";
@@ -20,7 +20,7 @@
     $: number = team.team.number;
     $: name = team.team.name;
 
-    $: seasonPart = season == CURRENT_SEASON ? "" : `?season=${season}`;
+    $: seasonPart = `?season=${season}`;
     $: codePart = code ? "#" + code : "";
     $: href = `/teams/${number}${seasonPart}${codePart}`;
     $: preloadData(href);

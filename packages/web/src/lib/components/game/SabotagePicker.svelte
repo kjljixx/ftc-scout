@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { loadSearchData } from "$lib/graphql/search-data";
+  import { CURRENT_SEASON } from "@ftc-scout/common";
   import type { EventsSearchEventFragment, TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
   import { game } from "$lib/game/game-store";
   import { castSabotage } from "$lib/game/duel-store";
@@ -25,7 +26,7 @@
 
   async function load() {
     try {
-      const result = await loadSearchData();
+      const result = await loadSearchData(CURRENT_SEASON);
       if (!destroyed) teams = result.data.teamsSearch;
     } catch (error) {
       console.error("[game] sniper search failed to load", error);

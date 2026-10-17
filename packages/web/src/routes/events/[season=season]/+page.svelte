@@ -25,7 +25,6 @@
     import { eventTyMatches } from "$lib/util/event-type";
     import { DATE_EC_DC } from "$lib/util/search-params/date";
     import { browser } from "$app/environment";
-    import { goto } from "$app/navigation";
     import { STRING_EC_DC } from "$lib/util/search-params/string";
     import InfiniteScroll from "svelte-infinite-scroll";
     import Head from "$lib/components/Head.svelte";
@@ -38,8 +37,7 @@
         .sort((a, b) => sortString(a.name, b.name))
         .sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
 
-    let season = +$page.params.season as Season;
-    $: gotoSubPage(season);
+    $: season = +$page.params.season as Season;
 
     function calcFirstMonday(season: Season): Date {
         let firstDate = DESCRIPTORS[season].kickoff;
@@ -74,14 +72,6 @@
         weeks.push([currWeekNum, currWeek]);
 
         return weeks;
-    }
-
-    function gotoSubPage(season: Season) {
-        if (browser && $page.route.id == "/events/[season=season]") {
-            let params = $page.url.searchParams.toString();
-            if (params != "") params = "?" + params;
-            goto(`/events/${season}${params}`, { replaceState: true });
-        }
     }
 
     let region = queryParam<RegionOption>("regions", REGION_EC_DC);
@@ -130,7 +120,7 @@
     <Card>
         <h1>{DESCRIPTORS[season].seasonName} Events</h1>
         <Options
-            bind:season
+            {season}
             bind:region={$region}
             bind:eventType={$eventTy}
             bind:start={$start}

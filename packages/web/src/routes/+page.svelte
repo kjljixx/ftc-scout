@@ -15,7 +15,8 @@
         faTrophy,
     } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
-    import { CURRENT_SEASON, notEmpty, type Season } from "@ftc-scout/common";
+    import { notEmpty, type Season } from "@ftc-scout/common";
+    import { globalSeason } from "$lib/season-store";
     import Head from "$lib/components/Head.svelte";
     import { createTippy } from "svelte-tippy";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
@@ -49,7 +50,7 @@
     $: showHomeTeamView = !!data.homeTeam && !!data.latestEvent;
 
     $: event = $latestEventStore?.data?.eventByCode!;
-    $: season = (data.latestSeason ?? CURRENT_SEASON) as Season;
+    $: season = (data.latestSeason ?? $globalSeason) as Season;
 
     const picklistSync = createPicklistSyncHandle();
     $: if (showHomeTeamView && event?.code) picklistSync.sync(season, event.code);
@@ -227,7 +228,7 @@
                     <b class="count">{activeTeamsCount ?? "..."}</b>
                     <p class="name">Active Teams</p>
                 </a>
-                <a class="info-box" href="/events/{CURRENT_SEASON}">
+                <a class="info-box" href="/events/{$globalSeason}">
                     <div class="icon"><Fa icon={faBolt} /></div>
                     <b class="count">{matchesPlayedCount ?? "..."}</b>
                     <p class="name">Matches Played</p>

@@ -4,7 +4,6 @@
     import RegionSelect from "$lib/components/ui/form/RegionSelect.svelte";
     import EventTypeSelect from "$lib/components/ui/form/EventTypeSelect.svelte";
     import DateRange from "$lib/components/ui/form/DateRange.svelte";
-    import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
     import SearchInput from "$lib/components/ui/form/SearchInput.svelte";
 
     export let season: Season;
@@ -17,11 +16,6 @@
 
 <Form id="season-search" style="col">
     <div class="row">
-        <label for="season-select">
-            Season
-            <SeasonSelect bind:season id="season-select" />
-        </label>
-
         <label for="region-select">
             Regions
             <RegionSelect bind:region name="regions" id="region-select" />

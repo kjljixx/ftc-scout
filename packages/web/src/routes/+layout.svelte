@@ -8,6 +8,7 @@
     import { page } from "$app/stores";
     import { onMount } from "svelte";
     import { sendAnalyticsRequest } from "./analytics";
+    import { syncSeasonFromPage } from "$lib/season-store";
     import GameHud from "$lib/components/game/GameHud.svelte";
     import GameToast from "$lib/components/game/GameToast.svelte";
     import {
@@ -35,6 +36,8 @@
     }
 
     afterNavigate(sendAnalyticsRequest);
+
+    $: syncSeasonFromPage($page);
 
     beforeNavigate(({ from, to, cancel }) => {
         if (!$gameActive || !to || to.url.origin != location.origin) return;

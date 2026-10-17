@@ -18,7 +18,6 @@
     import { setContext } from "svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
     import Form from "$lib/components/ui/form/Form.svelte";
-    import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
     import RegionSelect from "$lib/components/ui/form/RegionSelect.svelte";
     import {
         commitQueryParamBatch,
@@ -36,27 +35,21 @@
     import Match from "./Match.svelte";
     import EventTypeSelect from "../../../../lib/components/ui/form/EventTypeSelect.svelte";
 
-    function go(tab: string, season: Season) {
-        let tabChanged = tab != $page.params.tab;
-        let seasonChanged = season != +$page.params.season;
-        if (browser && (tabChanged || seasonChanged)) {
-            let toKeep = ["region", "type", "filter"];
+    function go(tab: string) {
+        if (browser && tab != $page.params.tab) {
+            let toKeep = ["region", "type", "filter", "start", "end"];
             if (DESCRIPTORS[season].hasRemote) toKeep.push("remote");
-            if (!seasonChanged) {
-                toKeep.push("start");
-                toKeep.push("end");
-            }
-            let params = queryParamUrlKeeping(toKeep);
-            goto(`/records/${season}/${selectedTab}${params}`, { replaceState: false });
+            goto(`/records/${season}/${tab}${queryParamUrlKeeping(toKeep)}`, {
+                replaceState: false,
+            });
         }
     }
 
-    let season = +$page.params.season as Season;
+    $: season = +$page.params.season as Season;
     let selectedTab = $page.params.tab;
-    $: go(selectedTab, season);
+    $: go(selectedTab);
 
     afterNavigate(() => {
-        season = +$page.params.season as Season;
         selectedTab = $page.params.tab;
     });
 
@@ -121,11 +114,6 @@
 
         <Form id="records-options" style="col">
             <div class="row">
-                <label for="season-select">
-                    Season
-                    <SeasonSelect bind:season id="season-select" />
-                </label>
-
                 <label for="region-select">
                     Regions
                     <RegionSelect

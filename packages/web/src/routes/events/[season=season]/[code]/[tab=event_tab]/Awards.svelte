@@ -3,7 +3,7 @@
     import type { AwardType, EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import { awardIsNotRanked, prettyPrintAwardCategory } from "$lib/printers/award";
     import { sortAwardPlacement, sortAwardTypes } from "$lib/util/sorters";
-    import { CURRENT_SEASON, type Season } from "@ftc-scout/common";
+    import type { Season } from "@ftc-scout/common";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import { getContext } from "svelte";
 
@@ -45,9 +45,7 @@
                 {#each awardsOfType as award}
                     <li>
                         <a
-                            href="/teams/{award.team.number}{season == CURRENT_SEASON
-                                ? ''
-                                : `?season=${season}`}#{eventCode}"
+                            href="/teams/{award.team.number}?season={season}#{eventCode}"
                             class:selected={focusedTeam == award.team.number}
                             role={browser && clickAction ? "button" : "link"}
                             on:click={(e) => {

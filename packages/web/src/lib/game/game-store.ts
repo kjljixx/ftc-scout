@@ -267,8 +267,7 @@ export function setBestRoute(pair: GamePair, best: BestRoute) {
 }
 
 export function teamUrl(number: number, season?: number | null): string {
-    let seasonPart = season && season != CURRENT_SEASON ? `?season=${season}` : "";
-    return `/teams/${number}${seasonPart}`;
+    return `/teams/${number}?season=${season || CURRENT_SEASON}`;
 }
 
 export function startUrl(pair: GamePair): string {

@@ -4,6 +4,7 @@
   import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
   import Fa from "svelte-fa";
   import { loadSearchData } from "$lib/graphql/search-data";
+  import { CURRENT_SEASON } from "@ftc-scout/common";
   import type { TeamsSearchTeamFragment } from "$lib/graphql/generated/graphql-operations";
   import { fetchCustomPair, startGame, startUrl, type GamePair } from "$lib/game/game-store";
   import GameTeamPicker from "./GameTeamPicker.svelte";
@@ -35,7 +36,7 @@
     loadingTeams = true;
     loadError = null;
     try {
-      const result = await loadSearchData();
+      const result = await loadSearchData(CURRENT_SEASON);
       if (destroyed) return;
       teams = result.data.teamsSearch;
       console.info(`[game] custom setup teams=${teams.length} search=number-or-name connectionCheck=shared-matches`);

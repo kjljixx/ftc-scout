@@ -7,18 +7,22 @@ import {
 } from "$lib/graphql/generated/graphql-operations";
 import { getData } from "$lib/graphql/getData";
 import { eventSorter } from "$lib/util/sorters";
-import { CURRENT_SEASON, type Season, longestCommonPrefix } from "@ftc-scout/common";
+import { type Season, longestCommonPrefix } from "@ftc-scout/common";
+import { get } from "svelte/store";
+import { globalSeason, HOME_SEASON_DEPENDENCY } from "$lib/season-store";
 import type { PageLoad } from "./$types";
 
 function logStep(step: string) {
     console.log(`[home load] ${Math.round(performance.now())}ms ${step}`);
 }
 
-export const load: PageLoad = async ({ fetch, data }) => {
-    logStep(`start homeTeam=${data.homeTeam} season=${CURRENT_SEASON}`);
+export const load: PageLoad = async ({ fetch, data, depends }) => {
+    depends(HOME_SEASON_DEPENDENCY);
+    let selectedSeason = get(globalSeason);
+    logStep(`start homeTeam=${data.homeTeam} season=${selectedSeason}`);
     let loadHome = () => {
         logStep("HomePage query (landing page)");
-        return getData(getClient(fetch), HomePageDocument, { season: CURRENT_SEASON });
+        return getData(getClient(fetch), HomePageDocument, { season: selectedSeason });
     };
 
     let homeTeam = data.homeTeam;
@@ -37,7 +41,7 @@ export const load: PageLoad = async ({ fetch, data }) => {
         query: HomeTeamDocument,
         variables: {
             number: homeTeam,
-            season: CURRENT_SEASON,
+            season: selectedSeason,
         },
     });
     logStep("Team query done");
@@ -54,9 +58,15 @@ export const load: PageLoad = async ({ fetch, data }) => {
     }
 
     const validSeasons = team.activeSeasons.filter((season) => season !== null) as number[];
-    let latestSeason = (validSeasons.length ? Math.max(...validSeasons) : CURRENT_SEASON) as Season;
+    let latestSeason = (
+        validSeasons.includes(selectedSeason)
+            ? selectedSeason
+            : validSeasons.length
+            ? Math.max(...validSeasons)
+            : selectedSeason
+    ) as Season;
 
-    if (latestSeason !== CURRENT_SEASON) {
+    if (latestSeason !== selectedSeason) {
         teamResult = await getClient(fetch).query({
             query: HomeTeamDocument,
             variables: {

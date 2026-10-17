@@ -20,7 +20,7 @@
     import Fa from "svelte-fa";
     import IconSidebarItem from "./IconSidebarItem.svelte";
     import { EMAIL, DISCORD, STATUS, GITHUB, DONATIONS } from "../../constants";
-    import { CURRENT_SEASON } from "@ftc-scout/common";
+    import { globalSeason } from "$lib/season-store";
 </script>
 
 <b>
@@ -31,9 +31,9 @@
 </b>
 
 <SidebarItem icon={faHome} name="Home" link="/" strict />
-<SidebarItem icon={faCalendarAlt} name="Events" link="/events/{CURRENT_SEASON}" />
+<SidebarItem icon={faCalendarAlt} name="Events" link="/events/{$globalSeason}" />
 <SidebarItem icon={faHashtag} name="Teams" link="/teams" />
-<SidebarItem icon={faTrophy} name="Season Records" link="/records/{CURRENT_SEASON}/teams" />
+<SidebarItem icon={faTrophy} name="Season Records" link="/records/{$globalSeason}/teams" />
 <SidebarItem icon={faStopwatch} name="Team Speedrun" link="/speedrun" />
 
 <hr />

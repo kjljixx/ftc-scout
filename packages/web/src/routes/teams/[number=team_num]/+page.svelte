@@ -1,7 +1,9 @@
 <script lang="ts" context="module">
+    import { get } from "svelte/store";
+    import { globalSeason, parseSeason } from "$lib/season-store";
+
     export function seasonFromUrl(url: URL): Season {
-        let seasonName = url.searchParams.get("season");
-        return ALL_SEASONS.find((s) => "" + s == seasonName) ?? CURRENT_SEASON;
+        return parseSeason(url.searchParams.get("season")) ?? get(globalSeason);
     }
 
     export function overallFromUrl(url: URL): boolean {
@@ -21,7 +23,6 @@
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
     import {
-        ALL_SEASONS,
         CURRENT_SEASON,
         DESCRIPTORS,
         type Season,
@@ -29,8 +30,6 @@
     } from "@ftc-scout/common";
     import Award from "$lib/components/Award.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
-    import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
-    import Form from "$lib/components/ui/form/Form.svelte";
     import { writable, type Writable } from "svelte/store";
     import { PRED_PENDING_CTX } from "$lib/components/matches/MatchScore.svelte";
     import { queryParam } from "$lib/util/search-params/search-params";
@@ -55,8 +54,6 @@
     $: teamStore = data.team;
     $: detailsStore = data.details;
     $: team = $teamStore?.data?.teamByNumber!;
-    $: activeSeasons = team?.activeSeasons ?? [];
-    $: inactiveSeasons = ALL_SEASONS.filter((s) => !activeSeasons.includes(s));
 
     const predPending = writable(false);
     setContext(PRED_PENDING_CTX, predPending);
@@ -83,9 +80,8 @@
     });
 
     let season: Writable<Season | "overall"> = queryParam("season", {
-        encode: (val) => (val == CURRENT_SEASON ? null : "" + val),
-        decode: (val) =>
-            val == "overall" ? val : ALL_SEASONS.find((s) => "" + s == val) ?? CURRENT_SEASON,
+        encode: (val) => "" + val,
+        decode: (val) => (val == "overall" ? val : parseSeason(val) ?? get(globalSeason)),
         pushState: true,
         killHash: true,
     });
@@ -205,14 +201,20 @@
                 </div>
 
                 <div class="actions">
-                    <Form id="season" noscriptSubmit>
-                        <SeasonSelect
-                            bind:season={$season}
-                            nonForm
-                            includeOverall
-                            disabledValues={inactiveSeasons}
-                        />
-                    </Form>
+                    <div class="view-switch" role="group" aria-label="Stats view">
+                        <button
+                            class:selected={$season != "overall"}
+                            on:click={() => ($season = $globalSeason)}
+                        >
+                            Season
+                        </button>
+                        <button
+                            class:selected={$season == "overall"}
+                            on:click={() => ($season = "overall")}
+                        >
+                            Overall
+                        </button>
+                    </div>
                 </div>
             </div>
         </Card>
@@ -309,7 +311,7 @@
                             any
                             {DESCRIPTORS[$season].seasonName} events.
                         </b>
-                        <p>Try choosing a different season from the dropdown menu.</p>
+                        <p>Try choosing a different season from the menu at the top of the page.</p>
                     </div>
                 </Card>
             {/each}
@@ -388,6 +390,38 @@
     .meta :global(a:hover) {
         color: var(--text-color);
         text-decoration-color: currentColor;
+    }
+
+    .view-switch {
+        display: inline-flex;
+        gap: 2px;
+        padding: 2px;
+
+        background: var(--raised-bg-color);
+        border-radius: 8px;
+    }
+
+    .view-switch button {
+        padding: var(--md-pad) calc(var(--lg-pad) * 1.5);
+        border: none;
+        border-radius: 6px;
+
+        background: transparent;
+        color: var(--grayed-out-text-color);
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .view-switch button:hover {
+        background: var(--hover-color);
+        color: var(--text-color);
+    }
+
+    .view-switch button.selected {
+        background: var(--sep-color);
+        color: var(--text-color);
+        font-weight: 600;
     }
 
     .actions {

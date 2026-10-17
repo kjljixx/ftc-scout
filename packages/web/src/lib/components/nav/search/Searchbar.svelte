@@ -8,6 +8,8 @@
     } from "../../../graphql/generated/graphql-operations";
     import { fuzzySearch, type FuzzyResult, calcCutoff } from "@ftc-scout/common";
     import { loadSearchData } from "../../../graphql/search-data";
+    import { globalSeason } from "$lib/season-store";
+    import type { Season } from "@ftc-scout/common";
     import { browser } from "$app/environment";
     import { writable } from "svelte/store";
     import type { ApolloQueryResult } from "@apollo/client";
@@ -23,20 +25,31 @@
     let searchText = "";
     let shown = false;
 
-    let resultsLoading = false;
+    let loadingSeason: Season | null = null;
     const results = writable<ApolloQueryResult<CombinedSearchQuery> | null>(null);
 
     function loadData() {
-        if (!browser || resultsLoading) return;
+        if (!browser || loadingSeason == $globalSeason) return;
 
-        resultsLoading = true;
-        loadSearchData()
-            .then((res) => results.set(res))
-            .catch(() => (resultsLoading = false));
+        let season = $globalSeason;
+        loadingSeason = season;
+        loadSearchData(season)
+            .then((res) => {
+                if (season == $globalSeason) results.set(res);
+            })
+            .catch(() => {
+                if (loadingSeason == season) loadingSeason = null;
+            });
+    }
+
+    $: if (loadingSeason != null && loadingSeason != $globalSeason) {
+        console.debug(`[searchbar] season changed to ${$globalSeason}, reloading search data`);
+        results.set(null);
+        loadData();
     }
 
     function prefetch(reason: string) {
-        if (!browser || resultsLoading) return;
+        if (!browser || loadingSeason == $globalSeason) return;
         console.debug(`[searchbar] prefetching search data (${reason})`);
         loadData();
     }
