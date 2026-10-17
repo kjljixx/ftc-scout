@@ -1,0 +1,27 @@
+query TeamEventDetails($number: Int!, $season: Int!) {
+    teamByNumber(number: $number) {
+        number
+        events(season: $season) {
+            season
+            eventCode
+            teamNumber
+            event {
+                season
+                code
+                teams {
+                    ...TeamPageEventTeam
+                }
+                relatedEvents {
+                    season
+                    code
+                    teams {
+                        ...TeamPageEventTeam
+                    }
+                }
+                matches {
+                    ...FullMatch
+                }
+            }
+        }
+    }
+}

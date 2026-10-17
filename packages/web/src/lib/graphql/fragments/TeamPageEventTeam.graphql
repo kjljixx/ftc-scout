@@ -1,0 +1,17 @@
+fragment TeamPageEventTeam on TeamEventParticipation {
+    season
+    eventCode
+    teamNumber
+    team {
+        number
+        name
+        location {
+            city
+            state
+            country
+        }
+    }
+    stats {
+        ...FullStats
+    }
+}

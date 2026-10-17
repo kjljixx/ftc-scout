@@ -16,6 +16,7 @@
     import TradMatchTableHeader from "./TradMatchTableHeader.svelte";
     import RemoteMatches from "./RemoteMatches.svelte";
     import Bracket from "./Bracket.svelte";
+    import VideoBadge from "./VideoBadge.svelte";
     import { bracketLayoutFor } from "./bracket-layout";
     import { allianceSeeds } from "./alliance-colors";
     import { page } from "$app/stores";
@@ -58,6 +59,7 @@
 
     $: anySurrogate = matches.some((m) => m.teams.some((t) => t.surrogate));
     $: anyDq = matches.some((m) => m.teams.some((t) => t.dq));
+    $: anyScored = matches.some((m) => m.scores);
 
     // Older events have no stored alliance count; their bracket size shows in the series numbers.
     function allianceCountFromSeries(ms: FullMatchFragment[]): number {
@@ -269,6 +271,16 @@
         {#if anyDq}
             <div style:text-decoration="line-through">Disqualified or No Show</div>
         {/if}
+    </div>
+{/if}
+
+{#if anyScored && !event.remote}
+    <div
+        style:margin-top="var(--sm-gap)"
+        style:--video-badge-size="16px"
+        style="display: flex; align-items: center; gap: var(--md-gap)"
+    >
+        <VideoBadge ready /> Click on match numbers to open match clip in YouTube
     </div>
 {/if}
 

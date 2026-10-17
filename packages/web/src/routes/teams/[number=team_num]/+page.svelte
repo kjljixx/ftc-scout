@@ -31,7 +31,8 @@
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
     import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
     import Form from "$lib/components/ui/form/Form.svelte";
-    import type { Writable } from "svelte/store";
+    import { writable, type Writable } from "svelte/store";
+    import { PRED_PENDING_CTX } from "$lib/components/matches/MatchScore.svelte";
     import { queryParam } from "$lib/util/search-params/search-params";
     import Head from "$lib/components/Head.svelte";
     import { onDestroy, setContext, tick } from "svelte";
@@ -52,11 +53,34 @@
     export let data;
 
     $: teamStore = data.team;
+    $: detailsStore = data.details;
     $: team = $teamStore?.data?.teamByNumber!;
     $: activeSeasons = team?.activeSeasons ?? [];
     $: inactiveSeasons = ALL_SEASONS.filter((s) => !activeSeasons.includes(s));
 
-    $: sortedEvents = [...(team?.events ?? [])].sort(eventSorter);
+    const predPending = writable(false);
+    setContext(PRED_PENDING_CTX, predPending);
+    $: $predPending = data.detailsExpected && !$detailsStore?.data;
+
+    $: baseEvents = [...(team?.events ?? [])].sort(eventSorter);
+    $: detailsByEvent = new Map(
+        ($detailsStore?.data?.teamByNumber?.events ?? []).map((d) => [d.event.code, d.event])
+    );
+    $: sortedEvents = baseEvents.map((tep) => {
+        let details = detailsByEvent.get(tep.event.code);
+        return {
+            ...tep,
+            event: {
+                ...tep.event,
+                teams: details?.teams,
+                matches: details?.matches,
+                relatedEvents: tep.event.relatedEvents?.map((related) => ({
+                    ...related,
+                    teams: details?.relatedEvents?.find((r) => r.code == related.code)?.teams,
+                })),
+            },
+        };
+    });
 
     let season: Writable<Season | "overall"> = queryParam("season", {
         encode: (val) => (val == CURRENT_SEASON ? null : "" + val),
@@ -109,7 +133,7 @@
         setGamePageContext({
           number: team.number,
           url,
-          events: sortedEvents.map(({ event }) => ({ season: event.season, code: event.code, name: event.name })),
+          events: baseEvents.map(({ event }) => ({ season: event.season, code: event.code, name: event.name })),
         });
     }
 

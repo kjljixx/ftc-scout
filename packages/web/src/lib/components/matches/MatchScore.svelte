@@ -1,4 +1,6 @@
 <script lang="ts" context="module">
+    export const PRED_PENDING_CTX = {};
+
     export function computeWinner(s: FullMatchFragment["scores"]): Alliance | "Tie" | null {
         if (s == undefined) {
             return null;
@@ -46,6 +48,7 @@
     import { getContext } from "svelte";
     import { readable, type Readable } from "svelte/store";
     import { SHOW_MATCH_SCORE, type ShowMatchFn } from "./MatchTable.svelte";
+    import VideoBadge from "./VideoBadge.svelte";
     import {
         LIVESTREAM_VIDEOS_CTX,
         knownVideoUrls,
@@ -94,6 +97,8 @@
 
     let show: ShowMatchFn = getContext(SHOW_MATCH_SCORE);
 
+    const predPendingStore: Readable<boolean> = getContext(PRED_PENDING_CTX) ?? readable(false);
+
     const livestreamStore: Readable<LivestreamVideos | undefined> =
         getContext(LIVESTREAM_VIDEOS_CTX) ?? readable(undefined);
     $: livestream = $livestreamStore;
@@ -118,7 +123,12 @@
     id="{match.eventCode}-{match.id}"
     on:click={() => linkable && openVideo()}
 >
-    <div class="description">{labelNumber}</div>
+    <div class="description">
+        <span>{labelNumber}</span>
+        {#if linkable}
+            <VideoBadge ready={existingVideoUrl != null} />
+        {/if}
+    </div>
 </td>
 
 <td class="center" class:hasScores={match.scores} class:unplayed={!match.scores} use:tippy={tip} on:click={() => show(match)}>
@@ -166,7 +176,7 @@
         <div class="score"><b>{scoreValue(match.scores, showNonPenaltyScores)}</b></div>
     {/if}
 
-    <div class="pred">
+    <div class="pred" class:pending={$predPendingStore}>
         <div class="left" class:strong={redPred >= bluePred}>
             {redPred.toFixed(0)}
         </div>
@@ -191,6 +201,7 @@
     .label {
         grid-column: 1;
         align-self: stretch;
+        position: relative;
     }
 
     .label.linkable {
@@ -223,10 +234,50 @@
     }
 
     .description {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
         padding-left: var(--md-gap);
         font-weight: bold;
         color: var(--text-color);
         white-space: nowrap;
+    }
+
+    @media (hover: hover) and (min-width: 641px) {
+        .label :global(.video-badge) {
+            opacity: 0;
+        }
+
+        :global(tr:hover) .label :global(.video-badge) {
+            opacity: 1;
+        }
+    }
+
+    @media (hover: hover) and (max-width: 640px) {
+        .label :global(.video-badge) {
+            display: none;
+        }
+    }
+
+    @media (hover: none) {
+        .label :global(.video-badge) {
+            --video-badge-size: 14px;
+
+            position: absolute;
+            left: var(--md-gap);
+            bottom: 3px;
+        }
+
+        .label :global(.video-badge.lookup) {
+            display: none;
+        }
+    }
+
+    @media (hover: none) and (max-width: 640px) {
+        .label :global(.video-badge) {
+            left: 0;
+        }
     }
 
     .time {
@@ -274,6 +325,25 @@
     .pred .strong {
         font-weight: 600;
         color: var(--text-color);
+    }
+
+    .pred.pending .left,
+    .pred.pending .right {
+        width: 2.2em;
+        color: transparent;
+        border-radius: 4px;
+        background: color-mix(in srgb, var(--grayed-out-text-color) 30%, transparent);
+        animation: pred-pending 1.2s ease-in-out infinite;
+    }
+
+    .pred.pending .left {
+        justify-self: end;
+    }
+
+    @keyframes pred-pending {
+        50% {
+            opacity: 0.4;
+        }
     }
 
     .left,
