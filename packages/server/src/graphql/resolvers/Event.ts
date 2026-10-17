@@ -203,6 +203,7 @@ export const EventGQL: GraphQLObjectType = new GraphQLObjectType({
         },
         matches: {
             type: list(nn(MatchGQL)),
+            args: { id: nullTy(IntTy) },
             resolve: dataLoaderResolverList<
                 Event,
                 Match,

@@ -1,0 +1,138 @@
+# // HELP: Season Specific
+fragment TeamPageMatchScores on MatchScores {
+    __typename
+    ... on MatchScores2026 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2025 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2024 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2023 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2022 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2021Trad {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2020Trad {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2019 {
+        season
+        eventCode
+        matchId
+        red {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+        blue {
+            alliance
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on MatchScores2021Remote {
+        season
+        eventCode
+        matchId
+        totalPoints
+        totalPointsNp
+    }
+    ... on MatchScores2020Remote {
+        season
+        eventCode
+        matchId
+        totalPoints
+        totalPointsNp
+    }
+}

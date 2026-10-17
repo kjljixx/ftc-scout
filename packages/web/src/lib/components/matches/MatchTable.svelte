@@ -6,9 +6,11 @@
 <script lang="ts">
     import { groupBy } from "@ftc-scout/common";
     import {
+        FullMatchByIdDocument,
         TournamentLevel,
         type FullMatchFragment,
     } from "../../graphql/generated/graphql-operations";
+    import { getClient } from "../../graphql/client";
     import { matchSorter } from "../../util/sorters";
     import RemoteMatchTableHeader from "./RemoteMatchTableHeader.svelte";
     import SectionRow from "./SectionRow.svelte";
@@ -105,8 +107,33 @@
     let modalShown = false;
     let modalMatch: FullMatchFragment | null;
 
-    function show(match: FullMatchFragment) {
-        modalMatch = match;
+    function hasFullScores(match: FullMatchFragment) {
+        return matches.some((m) => m.eventCode == match.eventCode && m.id == match.id);
+    }
+
+    async function loadFullMatch(match: FullMatchFragment): Promise<FullMatchFragment | null> {
+        let startMs = performance.now();
+        try {
+            let res = await getClient().query({
+                query: FullMatchByIdDocument,
+                variables: { season: match.season, code: match.eventCode, id: match.id },
+            });
+            console.info(
+                `[match-modal] loaded full scores event=${match.eventCode} match=${match.id} ms=${Math.round(
+                    performance.now() - startMs
+                )}`
+            );
+            return res.data.eventByCode?.matches[0] ?? null;
+        } catch (cause) {
+            console.error("[match-modal] failed to load full scores", cause);
+            return null;
+        }
+    }
+
+    async function show(match: FullMatchFragment) {
+        let full = hasFullScores(match) ? match : await loadFullMatch(match);
+        if (!full) return;
+        modalMatch = full;
         $modalMatchId = [match.eventCode, match.id];
         modalShown = true;
     }

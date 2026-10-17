@@ -1,0 +1,9 @@
+query FullMatchById($season: Int!, $code: String!, $id: Int!) {
+    eventByCode(season: $season, code: $code) {
+        season
+        code
+        matches(id: $id) {
+            ...FullMatch
+        }
+    }
+}

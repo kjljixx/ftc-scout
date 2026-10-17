@@ -1,0 +1,143 @@
+# // HELP: Season Specific
+fragment TeamPagePointsBoth on TeamEventStats {
+    ... on TeamEventStats2026 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2025 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2024 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2023 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2022 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2021Trad {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2021Remote {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2020Trad {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2020Remote {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2019 {
+        opr {
+            totalPoints
+            totalPointsNp
+        }
+        oprSe {
+            totalPoints
+            totalPointsNp
+        }
+        avg {
+            totalPoints
+            totalPointsNp
+        }
+    }
+}

@@ -12,6 +12,7 @@ fragment TeamPageEventTeam on TeamEventParticipation {
         }
     }
     stats {
-        ...FullStats
+        ...TeamPageStats
+        ...TeamPagePointsBoth
     }
 }

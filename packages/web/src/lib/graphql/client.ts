@@ -18,6 +18,18 @@ import { sha256 } from "crypto-hash";
 
 let client: ApolloClient<NormalizedCacheObject> | null = null;
 
+const SPARSELY_FETCHED_TYPES = DESCRIPTORS_LIST.flatMap((d) => {
+    let variants = d.hasRemote ? ["Trad", "Remote"] : [""];
+    return [
+        `MatchScores${d.season}Alliance`,
+        ...variants.flatMap((v) => [
+            `MatchScores${d.season}${v}`,
+            `TeamEventStats${d.season}${v}Group`,
+            `TeamEventStats${d.season}${v}StdErrGroup`,
+        ]),
+    ];
+});
+
 export function getClient(
     fetch?: NonNullable<HttpOptions["fetch"]>
 ): ApolloClient<NormalizedCacheObject> {
@@ -97,6 +109,7 @@ export function getClient(
                     return mergeObjects(existing, incoming);
                 },
             },
+            ...Object.fromEntries(SPARSELY_FETCHED_TYPES.map((type) => [type, { merge: true }])),
         },
     });
 

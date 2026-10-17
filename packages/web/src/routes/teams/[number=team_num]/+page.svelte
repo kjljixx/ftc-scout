@@ -73,7 +73,7 @@
             event: {
                 ...tep.event,
                 teams: details?.teams,
-                matches: details?.matches,
+                matches: details?.matches as FullMatchFragment[] | undefined,
                 relatedEvents: tep.event.relatedEvents?.map((related) => ({
                     ...related,
                     teams: details?.relatedEvents?.find((r) => r.code == related.code)?.teams,

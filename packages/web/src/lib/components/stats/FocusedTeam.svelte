@@ -1,6 +1,6 @@
 <script lang="ts">
     import { CURRENT_SEASON, DESCRIPTORS, Season } from "@ftc-scout/common";
-    import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
+    import type { TeamPageEventTeamFragment } from "$lib/graphql/generated/graphql-operations";
     import Fa from "svelte-fa";
     import StdErrLabel from "./StdErrLabel.svelte";
     import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -9,9 +9,8 @@
     import { createEventDispatcher } from "svelte";
     import { prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
 
-    type Team = Omit<NonNullable<EventPageQuery["eventByCode"]>["teams"][number], "__typename">;
-
-    export let team: Pick<Team, "stats" | "season"> & { eventCode?: string | undefined } & {
+    export let team: Pick<TeamPageEventTeamFragment, "stats" | "season"> & {
+        eventCode?: string | undefined;
         team: { name: string; number: number };
     };
     export let remote: boolean;

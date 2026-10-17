@@ -19,7 +19,7 @@ query TeamEventDetails($number: Int!, $season: Int!) {
                     }
                 }
                 matches {
-                    ...FullMatch
+                    ...TeamPageEventMatch
                 }
             }
         }
