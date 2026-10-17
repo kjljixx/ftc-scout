@@ -3,6 +3,7 @@
     import { browser } from "$app/environment";
     import Sidebar from "$lib/components/nav/Sidebar.svelte";
     import TimestampToast from "$lib/components/TimestampToast.svelte";
+    import TimestampModal from "$lib/components/TimestampModal.svelte";
     import { afterNavigate, beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/stores";
     import { onMount } from "svelte";
@@ -82,6 +83,7 @@
 <GameHud />
 <GameToast />
 <TimestampToast />
+<TimestampModal />
 
 <!-- Autofocus allows the document to be scrolled immediately without having to click. -->
 <!-- svelte-ignore a11y-autofocus -->

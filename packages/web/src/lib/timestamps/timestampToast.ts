@@ -25,6 +25,7 @@ export type TimestampToast = {
     readyStartSeconds: number | null;
     failure: string | null;
     hasDivisions: boolean;
+    minimized: boolean;
 };
 
 export const timestampToast = writable<TimestampToast | null>(null);
@@ -61,6 +62,10 @@ export function formatVideoTime(seconds: number): string {
 export function dismissTimestampToast() {
     currentRun += 1;
     timestampToast.set(null);
+}
+
+export function setTimestampToastMinimized(minimized: boolean) {
+    timestampToast.update((t) => (t ? { ...t, minimized } : t));
 }
 
 export async function clearEventTimestamps(season: number, eventCode: string) {
@@ -131,6 +136,7 @@ export function requestMatchTimestamp(match: FullMatchFragment, known?: KnownVid
         readyStartSeconds: null,
         failure: null,
         hasDivisions: known?.hasDivisions ?? false,
+        minimized: false,
     });
     startRun(run, match, known).catch((error) => {
         failWith(run, error?.message || "Something went wrong.");

@@ -4,18 +4,16 @@
     import { fly } from "svelte/transition";
     import {
         dismissTimestampToast,
-        submitLivestreamLink,
+        setTimestampToastMinimized,
         timestampToast,
     } from "$lib/timestamps/timestampToast";
-
-    let link = "";
+    import TimestampStatus from "./TimestampStatus.svelte";
 
     $: toast = $timestampToast;
     $: ready = toast?.readyUrl != null;
-    $: if (!toast?.failure) link = "";
 </script>
 
-{#if toast}
+{#if toast?.minimized}
     <svelte:element
         this={ready ? "a" : "div"}
         class="toast"
@@ -38,35 +36,13 @@
                 <span class="name">Open {toast.description}</span>
                 <span class="chevron"><Fa icon={faChevronRight} /></span>
             </div>
-        {:else if toast.failure}
-            <div class="team">
-                <span class="name">{toast.description}</span>
-                <span class="detail">Couldn't find it</span>
-            </div>
-            <p class="error">{toast.failure}</p>
-            {#if toast.hasDivisions}
-                <p class="error">Paste a livestream link on one of this event's division pages instead.</p>
-            {:else}
-                <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
-                    <input
-                        type="text"
-                        bind:value={link}
-                        placeholder="Paste a YouTube livestream link"
-                        aria-label="YouTube livestream link"
-                    />
-                    <button type="submit">Try</button>
-                </form>
-            {/if}
         {:else}
-            <div class="team">
-                <span class="name">{toast.description}</span>
-                <span class="detail">Finding the match</span>
-            </div>
-            <div class="bar"><div class="fill" style="width: {toast.progress * 100}%" /></div>
-            <div class="stat">
-                <span class="label">Video</span>
-                <span class="value">{toast.videoNumber} of {toast.videoCount}</span>
-            </div>
+            <TimestampStatus {toast} />
+            {#if toast.failure}
+                <button class="details" on:click={() => setTimestampToastMinimized(false)}>
+                    Details
+                </button>
+            {/if}
         {/if}
     </svelte:element>
 {/if}
@@ -97,15 +73,6 @@
         z-index: var(--focused-team-zi);
     }
 
-    .team {
-        display: flex;
-        align-items: baseline;
-        gap: var(--md-gap);
-
-        flex: 1;
-        min-width: 0;
-    }
-
     .name {
         font-size: var(--lg-font-size);
         font-weight: 600;
@@ -121,15 +88,6 @@
     .chevron {
         flex-shrink: 0;
         color: var(--grayed-out-text-color);
-    }
-
-    .detail {
-        font-size: var(--md-font-size);
-        color: var(--grayed-out-text-color);
-
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
     }
 
     .close {
@@ -150,37 +108,7 @@
         color: var(--text-color);
     }
 
-    .error {
-        flex-basis: 100%;
-        margin: 0;
-        font-size: var(--md-font-size);
-        line-height: 1.3;
-    }
-
-    .link {
-        display: flex;
-        flex-basis: 100%;
-        gap: var(--md-gap);
-    }
-
-    .link input {
-        flex: 1;
-        min-width: 0;
-        box-sizing: border-box;
-        padding: var(--md-pad);
-        border: none;
-        border-radius: 8px;
-        background: var(--form-bg-color);
-        color: var(--text-color);
-        font: inherit;
-        font-size: var(--md-font-size);
-    }
-
-    .link input:focus {
-        outline: 2px solid var(--neutral-team-color);
-    }
-
-    .link button {
+    .details {
         padding: var(--md-pad) var(--lg-pad);
         border: none;
         border-radius: 8px;
@@ -192,49 +120,10 @@
         cursor: pointer;
     }
 
-    .bar {
-        flex-basis: 100%;
-        height: 6px;
-        border-radius: 3px;
-        overflow: hidden;
-        background: var(--neutral-team-bg-color);
-    }
-
-    .fill {
-        height: 100%;
-        border-radius: 3px;
-        background: var(--neutral-team-color);
-        transition: width 0.4s ease;
-    }
-
-    .stat {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        flex: 1;
-    }
-
-    .label {
-        font-size: var(--sm-font-size);
-        color: var(--grayed-out-text-color);
-    }
-
-    .value {
-        font-size: var(--lg-font-size);
-        font-weight: 600;
-        line-height: 1.2;
-        font-variant-numeric: tabular-nums;
-    }
-
     @media (max-width: 600px) {
         .toast {
             padding: var(--lg-pad) calc(var(--lg-pad) + var(--md-font-size)) var(--lg-pad)
                 var(--lg-pad);
-        }
-
-        .detail,
-        .label {
-            font-size: var(--md-font-size);
         }
     }
 </style>
