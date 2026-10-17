@@ -4,6 +4,7 @@ import { page } from "$app/stores";
 import { ALL_SEASONS, CURRENT_SEASON, DESCRIPTORS, type Season } from "@ftc-scout/common";
 import type { Page } from "@sveltejs/kit";
 import { get, writable } from "svelte/store";
+import { gameActive } from "$lib/game/game-store";
 import { queryParamUrlKeeping } from "$lib/util/search-params/search-params";
 
 const STORAGE_KEY = "season";
@@ -23,6 +24,10 @@ function storedSeason(): Season {
     console.info(`[season] initial season=${stored ?? CURRENT_SEASON} stored=${stored}`);
     return stored ?? CURRENT_SEASON;
 }
+
+export const teamInactiveSeasons = writable<Season[]>([]);
+export const homeSeasonLoading = writable(false);
+let homeReloads = 0;
 
 export const globalSeason = writable<Season>(storedSeason());
 
@@ -75,7 +80,16 @@ export function changeSeason(season: Season) {
 
     let $page = get(page);
     if ($page.route.id == "/") {
-        invalidate(HOME_SEASON_DEPENDENCY);
+        homeReloads++;
+        homeSeasonLoading.set(true);
+        invalidate(HOME_SEASON_DEPENDENCY).finally(() => {
+            if (--homeReloads == 0) homeSeasonLoading.set(false);
+        });
+        return;
+    }
+
+    if (get(gameActive) && $page.route.id != TEAM_ROUTE) {
+        console.info(`[season] game active, kept page ${$page.url.pathname}`);
         return;
     }
 

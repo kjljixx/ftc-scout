@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
     import { get } from "svelte/store";
-    import { globalSeason, parseSeason } from "$lib/season-store";
+    import { globalSeason, parseSeason, teamInactiveSeasons } from "$lib/season-store";
 
     export function seasonFromUrl(url: URL): Season {
         return parseSeason(url.searchParams.get("season")) ?? get(globalSeason);
@@ -23,6 +23,7 @@
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
     import {
+        ALL_SEASONS,
         CURRENT_SEASON,
         DESCRIPTORS,
         type Season,
@@ -54,6 +55,10 @@
     $: teamStore = data.team;
     $: detailsStore = data.details;
     $: team = $teamStore?.data?.teamByNumber!;
+    $: $teamInactiveSeasons = team
+        ? ALL_SEASONS.filter((s) => !(team.activeSeasons ?? []).includes(s))
+        : [];
+    onDestroy(() => teamInactiveSeasons.set([]));
 
     const predPending = writable(false);
     setContext(PRED_PENDING_CTX, predPending);

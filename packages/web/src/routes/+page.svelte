@@ -16,7 +16,8 @@
     } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
     import { notEmpty, type Season } from "@ftc-scout/common";
-    import { globalSeason } from "$lib/season-store";
+    import { globalSeason, homeSeasonLoading } from "$lib/season-store";
+    import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
     import Head from "$lib/components/Head.svelte";
     import { createTippy } from "svelte-tippy";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
@@ -112,7 +113,9 @@
 /> -->
 
 <WidthProvider>
-    {#if showHomeTeamView}
+    {#if $homeSeasonLoading}
+        <Skeleton />
+    {:else if showHomeTeamView}
         <Loading store={$latestEventStore} checkExists={(e) => !!e.eventByCode}>
             {#if focusedTeam && focusedTeamData}
                 <FocusedTeam

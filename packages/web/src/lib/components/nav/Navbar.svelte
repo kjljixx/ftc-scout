@@ -4,12 +4,8 @@
     import Logo from "./Logo.svelte";
     import Searchbar from "./search/Searchbar.svelte";
     import { gameActive } from "$lib/game/game-store";
-    import SeasonSelect from "$lib/components/ui/form/SeasonSelect.svelte";
-    import { changeSeason, globalSeason } from "$lib/season-store";
-    import type { Season } from "@ftc-scout/common";
-
-    const onSeasonChange = (e: Event) =>
-        changeSeason(+(e.currentTarget as HTMLSelectElement).value as Season);
+    import SeasonPicker from "./SeasonPicker.svelte";
+    import { changeSeason, globalSeason, teamInactiveSeasons } from "$lib/season-store";
 </script>
 
 <nav>
@@ -20,14 +16,11 @@
 
     <div class="right">
         <div class="search-group">
-            <div class="season-select" class:hidden={$gameActive}>
-                <SeasonSelect
-                    season={$globalSeason}
-                    nonForm
-                    id="navbar-season-select"
-                    on:change={onSeasonChange}
-                />
-            </div>
+            <SeasonPicker
+                season={$globalSeason}
+                disabledValues={$teamInactiveSeasons}
+                on:select={(e) => changeSeason(e.detail)}
+            />
             <Searchbar disabled={$gameActive} />
         </div>
         <DarkModeToggle />
@@ -66,21 +59,6 @@
         display: flex;
         align-items: stretch;
         gap: 8px;
-    }
-
-    .season-select {
-        display: flex;
-    }
-
-    .season-select :global(select) {
-        width: auto;
-        border-radius: 4px;
-        padding: 10px 30px 10px 12px;
-        background-color: var(--fg-color);
-    }
-
-    .season-select :global(select:hover) {
-        background-color: var(--hover-color);
     }
 
     .right {
