@@ -21,7 +21,7 @@
     }
 </script>
 
-<Modal {shown} titleText="Match video" {close}>
+<Modal {shown} titleText={searching ? "Timestamping matches" : "Match video"} {close}>
     {#if toast}
         <div class="content">
             <TimestampStatus {toast} />

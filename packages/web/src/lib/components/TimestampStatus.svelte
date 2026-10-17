@@ -44,7 +44,7 @@
     }
 
     .bar {
-        flex-basis: 100%;
+        width: 100%;
         height: 6px;
         border-radius: 3px;
         overflow: hidden;
