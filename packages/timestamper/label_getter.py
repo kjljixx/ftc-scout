@@ -1,4 +1,4 @@
-import cv2, os, subprocess
+import cv2, ctypes, os, shutil, threading, time
 
 UPSCALE = 5
 BORDER_PX = 20
@@ -6,8 +6,51 @@ LABEL_LEFT_IN_ICONS = 25 / 22
 LABEL_TOP_IN_ICONS = -28 / 22
 LABEL_WIDTH_IN_ICONS = 230 / 22
 LABEL_HEIGHT_IN_ICONS = 24 / 22
-TESSERACT_CMD = ["tesseract", "stdin", "stdout", "--psm", "7"]
-NO_CONSOLE_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+LANGUAGE = b"eng"
+PAGE_SEG_MODE_SINGLE_LINE = 7
+
+
+class Tesseract:
+  def __init__(self):
+    began = time.time()
+    install_dir = os.path.dirname(shutil.which("tesseract"))
+    os.add_dll_directory(install_dir)
+    library_name = next(name for name in os.listdir(install_dir) if name.lower().startswith("libtesseract"))
+    self.lib = ctypes.CDLL(os.path.join(install_dir, library_name))
+    self.lib.TessBaseAPICreate.restype = ctypes.c_void_p
+    self.lib.TessBaseAPIInit3.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    self.lib.TessBaseAPISetPageSegMode.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    self.lib.TessBaseAPISetImage.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    self.lib.TessBaseAPIGetUTF8Text.argtypes = [ctypes.c_void_p]
+    self.lib.TessBaseAPIGetUTF8Text.restype = ctypes.c_void_p
+    self.lib.TessDeleteText.argtypes = [ctypes.c_void_p]
+    self.api = self.lib.TessBaseAPICreate()
+    if self.lib.TessBaseAPIInit3(self.api, os.path.join(install_dir, "tessdata").encode(), LANGUAGE) != 0:
+      raise RuntimeError(f"Tesseract could not load language data from {install_dir}")
+    self.lib.TessBaseAPISetPageSegMode(self.api, PAGE_SEG_MODE_SINGLE_LINE)
+    self.lock = threading.Lock()
+    print(f"config tesseract loaded in-process from {install_dir} in {time.time() - began:.2f}s", flush=True)
+
+  def read(self, gray_image):
+    height, width = gray_image.shape
+    with self.lock:
+      self.lib.TessBaseAPISetImage(self.api, gray_image.tobytes(), width, height, 1, width)
+      text_pointer = self.lib.TessBaseAPIGetUTF8Text(self.api)
+      text = ctypes.string_at(text_pointer).decode()
+      self.lib.TessDeleteText(text_pointer)
+    return text.strip()
+
+
+tesseract = None
+tesseract_creation_lock = threading.Lock()
+
+
+def get_tesseract():
+  global tesseract
+  with tesseract_creation_lock:
+    if tesseract is None:
+      tesseract = Tesseract()
+  return tesseract
 
 
 def label_crop(frame_gray, icon):
@@ -20,6 +63,4 @@ def label_crop(frame_gray, icon):
 
 
 def read_label(frame_gray, icon):
-  _, png = cv2.imencode(".png", label_crop(frame_gray, icon))
-  text = subprocess.run(TESSERACT_CMD, input=png.tobytes(), capture_output=True, creationflags=NO_CONSOLE_WINDOW).stdout.decode().strip()
-  return text or None
+  return get_tesseract().read(label_crop(frame_gray, icon)) or None

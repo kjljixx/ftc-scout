@@ -68,7 +68,7 @@ The server (`packages/server/src/graphql/resolvers/Timestamper.ts`) exposes:
 ## Requirements
 
 - Python 3.10+ with `pip install -r requirements.txt`
-- `node` and `tesseract` on the PATH (`node` runs the YouTube challenge solver for `yt-dlp`; `tesseract` reads the match label only)
+- `node` and `tesseract` on the PATH (`node` runs the YouTube challenge solver for `yt-dlp`; `tesseract` reads the match label only: `label_getter.py` loads the `libtesseract` library from the folder of the `tesseract` program and reads labels in-process)
 
 ## Known limits
 

@@ -48,12 +48,22 @@ def decode_first_frame(video_bytes):
     return frame.to_ndarray(format="gray") if frame else None
 
 
+shared_ydl = None
+
+
+def get_shared_ydl():
+  global shared_ydl
+  if shared_ydl is None:
+    shared_ydl = yt_dlp.YoutubeDL(YDL_OPTIONS)
+    print("config created shared yt-dlp object (connections are reused across videos)", flush=True)
+  return shared_ydl
+
+
 def extract_info(video_id):
   for attempt in range(1, EXTRACT_ATTEMPTS + 1):
     try:
       with timer.time("fetch.yt_dlp_url"):
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-          return ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+        return get_shared_ydl().extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
     except yt_dlp.utils.DownloadError as error:
       if attempt == EXTRACT_ATTEMPTS:
         raise
