@@ -22,7 +22,10 @@ function detailsAfter(
     first: Readable<ApolloQueryResult<TeamQuery> | null>,
     variables: TeamEventDetailsQueryVariables
 ): Readable<TeamEventDetails> {
-    return readable<TeamEventDetails>(null, (set) => {
+    const cachedData = browser
+        ? client.readQuery<TeamEventDetailsQuery>({ query: TeamEventDetailsDocument, variables })
+        : null;
+    return readable<TeamEventDetails>(cachedData ? { data: cachedData } : null, (set) => {
         let started = false;
         return first.subscribe((result) => {
             if (started || !result?.data?.teamByNumber) return;
@@ -47,7 +50,10 @@ function detailsAfter(
                     set({ data: res.data });
                 })
                 .catch((cause) => {
-                    console.error("[team-details] failed, predictions and bracket unavailable", cause);
+                    console.error(
+                        "[team-details] failed, predictions and bracket unavailable",
+                        cause
+                    );
                     set({ data: null });
                 });
         });
