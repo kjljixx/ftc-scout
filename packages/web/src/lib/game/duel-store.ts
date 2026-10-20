@@ -86,7 +86,11 @@ export const activeSabotages = derived([duelView, clock], ([v, now]): SabotageId
   v ? v.mine.outgoing.filter((e) => localExpiry(v, e.expiresAt) > now).map((e) => e.kind) : []
 );
 export const blockedTeams = derived([duelView, clock], ([v, now]) =>
-  v ? v.mine.incoming.filter((e) => e.kind === "sniper" && e.team !== undefined && localExpiry(v, e.expiresAt) > now).map((e) => e.team!) : []
+  v
+    ? v.mine.incoming
+        .filter((e) => e.kind === "sniper" && e.team !== undefined && localExpiry(v, e.spent ? v.mine.frozenUntil ?? 0 : e.expiresAt) > now)
+        .map((e) => e.team!)
+    : []
 );
 
 if (browser) {
