@@ -48,7 +48,8 @@
                 {#if i === lastReachIndex}
                     <tr class="radar-cutoff">
                         <td colspan="999">
-                            <Fa icon={faLock} scale="0.8x" /> Radar only accesses the top {RADAR_REACH} teams
+                            <Fa icon={faLock} scale="0.8x" /> Radar only accesses the top {RADAR_REACH}
+                            teams
                         </td>
                     </tr>
                 {/if}
@@ -118,7 +119,7 @@
         font-size: var(--sm-font-size);
         color: var(--grayed-out-text-color);
         background: var(--fg-color);
-        border-top: 1px solid var(--inline-theme-color);
+        border-top: 1px solid var(--sep-color);
         border-bottom: 1px solid var(--sep-color);
     }
 
