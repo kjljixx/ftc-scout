@@ -23,7 +23,9 @@
     import { allianceSeeds } from "./alliance-colors";
     import { page } from "$app/stores";
     import ScoreModal from "./score-modal/ScoreModal.svelte";
-    import { onMount, setContext, tick } from "svelte";
+    import { getContext, onMount, setContext, tick } from "svelte";
+    import { readable, type Readable } from "svelte/store";
+    import { PRED_PENDING_CTX } from "./MatchScore.svelte";
     import { queryParam } from "../../util/search-params/search-params";
     import { faHeart, faHeartBroken } from "@fortawesome/free-solid-svg-icons";
     import { faHeart as faHeartOutline } from "@fortawesome/free-regular-svg-icons";
@@ -83,6 +85,8 @@
     $: bracketMatches = allMatches.filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim);
     $: bracketAvailable = !remote && !!bracketLayout && bracketMatches.length > 0;
     $: bracketLoading = !remote && allMatches.length == 0;
+    const detailsPending: Readable<boolean> = getContext(PRED_PENDING_CTX) ?? readable(true);
+    $: bracketPulsing = bracketLoading && $detailsPending;
     let bracketView = false;
     $: showBracket = bracketView && bracketAvailable;
 
@@ -198,6 +202,7 @@
                                 <button
                                     class:active={bracketView}
                                     class:loading={bracketLoading}
+                                    class:pulsing={bracketPulsing}
                                     disabled={bracketLoading}
                                     aria-busy={bracketLoading}
                                     on:click={() => (bracketView = true)}
@@ -404,9 +409,13 @@
 
     .view-toggle button.loading,
     .view-toggle button.loading:hover {
-        background: color-mix(in srgb, var(--grayed-out-text-color) 30%, transparent);
+        background: transparent;
+        color: color-mix(in srgb, var(--grayed-out-text-color) 50%, transparent);
         font-weight: 500;
         cursor: default;
+    }
+
+    .view-toggle button.pulsing {
         animation: bracket-pending 1.2s ease-in-out infinite;
     }
 
