@@ -79,6 +79,7 @@
               {searchText}
               {focusNum}
               {index}
+              showTeamLocation={false}
               on:keydown={keydown}
               on:click={(event) => {
                 event.preventDefault();

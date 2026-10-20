@@ -14,6 +14,7 @@
     export let searchText: string;
     export let focusNum: Writable<number>;
     export let index: number;
+    export let showTeamLocation = true;
 
     $: doc = res.document;
     $: href =
@@ -44,7 +45,9 @@
                 {/if}
                 - <em>{@html name}</em>
             </span>
-            <i class="extra">{doc.location.city}, {topLoc}</i>
+            {#if showTeamLocation}
+                <i class="extra">{doc.location.city}, {topLoc}</i>
+            {/if}
         {/if}
     </span>
 </a>
