@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { longestCommonPrefix, type Season } from "@ftc-scout/common";
+    import type { Season } from "@ftc-scout/common";
     import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import Card from "$lib/components/Card.svelte";
     import { sortString } from "$lib/util/sorters";
+    import { divisionShortName } from "$lib/printers/division";
 
     type RelatedEvent = NonNullable<EventPageQuery["eventByCode"]>["relatedEvents"][number];
 
@@ -13,15 +14,13 @@
     export let tab: string;
 
     $: allEvents = [{ name: thisEventName, code: thisEventCode }, ...relatedEvents];
-    $: mainEventName = longestCommonPrefix(allEvents.map((e) => e.name));
     $: divisions = [...allEvents].sort((a, b) => sortString(a.code, b.code));
 
     function shortName(name: string): string {
-        return name
-            .slice(mainEventName.length)
-            .trim()
-            .replace(/\-\s*/, "")
-            .replace(/\s*division$/i, "");
+        return divisionShortName(
+            name,
+            allEvents.map((e) => e.name)
+        );
     }
 
     function isFinals(name: string): boolean {

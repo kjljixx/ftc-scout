@@ -36,6 +36,7 @@
     import { createPicklistSyncHandle } from "$lib/picklist/picklistSync";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
+    import { divisionShortName } from "$lib/printers/division";
     import Teams from "./Teams.svelte";
     import Picklist from "./Picklist.svelte";
     import Rankings from "./Rankings.svelte";
@@ -149,8 +150,15 @@
 
     let focusedTeam: number | null = null;
     $: focusedTeamData =
+        (isEventFinalsDivision
+            ? matchTableTeams.find((t) => t.teamNumber == focusedTeam)
+            : undefined) ??
         event?.teams?.find((t) => t.teamNumber == focusedTeam) ??
         event?.awards?.find((a) => a.teamNumber == focusedTeam)!;
+    $: focusedTeamDivision =
+        focusedTeamData && "eventCode" in focusedTeamData
+            ? (event?.relatedEvents ?? []).find((re) => re.code == focusedTeamData.eventCode)
+            : undefined;
     async function handleEventTeamClick(number: number) {
       if ($gameActive) {
         if (!isRadarEvent($page.url.pathname, $game) || !$game.radarVisit?.roster?.includes(number)) {
@@ -297,6 +305,11 @@
         {#if focusedTeam && focusedTeamData}
             <FocusedTeam
                 team={focusedTeamData}
+                division={focusedTeamDivision &&
+                    divisionShortName(focusedTeamDivision.name, [
+                        event.name,
+                        ...event.relatedEvents.map((re) => re.name),
+                    ])}
                 remote={event.remote}
                 on:close={() => (focusedTeam = null)}
             />

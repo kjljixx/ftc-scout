@@ -1,6 +1,6 @@
 <script lang="ts">
     import { DESCRIPTORS, Season } from "@ftc-scout/common";
-    import type { TeamPageEventTeamFragment } from "$lib/graphql/generated/graphql-operations";
+    import type { FocusedTeamStatsFragment } from "$lib/graphql/generated/graphql-operations";
     import Fa from "svelte-fa";
     import StdErrLabel from "./StdErrLabel.svelte";
     import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -8,12 +8,16 @@
     import { fly } from "svelte/transition";
     import { createEventDispatcher } from "svelte";
     import { prettyPrintFloat, prettyPrintOrdinal } from "$lib/printers/number";
+    import { divisionAbbreviation } from "$lib/printers/division";
 
-    export let team: Pick<TeamPageEventTeamFragment, "stats" | "season"> & {
+    export let team: {
+        season: number;
+        stats?: FocusedTeamStatsFragment | null;
         eventCode?: string | undefined;
         team: { name: string; number: number };
     };
     export let remote: boolean;
+    export let division: string | undefined = undefined;
 
     $: season = team.season as Season;
     $: code = team.eventCode;
@@ -76,6 +80,12 @@
                     <span class="label">{useNp ? "np AVG" : "AVG"}</span>
                     <span class="value">{prettyPrintFloat(stats.avg[npStat])}</span>
                 </div>
+                {#if division}
+                    <div class="stat" title="{division} Division">
+                        <span class="label">Div</span>
+                        <span class="value">{divisionAbbreviation(division)}</span>
+                    </div>
+                {/if}
             </div>
         {/if}
     </a>
