@@ -2,10 +2,11 @@ import { DESCRIPTORS, FloatTy, IntTy, Season, StrTy, list, nn, nullTy } from "@f
 import { GraphQLObjectType } from "graphql";
 import { dataLoaderResolver, dataLoaderResolverList, dataLoaderResolverSingle } from "../utils";
 import { TeamEventParticipation } from "../../db/entities/dyn/team-event-participation";
+import { In } from "typeorm";
 import { Event } from "../../db/entities/Event";
+import { DATA_SOURCE } from "../../db/data-source";
 import { TeamGQL } from "./Team";
 import { Team } from "../../db/entities/Team";
-import { In } from "typeorm";
 import { AwardGQL, teamAwareAwardLoader } from "./Award";
 import { Award } from "../../db/entities/Award";
 import { TeamMatchParticipation } from "../../db/entities/TeamMatchParticipation";
@@ -16,7 +17,7 @@ import { TeamMatchParticipationGQL } from "./TeamMatchParticipation";
 
 type PreviousBestOprKey = { season: Season; eventCode: string; teamNumber: number };
 
-async function loadPreviousBestOprs(keys: PreviousBestOprKey[]): Promise<(number | null)[]> {
+export async function loadPreviousBestOprs(keys: PreviousBestOprKey[]): Promise<(number | null)[]> {
     let startMs = Date.now();
     let results: (number | null)[] = keys.map(() => null);
 
@@ -26,51 +27,34 @@ async function loadPreviousBestOprs(keys: PreviousBestOprKey[]): Promise<(number
     );
 
     for (let [season, indexes] of indexesBySeason) {
-        let teamNumbers = [...new Set(indexes.map((i) => keys[i].teamNumber))];
-        let candidates = await TeamEventParticipation[season]
-            .createQueryBuilder("t")
-            .where("t.teamNumber IN (:...teamNumbers)", { teamNumbers })
-            .andWhere("NOT t.isRemote")
-            .andWhere("t.hasStats")
-            .getMany();
+        let oprColumn = DESCRIPTORS[season].pensSubtract
+            ? "c.opr_total_points"
+            : "COALESCE(c.opr_total_points_np, c.opr_total_points)";
 
-        let eventCodes = new Set([
-            ...indexes.map((i) => keys[i].eventCode),
-            ...candidates.map((c) => c.eventCode),
-        ]);
-        let events = await Event.findBy({ season, code: In([...eventCodes]) });
-        let eventsByCode = new Map(events.map((e) => [e.code, e]));
+        let rows: { team_number: number; event_code: string; best: number | null }[] =
+            await DATA_SOURCE.query(
+                `SELECT k.team_number, k.event_code, MAX(${oprColumn}) AS best
+                 FROM unnest($1::int[], $2::varchar[]) AS k(team_number, event_code)
+                 JOIN event cur ON cur.season = $3 AND cur.code = k.event_code
+                 JOIN tep_${season} c ON c.team_number = k.team_number
+                  AND c.event_code <> k.event_code
+                  AND NOT c.is_remote
+                  AND c.has_stats
+                 JOIN event ce ON ce.season = $3 AND ce.code = c.event_code
+                  AND NOT ce.modified_rules
+                  AND ce.start < cur.start
+                 GROUP BY k.team_number, k.event_code`,
+                [
+                    indexes.map((i) => keys[i].teamNumber),
+                    indexes.map((i) => keys[i].eventCode),
+                    season,
+                ]
+            );
 
-        let candidatesByTeam = new Map<number, TeamEventParticipation[]>();
-        for (let c of candidates) {
-            candidatesByTeam.set(c.teamNumber, [...(candidatesByTeam.get(c.teamNumber) ?? []), c]);
-        }
-
-        let descriptor = DESCRIPTORS[season];
-        let getOpr = (t: TeamEventParticipation) =>
-            descriptor.pensSubtract
-                ? t.opr?.totalPoints ?? null
-                : t.opr?.totalPointsNp ?? t.opr?.totalPoints ?? null;
-
+        let bestByKey = new Map(rows.map((r) => [`${r.team_number}|${r.event_code}`, r.best]));
         for (let i of indexes) {
-            let thisEvent = eventsByCode.get(keys[i].eventCode);
-            if (!thisEvent) continue;
-
-            let best = (candidatesByTeam.get(keys[i].teamNumber) ?? [])
-                .filter((c) => {
-                    let candidateEvent = eventsByCode.get(c.eventCode);
-                    return (
-                        c.eventCode != keys[i].eventCode &&
-                        candidateEvent &&
-                        !candidateEvent.modifiedRules &&
-                        candidateEvent.start < thisEvent!.start
-                    );
-                })
-                .map(getOpr)
-                .filter((v): v is number => v != null)
-                .reduce((a, b) => Math.max(a, b), -Infinity);
-
-            results[i] = best === -Infinity ? null : best;
+            let best = bestByKey.get(`${keys[i].teamNumber}|${keys[i].eventCode}`);
+            results[i] = best == null ? null : +best;
         }
     }
 

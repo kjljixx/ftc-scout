@@ -1,0 +1,53 @@
+# // HELP: Season Specific
+fragment OprOnlyStats on TeamEventStats {
+    ... on TeamEventStats2026 {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2025 {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2024 {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2023 {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2022 {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2021Trad {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2021Remote {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2020Trad {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2020Remote {
+        opr {
+            totalPointsNp
+        }
+    }
+    ... on TeamEventStats2019 {
+        opr {
+            totalPointsNp
+        }
+    }
+}
