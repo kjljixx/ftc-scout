@@ -64,8 +64,8 @@ const SIX_ALLIANCES = withFinals(
         { series: 2, col: 0, row: 1, slots: seeded },
         { series: 3, col: 1, row: 0, slots: [null, winner(1)] },
         { series: 4, col: 1, row: 1, slots: [null, winner(2)] },
-        { series: 5, col: 2, row: 2.25, slots: [loser(3), loser(2)] },
-        { series: 6, col: 2, row: 3.25, slots: [loser(4), loser(1)] },
+        { series: 5, col: 2, row: 3.25, slots: [loser(3), loser(2)] }, //For whatever reason match 5 being above match 6 causes the lines to intersect b/c match 5 winner is blue and match 6 is red in the next round
+        { series: 6, col: 2, row: 2.25, slots: [loser(4), loser(1)] },
         { series: 7, col: 2, row: 0.5, slots: [winner(3), winner(4)] },
         { series: 8, col: 3, row: 2.75, slots: [winner(5), winner(6)] },
         { series: 9, col: 4, row: 2.75, slots: [loser(7), winner(8)] },
