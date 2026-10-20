@@ -107,10 +107,6 @@
     let modalShown = false;
     let modalMatch: FullMatchFragment | null;
 
-    function hasFullScores(match: FullMatchFragment) {
-        return matches.some((m) => m.eventCode == match.eventCode && m.id == match.id);
-    }
-
     async function loadFullMatch(match: FullMatchFragment): Promise<FullMatchFragment | null> {
         let startMs = performance.now();
         try {
@@ -119,9 +115,9 @@
                 variables: { season: match.season, code: match.eventCode, id: match.id },
             });
             console.info(
-                `[match-modal] loaded full scores event=${match.eventCode} match=${match.id} ms=${Math.round(
-                    performance.now() - startMs
-                )}`
+                `[match-modal] loaded full scores event=${match.eventCode} match=${
+                    match.id
+                } ms=${Math.round(performance.now() - startMs)}`
             );
             return res.data.eventByCode?.matches[0] ?? null;
         } catch (cause) {
@@ -131,7 +127,11 @@
     }
 
     async function show(match: FullMatchFragment) {
-        let full = hasFullScores(match) ? match : await loadFullMatch(match);
+        let full =
+            matches.find(
+                (m) =>
+                    m.season == match.season && m.eventCode == match.eventCode && m.id == match.id
+            ) ?? (await loadFullMatch(match));
         if (!full) return;
         modalMatch = full;
         $modalMatchId = [match.eventCode, match.id];
@@ -186,10 +186,16 @@
                     <SectionRow name={"Playoffs"}>
                         {#if bracketAvailable}
                             <div class="view-toggle">
-                                <button class:active={!bracketView} on:click={() => (bracketView = false)}>
+                                <button
+                                    class:active={!bracketView}
+                                    on:click={() => (bracketView = false)}
+                                >
                                     List
                                 </button>
-                                <button class:active={bracketView} on:click={() => (bracketView = true)}>
+                                <button
+                                    class:active={bracketView}
+                                    on:click={() => (bracketView = true)}
+                                >
                                     Bracket
                                 </button>
                             </div>
