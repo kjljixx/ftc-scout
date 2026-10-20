@@ -73,7 +73,7 @@ The server (`packages/server/src/graphql/resolvers/Timestamper.ts`) exposes:
 ## Known limits
 
 - Fully run on the Pennsylvania Championship (Days 1 and 2) and one Michiana division day. Frames from Niagara and Worlds VODs were only sampled.
-- Match labels "Qualification N" and "Playoff Match N" are mapped to match ids. Practice labels are skipped. Worlds Finale labels ("da Vinci Match N", "Finals N"), replays and 2-team finals are not handled yet.
+- Match labels "Qualification N" and "Playoff Match N" are mapped to match ids. Practice labels are skipped. Finals-division labels are read only as "da Vinci Match N" and "da Vinci Finals N" (other field names are not accepted); replays and 2-team finals are not handled yet.
 - Hard-coded to the 360p format (YouTube format ID 134), the DECODE-season scoreboard icons and an 8 s transition.
 - Without match times (full read), a match seen in only one frame has no cross-check and a match with no readable frame is missing.
 - The wall start assumes the video is a continuous recording of the event, and that the video belongs to the event code given. It does not check this. A cut or restarted stream, a wrong event or video, a misread anchor label, or a match played while the stream was off (or on a field the stream did not show) all give wrong predicted times with no warning.

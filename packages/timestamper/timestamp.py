@@ -11,7 +11,7 @@ MATCH_CLOCK_S = 150
 OUTLIER_S = 5
 PROCESS_WORKERS = 8
 DEFAULT_STEP_S = 120
-COUNT_KEYS = ["frames", "no_frame", "no_icon", "no_clock", "no_label", "unparsed", "practice", "used"]
+COUNT_KEYS = ["frames", "no_frame", "no_icon", "no_clock", "no_label", "unparsed", "practice", "wrong_kind", "used"]
 
 
 def match_start_s(frame_time_s, phase, clock_s):
@@ -41,7 +41,7 @@ def hms(seconds):
   return f"{seconds // 3600}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
 
 
-def process_frame(time_s, frame):
+def process_frame(time_s, frame, labels):
   if frame is None:
     return "no_frame", None
   with timer.time("locate_icon"):
@@ -56,7 +56,7 @@ def process_frame(time_s, frame):
     label = label_getter.read_label(frame, icon)
   if not label:
     return "no_label", None
-  outcome, key, description = match_resolver.resolve_label(label)
+  outcome, key, description = match_resolver.resolve_label(label, labels)
   if outcome == "unparsed":
     print(f"warn unparsed label {label!r} at {time_s:.0f}s", flush=True)
   if outcome != "ok":
@@ -69,8 +69,8 @@ def spread_order(times):
   return [times[i] for i in sorted(range(len(times)), key=lambda i: int(format(i, f"0{bits}b")[::-1], 2))]
 
 
-def read_frames(pool, frames, counts, readings):
-  for outcome, reading in pool.map(lambda frame_args: process_frame(*frame_args), frames):
+def read_frames(pool, frames, counts, readings, labels):
+  for outcome, reading in pool.map(lambda frame_args: process_frame(*frame_args, labels), frames):
     counts["frames"] += 1
     counts[outcome] += 1
     if outcome == "used":
@@ -82,7 +82,7 @@ def full_sweep(video_id, step_s):
   readings = []
   frames = timer.iterate("wait_for_frame", frame_fetcher.fetch_frames(video_id, step_s))
   with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
-    read_frames(pool, frames, counts, readings)
+    read_frames(pool, frames, counts, readings, match_resolver.LabelContext())
   with timer.time("merge"):
     return merge(readings), counts
 
@@ -91,7 +91,14 @@ class NoAnchorError(Exception):
   pass
 
 
-def anchor_video(video_id, step_s, matches):
+def wrong_kind_note(counts, labels):
+  if not counts["wrong_kind"]:
+    return ""
+  shown = "division-style 'Playoff Match'" if labels.is_finals_event else "finals-style"
+  return f" ({counts['wrong_kind']} frames showed {shown} labels, which this event does not use)"
+
+
+def anchor_video(video_id, step_s, matches, labels):
   counts = dict.fromkeys(COUNT_KEYS, 0)
   readings = []
   actual_by_id = dict(matches)
@@ -99,13 +106,13 @@ def anchor_video(video_id, step_s, matches):
   times = spread_order(list(range(0, int(source.duration_s), step_s)))
   with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
     for batch in frame_fetcher.fetch_frame_batches(source, times):
-      read_frames(pool, batch, counts, readings)
+      read_frames(pool, batch, counts, readings, labels)
       anchors = [(actual_by_id[m["match_id"]], m["start_s"]) for m in merge(readings) if m["match_id"] in actual_by_id]
       if anchors:
         wall_start_s, residuals = predict.estimate_wall_start(anchors)
         print(f"anchor found: {len(anchors)} match(es) read from {counts['frames']} frames, wall start spread {max(residuals) - min(residuals):.1f}s", flush=True)
         return {"wall_start_s": wall_start_s, "duration_s": None if source.is_live else source.duration_s, "counts": counts}
-  raise NoAnchorError(f"None of the {counts['frames']} frames read showed a match that has a start time in the database")
+  raise NoAnchorError(f"None of the {counts['frames']} frames read showed a match that has a start time in the database{wrong_kind_note(counts, labels)}")
 
 
 def main():
@@ -114,6 +121,7 @@ def main():
   parser.add_argument("--step", type=int, default=DEFAULT_STEP_S)
   parser.add_argument("--event", help="event code: find the video's wall start from one match and list the event's matches inside it")
   parser.add_argument("--season", type=int, default=2025)
+  parser.add_argument("--finals", action="store_true", help="the event is a finals division (labels like 'da Vinci Match 3' and 'Finals 1')")
   args = parser.parse_args()
   print(f"config video={args.video_id} step={args.step}s transition={TRANSITION_S}s outlier={OUTLIER_S}s process_workers={PROCESS_WORKERS} event={args.event}", flush=True)
 
@@ -121,8 +129,10 @@ def main():
   if args.event:
     import event_matches
     matches = event_matches.load_event_matches(event_matches.connect(), args.season, args.event)
-    print(f"loaded {len(matches)} matches with an actual start time for {args.event}", flush=True)
-    anchor = anchor_video(args.video_id, args.step, matches)
+    finals_series = event_matches.load_finals_series(event_matches.connect(), args.season, args.event) if args.finals else None
+    labels = match_resolver.LabelContext(args.finals, finals_series)
+    print(f"loaded {len(matches)} matches with an actual start time for {args.event} finals_event={args.finals} finals_series={finals_series}", flush=True)
+    anchor = anchor_video(args.video_id, args.step, matches, labels)
     visible = predict.predict_offsets(matches, anchor["wall_start_s"], anchor["duration_s"])
     for match_id, offset_s in visible:
       print(f"{match_resolver.describe_match_id(match_id):<12}{hms(offset_s):>9}")

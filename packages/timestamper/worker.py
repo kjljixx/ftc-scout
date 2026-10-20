@@ -2,7 +2,7 @@ import argparse, os, signal, threading, time, traceback
 from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
-import event_matches, live_status, predict, timestamp
+import event_matches, live_status, match_resolver, predict, timestamp
 
 POLL_INTERVAL_S = 1
 LIVE_CHECK_INTERVAL_S = 30
@@ -13,7 +13,7 @@ REQUEUE_ORPHANED_SQL = "UPDATE timestamp_job SET status = 'Queued', started_at =
 CLAIM_JOB_SQL = """
   UPDATE timestamp_job SET status = 'Running', started_at = now()
   WHERE id = (SELECT id FROM timestamp_job WHERE status = 'Queued' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
-  RETURNING id, season, event_code, video_id
+  RETURNING id, season, event_code, video_id, is_finals_event
 """
 SAVE_VIDEO_SQL = """
   INSERT INTO event_video (season, event_code, video_id, wall_start, duration_s)
@@ -36,12 +36,14 @@ def request_stop(signum, frame):
 
 
 def run_job(conn, job):
-  job_id, season, event_code, video_id = job
+  job_id, season, event_code, video_id, is_finals_event = job
   began = time.time()
-  print(f"job {job_id} started: season={season} event={event_code} video={video_id}", flush=True)
   try:
+    finals_series = event_matches.load_finals_series(conn, season, event_code) if is_finals_event else None
+    labels = match_resolver.LabelContext(is_finals_event, finals_series)
+    print(f"job {job_id} started: season={season} event={event_code} video={video_id} finals_event={is_finals_event} finals_series={finals_series}", flush=True)
     event_match_times = event_matches.load_event_matches(conn, season, event_code)
-    anchor = timestamp.anchor_video(video_id, timestamp.DEFAULT_STEP_S, event_match_times)
+    anchor = timestamp.anchor_video(video_id, timestamp.DEFAULT_STEP_S, event_match_times, labels)
   except Exception as error:
     print(f"job {job_id} FAILED after {time.time() - began:.1f}s:", flush=True)
     print(traceback.format_exc(), flush=True)

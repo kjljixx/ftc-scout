@@ -1,5 +1,6 @@
 import {
     BaseEntity,
+    Brackets,
     Column,
     CreateDateColumn,
     DeepPartial,
@@ -107,6 +108,23 @@ export class Event extends BaseEntity {
 
     @UpdateDateColumn({ type: "timestamptz" })
     updatedAt!: Date;
+
+    static relatedTo(event: Event): Promise<Event[]> {
+        return Event.createQueryBuilder("e")
+            .where("e.season = :season", { season: event.season })
+            .andWhere("e.code <> :code", { code: event.code })
+            .andWhere(
+                new Brackets((qb) => {
+                    if (event.divisionCode) {
+                        qb.orWhere("e.code = :divCode", {
+                            divCode: event.divisionCode,
+                        }).orWhere("e.divisionCode = :divCode");
+                    }
+                    qb.orWhere("e.divisionCode = :code");
+                })
+            )
+            .getMany();
+    }
 
     static fromApi(api: EventFtcApi, season: Season): Event | null {
         let type = eventTypeFromFtcApi(api.typeName ?? "");

@@ -27,21 +27,15 @@
             <TimestampStatus {toast} />
             {#if toast.failure}
                 <p class="error">{toast.failure}</p>
-                {#if toast.hasDivisions}
-                    <p class="error">
-                        Paste a livestream link on one of this event's division pages instead.
-                    </p>
-                {:else}
-                    <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
-                        <input
-                            type="text"
-                            bind:value={link}
-                            placeholder="Paste a YouTube livestream link"
-                            aria-label="YouTube livestream link"
-                        />
-                        <button type="submit">Try</button>
-                    </form>
-                {/if}
+                <form class="link" on:submit|preventDefault={() => submitLivestreamLink(link)}>
+                    <input
+                        type="text"
+                        bind:value={link}
+                        placeholder="Paste a YouTube livestream link"
+                        aria-label="YouTube livestream link"
+                    />
+                    <button type="submit">Try</button>
+                </form>
             {/if}
         </div>
     {/if}

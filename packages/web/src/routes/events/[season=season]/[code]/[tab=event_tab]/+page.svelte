@@ -1,7 +1,7 @@
 <script lang="ts">
     import RelatedEvents from "./RelatedEvents.svelte";
 
-    import { DESCRIPTORS, Season, notEmpty, longestCommonPrefix } from "@ftc-scout/common";
+    import { DESCRIPTORS, Season, notEmpty, isFinalsDivision } from "@ftc-scout/common";
     import ErrorPage from "$lib/components/ErrorPage.svelte";
     import Loading from "$lib/components/Loading.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
@@ -252,21 +252,19 @@
         showAllLivestreams = false;
     }
 
-    $: isFinalsDivision = (() => {
-        if (!event || !event.relatedEvents || event.relatedEvents.length === 0) return false;
-        const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
-        const prefix = longestCommonPrefix(names);
-        const sliced = event.name.slice(prefix.length).trim().replace(/\-\s*/, "");
-        const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
-        return mappedName === "Finals Division";
-    })();
+    $: isEventFinalsDivision =
+        !!event &&
+        isFinalsDivision(
+            event.name,
+            (event.relatedEvents ?? []).map((re) => re.name)
+        );
 
     async function clearTimestamps() {
         await clearEventTimestamps(season, event.code);
         await invalidateAll();
     }
 
-    $: matchTableTeams = isFinalsDivision
+    $: matchTableTeams = isEventFinalsDivision
         ? (event?.relatedEvents ?? []).flatMap((re) =>
               (re.teams ?? []).map((t) => ({
                   ...t,
@@ -422,7 +420,7 @@
                 [faChartLine, "Preview", "preview", !radarMode && shouldShowPreviewTab],
                 [faBolt, "Matches", "matches", !radarMode && (event?.matches?.length ?? 0) > 0],
                 [faTrophy, "Rankings", "rankings", !!stats.length],
-                [faList, "Picklist", "picklist", !radarMode && !!event.teams.length && !isFinalsDivision],
+                [faList, "Picklist", "picklist", !radarMode && !!event.teams.length && !isEventFinalsDivision],
                 [faLightbulb, "Insights", "insights", !radarMode && !!insights.length],
                 [faMedal, "Awards", "awards", !radarMode && (event?.awards?.length ?? 0) > 0],
                 [faHashtag, `Teams (${event.teams.length})`, "teams", !radarMode && !!event.teams.length],

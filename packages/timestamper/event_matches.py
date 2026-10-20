@@ -10,6 +10,13 @@ LOAD_MATCHES_SQL = """
 """
 
 
+FINALS_SERIES_SQL = """
+  SELECT max(series)
+  FROM match
+  WHERE event_season = %s AND event_code = %s AND tournament_level = 'DoubleElim'
+"""
+
+
 def connect():
   load_dotenv(Path(__file__).resolve().parent.parent / "server" / ".env")
   return psycopg.connect(os.environ["DATABASE_URL"], autocommit=True)
@@ -17,3 +24,7 @@ def connect():
 
 def load_event_matches(conn, season, event_code):
   return [(match_id, float(actual_s)) for match_id, actual_s in conn.execute(LOAD_MATCHES_SQL, (season, event_code)).fetchall()]
+
+
+def load_finals_series(conn, season, event_code):
+  return conn.execute(FINALS_SERIES_SQL, (season, event_code)).fetchone()[0]

@@ -23,6 +23,9 @@ export class TimestampJob extends BaseEntity {
     @Column()
     videoId!: string;
 
+    @Column("boolean", { default: false })
+    isFinalsEvent!: boolean;
+
     @Index()
     @Column("enum", {
         enum: TimestampJobStatus,

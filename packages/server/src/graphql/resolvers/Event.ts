@@ -34,7 +34,7 @@ import { TeamEventParticipation } from "../../db/entities/dyn/team-event-partici
 import { LocationGQL } from "../objs/Location";
 import { DateTime } from "luxon";
 import { DATA_SOURCE } from "../../db/data-source";
-import { Brackets, In } from "typeorm";
+import { In } from "typeorm";
 import { newMatchesKey, pubsub } from "./pubsub";
 import { TepStatsUnionGQL } from "../dyn/dyn-types-schema";
 import { addTypename } from "../dyn/tep";
@@ -121,22 +121,7 @@ export const EventGQL: GraphQLObjectType = new GraphQLObjectType({
 
         relatedEvents: {
             type: list(nn(EventGQL)),
-            resolve: (e) =>
-                DATA_SOURCE.getRepository(Event)
-                    .createQueryBuilder("e")
-                    .where("e.season = :season", { season: e.season })
-                    .andWhere("e.code <> :code", { code: e.code })
-                    .andWhere(
-                        new Brackets((qb) => {
-                            if (e.divisionCode) {
-                                qb.orWhere("e.code = :divCode", {
-                                    divCode: e.divisionCode,
-                                }).orWhere("e.divisionCode = :divCode");
-                            }
-                            qb.orWhere("e.divisionCode = :code");
-                        })
-                    )
-                    .getMany(),
+            resolve: (e) => Event.relatedTo(e),
         },
 
         awards: {

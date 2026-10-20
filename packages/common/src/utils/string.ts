@@ -11,3 +11,11 @@ export function longestCommonPrefix(words: string[]): string {
 
     return words[0].slice(0, i);
 }
+
+export function isFinalsDivision(eventName: string, relatedEventNames: string[]): boolean {
+    if (relatedEventNames.length === 0) return false;
+
+    let prefix = longestCommonPrefix([eventName, ...relatedEventNames]);
+    let remainder = eventName.slice(prefix.length).trim().replace(/\-\s*/, "");
+    return remainder.length === 0 || remainder === "Finals Division";
+}

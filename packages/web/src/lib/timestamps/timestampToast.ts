@@ -13,7 +13,7 @@ import {
 
 export const LIVESTREAM_VIDEOS_CTX = {};
 export type VideoRef = { eventCode: string; videoId: string };
-export type KnownVideos = { videos: VideoRef[]; hasDivisions: boolean };
+export type KnownVideos = { videos: VideoRef[] };
 export type LivestreamVideos = KnownVideos & { eventCode: string };
 
 export type TimestampToast = {
@@ -24,7 +24,6 @@ export type TimestampToast = {
     readyUrl: string | null;
     readyStartSeconds: number | null;
     failure: string | null;
-    hasDivisions: boolean;
     minimized: boolean;
 };
 
@@ -97,10 +96,7 @@ type EventStreams = {
 export function eventKnownVideos(
     event: EventStreams & { relatedEvents?: (EventStreams & { divisionCode?: string | null })[] | null }
 ): KnownVideos {
-    return {
-        videos: eventVideoRefs(event),
-        hasDivisions: (event.relatedEvents ?? []).some((e) => e.divisionCode == event.code),
-    };
+    return { videos: eventVideoRefs(event) };
 }
 
 export function eventVideoRefs(
@@ -121,7 +117,7 @@ async function loadKnownVideos(match: FullMatchFragment): Promise<KnownVideos> {
         query: EventLivestreamsDocument,
         variables: { season: match.season, code: match.eventCode },
     });
-    return data.eventByCode ? eventKnownVideos(data.eventByCode) : { videos: [], hasDivisions: false };
+    return data.eventByCode ? eventKnownVideos(data.eventByCode) : { videos: [] };
 }
 
 export function requestMatchTimestamp(match: FullMatchFragment, known?: KnownVideos) {
@@ -135,7 +131,6 @@ export function requestMatchTimestamp(match: FullMatchFragment, known?: KnownVid
         readyUrl: null,
         readyStartSeconds: null,
         failure: null,
-        hasDivisions: known?.hasDivisions ?? false,
         minimized: false,
     });
     startRun(run, match, known).catch((error) => {
@@ -144,9 +139,8 @@ export function requestMatchTimestamp(match: FullMatchFragment, known?: KnownVid
 }
 
 async function startRun(run: number, match: FullMatchFragment, known?: KnownVideos) {
-    let { videos, hasDivisions } = known ?? (await loadKnownVideos(match));
+    let { videos } = known ?? (await loadKnownVideos(match));
     if (run != currentRun) return;
-    timestampToast.update((t) => (t ? { ...t, hasDivisions } : t));
     if (videos.length == 0) {
         failWith(run, "No livestream is listed for this event.");
         return;
@@ -163,7 +157,6 @@ export function submitLivestreamLink(link: string) {
     }
     if (retryMatch) requestMatchTimestamp(retryMatch, {
             videos: [{ eventCode: retryMatch.eventCode, videoId }],
-            hasDivisions: false,
         });
 }
 

@@ -1,5 +1,15 @@
 import { GraphQLFieldConfig, GraphQLObjectType } from "graphql";
-import { DateTimeTy, IntTy, Season, StrTy, list, makeGQLEnum, nn, nullTy } from "@ftc-scout/common";
+import {
+    DateTimeTy,
+    IntTy,
+    Season,
+    StrTy,
+    isFinalsDivision,
+    list,
+    makeGQLEnum,
+    nn,
+    nullTy,
+} from "@ftc-scout/common";
 import { Event } from "../../db/entities/Event";
 import { EventVideo } from "../../db/entities/EventVideo";
 import { TimestampJob, TimestampJobStatus } from "../../db/entities/TimestampJob";
@@ -119,9 +129,8 @@ export const TimestamperMutations: Record<string, GraphQLFieldConfig<any, any>> 
             { season, eventCode, videoId }: { season: Season; eventCode: string; videoId: string }
         ) => {
             if (!VIDEO_ID_PATTERN.test(videoId)) throw new Error(`Invalid YouTube video id: ${videoId}`);
-            if (!(await Event.findOneBy({ season, code: eventCode }))) {
-                throw new Error(`No event ${eventCode} in season ${season}.`);
-            }
+            let event = await Event.findOneBy({ season, code: eventCode });
+            if (!event) throw new Error(`No event ${eventCode} in season ${season}.`);
 
             let latestJob = await TimestampJob.findOne({
                 where: { season, eventCode, videoId },
@@ -133,7 +142,12 @@ export const TimestamperMutations: Record<string, GraphQLFieldConfig<any, any>> 
             let queuedJobs = await TimestampJob.countBy({ status: TimestampJobStatus.Queued });
             if (queuedJobs >= MAX_QUEUED_JOBS) throw new Error("Too many timestamp jobs are waiting. Try again later.");
 
-            return TimestampJob.create({ season, eventCode, videoId }).save();
+            let relatedEvents = await Event.relatedTo(event);
+            let isFinalsEvent = isFinalsDivision(
+                event.name,
+                relatedEvents.map((related) => related.name)
+            );
+            return TimestampJob.create({ season, eventCode, videoId, isFinalsEvent }).save();
         },
     },
     clearTimestamps: {

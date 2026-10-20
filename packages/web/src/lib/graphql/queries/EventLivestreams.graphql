@@ -8,6 +8,7 @@ query EventLivestreams($season: Int!, $code: String!) {
             liveStreamURL
         }
         relatedEvents {
+            season
             code
             divisionCode
             liveStreamURL

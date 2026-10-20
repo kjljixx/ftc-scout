@@ -28,7 +28,7 @@
         CURRENT_SEASON,
         DESCRIPTORS,
         type Season,
-        longestCommonPrefix,
+        isFinalsDivision,
     } from "@ftc-scout/common";
     import Award from "$lib/components/Award.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
@@ -378,20 +378,12 @@
                                 ))}
                         {@const href = `/events/${event.season}/${event.code}/matches`}
 
-                        {@const isFinalsDivision = (() => {
-                            if (!event || !event.relatedEvents || event.relatedEvents.length === 0)
-                                return false;
-                            const names = [event.name, ...event.relatedEvents.map((re) => re.name)];
-                            const prefix = longestCommonPrefix(names);
-                            const sliced = event.name
-                                .slice(prefix.length)
-                                .trim()
-                                .replace(/\-\s*/, "");
-                            const mappedName = sliced.length === 0 ? "Finals Division" : sliced;
-                            return mappedName === "Finals Division";
-                        })()}
+                        {@const isEventFinalsDivision = isFinalsDivision(
+                            event.name,
+                            (event.relatedEvents ?? []).map((re) => re.name)
+                        )}
 
-                        {@const matchTableTeams = isFinalsDivision
+                        {@const matchTableTeams = isEventFinalsDivision
                             ? (event.relatedEvents ?? []).flatMap((re) =>
                                   (re.teams ?? []).map((t) => ({
                                       ...t,
