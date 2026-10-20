@@ -1,7 +1,7 @@
 import argparse, statistics, time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-import clock_getter, frame_fetcher, icon_locator, label_getter, match_resolver, predict
+import clock_getter, frame_fetcher, icon_locator, label_getter, match_resolver, predict, youtube_info
 from stage_timer import timer
 
 AUTO_S = 30
@@ -11,6 +11,8 @@ MATCH_CLOCK_S = 150
 OUTLIER_S = 5
 PROCESS_WORKERS = 8
 DEFAULT_STEP_S = 120
+TARGET_COUNT = 3
+SAMPLE_AFTER_START_S = 25
 COUNT_KEYS = ["frames", "no_frame", "no_icon", "no_clock", "no_label", "unparsed", "practice", "wrong_kind", "used"]
 
 
@@ -64,11 +66,6 @@ def process_frame(time_s, frame, labels):
   return "used", (key, description, match_start_s(time_s, icon["phase"], clock_s))
 
 
-def spread_order(times):
-  bits = max(1, (len(times) - 1).bit_length())
-  return [times[i] for i in sorted(range(len(times)), key=lambda i: int(format(i, f"0{bits}b")[::-1], 2))]
-
-
 def read_frames(pool, frames, counts, readings, labels):
   for outcome, reading in pool.map(lambda frame_args: process_frame(*frame_args, labels), frames):
     counts["frames"] += 1
@@ -87,10 +84,6 @@ def full_sweep(video_id, step_s):
     return merge(readings), counts
 
 
-class NoAnchorError(Exception):
-  pass
-
-
 def wrong_kind_note(counts, labels):
   if not counts["wrong_kind"]:
     return ""
@@ -98,21 +91,37 @@ def wrong_kind_note(counts, labels):
   return f" ({counts['wrong_kind']} frames showed {shown} labels, which this event does not use)"
 
 
-def anchor_video(video_id, step_s, matches, labels):
+def target_sample_times(matches, wall_start_s, duration_s):
+  visible = predict.predict_offsets(matches, wall_start_s, duration_s)
+  if not visible:
+    return []
+  indexes = sorted({int(len(visible) * (i + 1) / (TARGET_COUNT + 1)) for i in range(TARGET_COUNT)})
+  return [visible[i][1] + SAMPLE_AFTER_START_S for i in indexes]
+
+
+def anchor_video(video_id, matches, labels):
   counts = dict.fromkeys(COUNT_KEYS, 0)
   readings = []
   actual_by_id = dict(matches)
-  source = frame_fetcher.open_source(video_id)
-  times = spread_order(list(range(0, int(source.duration_s), step_s)))
+  with ThreadPoolExecutor(1) as pool:
+    youtube_start = pool.submit(youtube_info.fetch_start_s, video_id)
+    source = frame_fetcher.open_source(video_id)
+    youtube_start_s = youtube_start.result()
+  times = target_sample_times(matches, youtube_start_s, source.duration_s)
+  print(f"targets: {len(times)} frame(s) at {[hms(t) for t in times]} from youtube start {youtube_start_s:.0f}", flush=True)
   with ThreadPoolExecutor(PROCESS_WORKERS) as pool:
     for batch in frame_fetcher.fetch_frame_batches(source, times):
       read_frames(pool, batch, counts, readings, labels)
-      anchors = [(actual_by_id[m["match_id"]], m["start_s"]) for m in merge(readings) if m["match_id"] in actual_by_id]
-      if anchors:
-        wall_start_s, residuals = predict.estimate_wall_start(anchors)
-        print(f"anchor found: {len(anchors)} match(es) read from {counts['frames']} frames, wall start spread {max(residuals) - min(residuals):.1f}s", flush=True)
-        return {"wall_start_s": wall_start_s, "duration_s": None if source.is_live else source.duration_s, "counts": counts}
-  raise NoAnchorError(f"None of the {counts['frames']} frames read showed a match that has a start time in the database{wrong_kind_note(counts, labels)}")
+  anchors = [(actual_by_id[key], start_s) for key, _, start_s in readings if key in actual_by_id]
+  if anchors:
+    wall_start_s, _ = predict.estimate_wall_start(anchors[:1])
+    wall_start_source = "label"
+    print(f"anchor found: first of {len(anchors)} match(es) read from {counts['frames']} frames; label wall start is {wall_start_s - youtube_start_s:+.1f}s from youtube", flush=True)
+  else:
+    wall_start_s = youtube_start_s
+    wall_start_source = "youtube"
+    print(f"warn no target frame showed a match with a start time in the database; using the youtube start time{wrong_kind_note(counts, labels)}", flush=True)
+  return {"wall_start_s": wall_start_s, "duration_s": None if source.is_live else source.duration_s, "counts": counts, "wall_start_source": wall_start_source}
 
 
 def main():
@@ -132,11 +141,11 @@ def main():
     finals_series = event_matches.load_finals_series(event_matches.connect(), args.season, args.event) if args.finals else None
     labels = match_resolver.LabelContext(args.finals, finals_series)
     print(f"loaded {len(matches)} matches with an actual start time for {args.event} finals_event={args.finals} finals_series={finals_series}", flush=True)
-    anchor = anchor_video(args.video_id, args.step, matches, labels)
+    anchor = anchor_video(args.video_id, matches, labels)
     visible = predict.predict_offsets(matches, anchor["wall_start_s"], anchor["duration_s"])
     for match_id, offset_s in visible:
       print(f"{match_resolver.describe_match_id(match_id):<12}{hms(offset_s):>9}")
-    print(f"summary {anchor['counts']} wall_start={anchor['wall_start_s']:.0f} matches_in_video={len(visible)} wall={time.time() - began:.1f}s", flush=True)
+    print(f"summary {anchor['counts']} wall_start={anchor['wall_start_s']:.0f} wall_start_source={anchor['wall_start_source']} matches_in_video={len(visible)} wall={time.time() - began:.1f}s", flush=True)
   else:
     results, counts = full_sweep(args.video_id, args.step)
     print(f"{'match':<28}{'start':>9}{'frames':>8}{'agree':>7}{'spread':>8}")

@@ -43,7 +43,7 @@ def run_job(conn, job):
     labels = match_resolver.LabelContext(is_finals_event, finals_series)
     print(f"job {job_id} started: season={season} event={event_code} video={video_id} finals_event={is_finals_event} finals_series={finals_series}", flush=True)
     event_match_times = event_matches.load_event_matches(conn, season, event_code)
-    anchor = timestamp.anchor_video(video_id, timestamp.DEFAULT_STEP_S, event_match_times, labels)
+    anchor = timestamp.anchor_video(video_id, event_match_times, labels)
   except Exception as error:
     print(f"job {job_id} FAILED after {time.time() - began:.1f}s:", flush=True)
     print(traceback.format_exc(), flush=True)
@@ -54,7 +54,7 @@ def run_job(conn, job):
   with conn.transaction():
     conn.execute(SAVE_VIDEO_SQL, (season, event_code, video_id, wall_start_s, duration_s))
     conn.execute(FINISH_JOB_SQL, (matches_in_video, job_id))
-  print(f"job {job_id} done in {time.time() - began:.1f}s: matches_in_video={matches_in_video} counts={anchor['counts']}", flush=True)
+  print(f"job {job_id} done in {time.time() - began:.1f}s: matches_in_video={matches_in_video} wall_start_source={anchor['wall_start_source']} counts={anchor['counts']}", flush=True)
 
 
 def check_live_videos(conn):
@@ -109,7 +109,7 @@ def main():
   load_dotenv(Path(__file__).resolve().parent.parent / "server" / ".env")
   database_url = os.environ["DATABASE_URL"]
   info = psycopg.conninfo.conninfo_to_dict(database_url)
-  print(f"config db={info.get('dbname')}@{info.get('host')}:{info.get('port')} poll_interval={POLL_INTERVAL_S}s once={args.once} step={timestamp.DEFAULT_STEP_S}s", flush=True)
+  print(f"config db={info.get('dbname')}@{info.get('host')}:{info.get('port')} poll_interval={POLL_INTERVAL_S}s once={args.once} targets={timestamp.TARGET_COUNT} sample_after_start={timestamp.SAMPLE_AFTER_START_S}s", flush=True)
   signal.signal(signal.SIGINT, request_stop)
   signal.signal(signal.SIGTERM, request_stop)
   threading.Thread(target=watch_live_videos, args=(database_url,), daemon=True).start()

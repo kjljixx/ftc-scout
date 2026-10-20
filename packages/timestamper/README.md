@@ -16,13 +16,15 @@ Finds the start time of each match in a YouTube livestream VOD of an FTC event.
 
 The worker needs the event's matches and their `actual_start_time` values. It does not read every match:
 
-1. It reads frames in a spread-out order (coarse to fine), 8 at a time in parallel, and stops after the first batch in which at least one match that is in the database list has been read (an "anchor").
-2. For each anchor, `wall_start = actual_start_time − position in the video` (the real-world time at which the video began). It takes the median over the anchors found in that batch.
-3. It saves one row in `event_video`: the season, event code, video id, `wall_start`, and the video length (`NULL` while the video is a live stream). It saves no per-match rows.
+1. `youtube_info.py` asks YouTube's player API for the live broadcast start time (`liveBroadcastDetails.startTimestamp`). It runs in a thread while yt-dlp resolves the stream. If YouTube gives no start time, the job fails.
+2. With that start time as a first guess, it predicts where each match is in the video and picks 3 matches (`TARGET_COUNT`) at about the 25%, 50% and 75% points. It reads one frame per target, `SAMPLE_AFTER_START_S` (25 s) after the predicted match start, in one parallel batch.
+3. The first frame that shows a match from the database list (an "anchor") sets `wall_start = actual_start_time − position in the video` (the real-world time at which the video began). There is no median over anchors.
+4. If no target frame shows such a match, `wall_start` is YouTube's start time as it is (`wall_start_source=youtube`). There is no scan of the whole video.
+5. It saves one row in `event_video`: the season, event code, video id, `wall_start`, and the video length (`NULL` while the video is a live stream). It saves no per-match rows.
 
 The server computes a match's link when it is asked for: `position = match.actual_start_time − wall_start`. The video qualifies if `0 <= position <= length − 30`. For a live stream the length is `now − wall_start`. Matches outside the video (other days, other videos) get no link.
 
-There is no check on the anchors. If no frame shows a match from the database list, the job fails.
+A frame 25 s after the predicted start is usually in the autonomous phase. On some streams the clock formula for that phase is about 7 s early (seen on a Worlds division stream). When the YouTube start time is used, there is no check on it.
 
 ## Usage
 
@@ -32,7 +34,7 @@ python timestamp.py <youtube_video_id> [--step 120] [--event <event_code> [--sea
 
 With `--event` the script loads that event's match times from the database, finds the anchor, and lists the matches inside the video. Without it every match is read from frames (a full read, for checking only). The video must belong to one event (for a division event, one division); the caller decides which event the ids refer to.
 
-From Python, call `timestamp.anchor_video(video_id, step_s, matches)`. `matches` is a list of `(match_id, actual_start_epoch_seconds)` (see `event_matches.load_event_matches`). It returns `wall_start_s`, `duration_s` and the frame outcome counts, or raises `NoAnchorError`.
+From Python, call `timestamp.anchor_video(video_id, matches, labels)`. `matches` is a list of `(match_id, actual_start_epoch_seconds)` (see `event_matches.load_event_matches`). It returns `wall_start_s`, `duration_s`, the frame outcome counts and `wall_start_source` (`label` or `youtube`).
 
 The pause between autonomous and teleop is fixed at 8 s (`TRANSITION_S` in `timestamp.py`).
 
