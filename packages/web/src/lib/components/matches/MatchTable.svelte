@@ -76,7 +76,9 @@
         event.allianceCount || allianceCountFromSeries(allMatches.length ? allMatches : matches);
     $: teamCount = allianceCount > 6 ? 41 : allianceCount > 4 ? 40 : allianceCount > 0 ? 20 : 0;
 
-    $: seeds = allianceSeeds(allMatches.length ? allMatches : matches, allianceCount);
+    $: seeds = bracketLoading
+        ? new Map()
+        : allianceSeeds(allMatches.length ? allMatches : matches, allianceCount);
     $: bracketLayout = bracketLayoutFor(allianceCount);
     $: bracketMatches = allMatches.filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim);
     $: bracketAvailable = !remote && !!bracketLayout && bracketMatches.length > 0;
