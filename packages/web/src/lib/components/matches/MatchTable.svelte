@@ -80,6 +80,7 @@
     $: bracketLayout = bracketLayoutFor(allianceCount);
     $: bracketMatches = allMatches.filter((m) => m.tournamentLevel == TournamentLevel.DoubleElim);
     $: bracketAvailable = !remote && !!bracketLayout && bracketMatches.length > 0;
+    $: bracketLoading = !remote && allMatches.length == 0;
     let bracketView = false;
     $: showBracket = bracketView && bracketAvailable;
 
@@ -184,7 +185,7 @@
             {:else}
                 {#if doubleElim.length}
                     <SectionRow name={"Playoffs"}>
-                        {#if bracketAvailable}
+                        {#if bracketAvailable || bracketLoading}
                             <div class="view-toggle">
                                 <button
                                     class:active={!bracketView}
@@ -194,6 +195,9 @@
                                 </button>
                                 <button
                                     class:active={bracketView}
+                                    class:loading={bracketLoading}
+                                    disabled={bracketLoading}
+                                    aria-busy={bracketLoading}
                                     on:click={() => (bracketView = true)}
                                 >
                                     Bracket
@@ -394,6 +398,20 @@
         background: var(--sep-color);
         color: var(--text-color);
         font-weight: 600;
+    }
+
+    .view-toggle button.loading,
+    .view-toggle button.loading:hover {
+        background: color-mix(in srgb, var(--grayed-out-text-color) 30%, transparent);
+        font-weight: 500;
+        cursor: default;
+        animation: bracket-pending 1.2s ease-in-out infinite;
+    }
+
+    @keyframes bracket-pending {
+        50% {
+            opacity: 0.4;
+        }
     }
 
     .bracket-row,
