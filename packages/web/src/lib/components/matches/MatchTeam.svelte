@@ -254,12 +254,27 @@
         color: inherit;
     }
 
+    td.benched {
+        width: 0;
+        min-width: 100%;
+    }
+
+    @media (min-width: 641px) {
+        td.benched.red .inner {
+            justify-content: flex-end;
+        }
+    }
+
     td.trad.benched .name {
         order: -1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     td.trad.benched .num {
         order: 0;
+        flex-shrink: 0;
         font-weight: 400;
     }
 
