@@ -19,6 +19,7 @@
     import { page } from "$app/stores";
     import { prettyPrintURL } from "$lib/printers/url";
     import Location from "$lib/components/Location.svelte";
+    import AdditionalInfo from "$lib/components/AdditionalInfo.svelte";
     import { eventSorter } from "$lib/util/sorters";
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
@@ -306,23 +307,25 @@
                         <div class="meta">
                             <div class="meta-line">
                                 <Location {...team.location} />
-                                <span class="sep">&middot;</span>
-                                <span>Rookie year {team.rookieYear}</span>
-                            </div>
-                            <div class="meta-line">
-                                <span>{team.schoolName}</span>
-                                {#if team.sponsors.length}
+                                {#if team.website}
                                     <span class="sep">&middot;</span>
-                                    <span>{team.sponsors.join(", ")}</span>
-                                {/if}
-                            </div>
-                            {#if team.website}
-                                <div class="meta-line">
                                     <a href={team.website} target="_blank" rel="noreferrer">
                                         {prettyPrintURL(team.website)}
                                     </a>
+                                {/if}
+                            </div>
+                            <AdditionalInfo>
+                                <div class="meta-line">
+                                    <span>Rookie year {team.rookieYear}</span>
                                 </div>
-                            {/if}
+                                <div class="meta-line">
+                                    <span>{team.schoolName}</span>
+                                    {#if team.sponsors.length}
+                                        <span class="sep">&middot;</span>
+                                        <span>{team.sponsors.join(", ")}</span>
+                                    {/if}
+                                </div>
+                            </AdditionalInfo>
                         </div>
                     </div>
 
@@ -417,21 +420,25 @@
                                     <Location {...event.location} />
                                 </div>
 
-                                <TeamEventStats
-                                    stats={tep.stats}
-                                    season={toSeason(event.season)}
-                                    remote={event.remote}
-                                />
+                                {#if tep.stats || tep.awards.length}
+                                    <div class="performance">
+                                        <TeamEventStats
+                                            stats={tep.stats}
+                                            season={toSeason(event.season)}
+                                            remote={event.remote}
+                                        />
 
-                                {#if tep.awards.length}
-                                    <div>
-                                        {#each tep.awards as award, i}
-                                            <Award
-                                                {award}
-                                                comma={i != tep.awards.length - 1}
-                                                season={event.season}
-                                            />
-                                        {/each}
+                                        {#if tep.awards.length}
+                                            <div>
+                                                {#each tep.awards as award, i}
+                                                    <Award
+                                                        {award}
+                                                        comma={i != tep.awards.length - 1}
+                                                        season={event.season}
+                                                    />
+                                                {/each}
+                                            </div>
+                                        {/if}
                                     </div>
                                 {/if}
                             </div>
@@ -630,6 +637,13 @@
     .event-head .meta-line {
         font-size: 0.9em;
         color: var(--grayed-out-text-color);
+    }
+
+    .performance {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sm-gap);
+        margin-top: var(--lg-gap);
     }
 
     h3 {

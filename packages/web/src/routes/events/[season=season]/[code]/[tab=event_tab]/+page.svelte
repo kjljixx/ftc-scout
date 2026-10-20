@@ -19,6 +19,7 @@
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import { prettyPrintURL } from "$lib/printers/url";
     import Location from "$lib/components/Location.svelte";
+    import AdditionalInfo from "$lib/components/AdditionalInfo.svelte";
     import TabbedCard from "$lib/components/tabs/TabbedCard.svelte";
     import TabContent from "$lib/components/tabs/TabContent.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
@@ -312,95 +313,97 @@
                 </div>
 
                 {#if event.website || event.livestreamsByDay?.length || event.liveStreamURL}
-                    <div class="meta-line">
-                        {#if event.website}
-                            <a
-                                href={event.website}
-                                target="_blank"
-                                rel="noreferrer"
-                                class="norm-link"
-                            >
-                                {prettyPrintURL(event.website)}
-                            </a>
-                        {/if}
-                        {#if event.website && (event.livestreamsByDay?.length || event.liveStreamURL)}
-                            <span class="sep">&middot;</span>
-                        {/if}
-                        {#if event.livestreamsByDay && event.livestreamsByDay.length > 0}
-                            <div class="livestream-block">
-                                {#if currentDayLivestream}
-                                    <div class="livestream-row">
-                                        {#if currentDayLivestream.liveStreamURL}
-                                            <a
-                                                href={currentDayLivestream.liveStreamURL}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                class="norm-link"
-                                            >
-                                                {prettyPrintURL(currentDayLivestream.liveStreamURL)}
-                                            </a>
-                                        {/if}
-                                        <span class="livestream-day"
-                                            >[{formatLivestreamDay(currentDayLivestream.day)}]</span
-                                        >
-                                        {#if sortedLivestreams.length > 1}
-                                            <button
-                                                class="livestream-inline-toggle"
-                                                type="button"
-                                                on:click={() =>
-                                                    (showAllLivestreams = !showAllLivestreams)}
-                                                aria-expanded={showAllLivestreams}
-                                            >
-                                                {showAllLivestreams ? "Hide" : "Show all"}
-                                            </button>
-                                        {/if}
-                                    </div>
-                                {/if}
-
-                                {#if showAllLivestreams}
-                                    <div class="livestream-list">
-                                        {#each sortedLivestreams as livestream (livestream.day)}
-                                            {@const isCurrentDay =
-                                                getDateOnly(livestream.day).getTime() ===
-                                                todayDateOnly.getTime()}
-                                            {#if !isCurrentDay}
-                                                <div class="livestream-row">
-                                                    {#if livestream.liveStreamURL}
-                                                        <a
-                                                            href={livestream.liveStreamURL}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            class="norm-link"
-                                                        >
-                                                            {prettyPrintURL(
-                                                                livestream.liveStreamURL
-                                                            )}
-                                                        </a>
-                                                    {:else}
-                                                        <span>No livestream URL</span>
-                                                    {/if}
-                                                    <span class="livestream-day"
-                                                        >[{formatLivestreamDay(
-                                                            livestream.day
-                                                        )}]</span
-                                                    >
-                                                </div>
+                    <AdditionalInfo>
+                        <div class="meta-line">
+                            {#if event.website}
+                                <a
+                                    href={event.website}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="norm-link"
+                                >
+                                    {prettyPrintURL(event.website)}
+                                </a>
+                            {/if}
+                            {#if event.website && (event.livestreamsByDay?.length || event.liveStreamURL)}
+                                <span class="sep">&middot;</span>
+                            {/if}
+                            {#if event.livestreamsByDay && event.livestreamsByDay.length > 0}
+                                <div class="livestream-block">
+                                    {#if currentDayLivestream}
+                                        <div class="livestream-row">
+                                            {#if currentDayLivestream.liveStreamURL}
+                                                <a
+                                                    href={currentDayLivestream.liveStreamURL}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="norm-link"
+                                                >
+                                                    {prettyPrintURL(currentDayLivestream.liveStreamURL)}
+                                                </a>
                                             {/if}
-                                        {/each}
-                                    </div>
-                                {/if}
-                            </div>
-                        {:else if event.liveStreamURL}
-                            <a
-                                href={event.liveStreamURL}
-                                target="_blank"
-                                rel="noreferrer"
-                                class="norm-link"
-                            >
-                                {prettyPrintURL(event.liveStreamURL)}
-                            </a>
-                        {/if}
-                    </div>
+                                            <span class="livestream-day"
+                                                >[{formatLivestreamDay(currentDayLivestream.day)}]</span
+                                            >
+                                            {#if sortedLivestreams.length > 1}
+                                                <button
+                                                    class="livestream-inline-toggle"
+                                                    type="button"
+                                                    on:click={() =>
+                                                        (showAllLivestreams = !showAllLivestreams)}
+                                                    aria-expanded={showAllLivestreams}
+                                                >
+                                                    {showAllLivestreams ? "Hide" : "Show all"}
+                                                </button>
+                                            {/if}
+                                        </div>
+                                    {/if}
+
+                                    {#if showAllLivestreams}
+                                        <div class="livestream-list">
+                                            {#each sortedLivestreams as livestream (livestream.day)}
+                                                {@const isCurrentDay =
+                                                    getDateOnly(livestream.day).getTime() ===
+                                                    todayDateOnly.getTime()}
+                                                {#if !isCurrentDay}
+                                                    <div class="livestream-row">
+                                                        {#if livestream.liveStreamURL}
+                                                            <a
+                                                                href={livestream.liveStreamURL}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                class="norm-link"
+                                                            >
+                                                                {prettyPrintURL(
+                                                                    livestream.liveStreamURL
+                                                                )}
+                                                            </a>
+                                                        {:else}
+                                                            <span>No livestream URL</span>
+                                                        {/if}
+                                                        <span class="livestream-day"
+                                                            >[{formatLivestreamDay(
+                                                                livestream.day
+                                                            )}]</span
+                                                        >
+                                                    </div>
+                                                {/if}
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
+                            {:else if event.liveStreamURL}
+                                <a
+                                    href={event.liveStreamURL}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="norm-link"
+                                >
+                                    {prettyPrintURL(event.liveStreamURL)}
+                                </a>
+                            {/if}
+                        </div>
+                    </AdditionalInfo>
                 {/if}
             </div>
         </Card>
