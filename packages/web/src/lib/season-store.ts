@@ -56,7 +56,9 @@ function seasonUrl(season: Season, $page: Page): string | null {
     let routeId = $page.route.id ?? "";
 
     if (routeId == EVENTS_LIST_ROUTE) return `/events/${season}${$page.url.search}`;
-    if (routeId.startsWith(EVENTS_PREFIX)) return `/events/${season}`;
+    if (routeId.startsWith(EVENTS_PREFIX)) {
+        return `/events/${season}/${$page.params.code}/${$page.params.tab}${$page.url.search}`;
+    }
 
     if (routeId.startsWith(RECORDS_PREFIX)) {
         let toKeep = ["region", "type", "filter"];
