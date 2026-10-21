@@ -13,6 +13,7 @@
         faServer,
         faStopwatch,
         faHandHoldingDollar,
+        faUsers,
     } from "@fortawesome/free-solid-svg-icons";
     import { faGithub, faDiscord } from "@fortawesome/free-brands-svg-icons";
     import SidebarItem from "./SidebarItem.svelte";
@@ -21,6 +22,8 @@
     import IconSidebarItem from "./IconSidebarItem.svelte";
     import { EMAIL, DISCORD, STATUS, GITHUB, DONATIONS } from "../../constants";
     import { globalSeason } from "$lib/season-store";
+    import { team, teamModal } from "$lib/team/team-store";
+    import TeamName from "../team/TeamName.svelte";
 </script>
 
 <b>
@@ -35,6 +38,21 @@
 <SidebarItem icon={faHashtag} name="Teams" link="/teams" />
 <SidebarItem icon={faTrophy} name="Season Records" link="/records/{$globalSeason}/teams" />
 <SidebarItem icon={faStopwatch} name="Team Speedrun" link="/speedrun" />
+
+<hr />
+
+<SidebarItem
+    icon={faUsers}
+    name={$team?.name ?? "Create / Join Team"}
+    link={null}
+    on:click={() => ($teamModal = $team ? "team" : "create")}
+>
+    {#if $team}
+        <TeamName name={$team.name} number={$team.teamNumber} numberSize="0.75em" />
+    {:else}
+        Create / Join Team
+    {/if}
+</SidebarItem>
 
 <hr />
 

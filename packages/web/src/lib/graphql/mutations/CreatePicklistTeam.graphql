@@ -1,0 +1,7 @@
+mutation CreatePicklistTeam($teamNumber: Int!) {
+    createPicklistTeam(teamNumber: $teamNumber) {
+        token
+        teamNumber
+        name
+    }
+}

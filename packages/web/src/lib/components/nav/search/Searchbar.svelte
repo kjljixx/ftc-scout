@@ -21,9 +21,12 @@
     import { onMount } from "svelte";
 
     export let disabled = false;
+    export let pickTeam: ((team: TeamsSearchTeamFragment | null) => void) | null = null;
+    export let inputId = "searchbar";
 
     let searchText = "";
     let shown = false;
+    let picked = false;
 
     let loadingSeason: Season | null = null;
     const results = writable<ApolloQueryResult<CombinedSearchQuery> | null>(null);
@@ -78,13 +81,40 @@
     }
 
     function preload() {
-        if (searchResults.length == 0) return;
+        if (pickTeam || searchResults.length == 0) return;
         let r = searchResults[Math.max(0, $focusNum)];
         preloadData(getURL(r));
     }
 
+    function pick(res: FuzzyResult<EventsSearchEventFragment | TeamsSearchTeamFragment>) {
+        let doc = res.document;
+        if (!pickTeam || doc.__typename != "Team") return;
+        picked = true;
+        searchText = `${doc.name} ${doc.number}`;
+        pickTeam(doc);
+    }
+
+    function onResultClick(
+        e: MouseEvent,
+        res: FuzzyResult<EventsSearchEventFragment | TeamsSearchTeamFragment>
+    ) {
+        if (!pickTeam) {
+            searchText = "";
+            return;
+        }
+        e.preventDefault();
+        pick(res);
+    }
+
+    function onInput() {
+        if (!picked) return;
+        picked = false;
+        pickTeam?.(null);
+    }
+
     function submit() {
         if (searchResults.length == 0) return;
+        if (pickTeam) return pick(searchResults[0]);
         goto(getURL(searchResults[0]));
         searchText = "";
     }
@@ -99,26 +129,28 @@
             e.preventDefault();
             $focusNum = Math.max(-1, $focusNum - 1);
         } else if (e.code == "Escape") {
-            document.getElementById("searchbar")?.blur();
+            document.getElementById(inputId)?.blur();
         }
     }
 
     function show() {
         shown = true;
-        setTimeout(() => document.getElementById("searchbar")?.focus(), 5);
+        setTimeout(() => document.getElementById(inputId)?.focus(), 5);
     }
 
     function docKey(e: KeyboardEvent) {
-        if (disabled || e.key !== "/" || e.ctrlKey || e.metaKey) return;
+        if (disabled || pickTeam || e.key !== "/" || e.ctrlKey || e.metaKey) return;
         let tagname = e?.target && "tagName" in e?.target ? e.target.tagName + "" : "";
         if (/^(?:input|textarea|select|button)$/i.test(tagname)) return;
 
         e.preventDefault();
         shown = true;
-        document.getElementById("searchbar")?.focus();
+        document.getElementById(inputId)?.focus();
     }
 
-    $: relevantEvents = ($results?.data?.eventsSearch ?? []).filter((e) => isCompetition(e.type));
+    $: relevantEvents = pickTeam
+        ? []
+        : ($results?.data?.eventsSearch ?? []).filter((e) => isCompetition(e.type));
     $: relevantTeams = $results?.data?.teamsSearch ?? [];
 
     $: browser && searchText != "" && loadData();
@@ -160,6 +192,8 @@
 
     $: searchResults, $focusNum, preload();
 
+    $: showResults = searchText != "" && !picked;
+
     afterNavigate(() => (searchText = ""));
 </script>
 
@@ -170,8 +204,9 @@
     on:pointerenter={() => prefetch("pointer")}
     on:touchstart|passive={() => prefetch("touch")}
     use:focusWithinOut={() => setTimeout(() => (shown = false), 50)}
-    class:has-text={searchText != ""}
-    class:shown
+    class:has-text={showResults}
+    class:shown={shown || !!pickTeam}
+    class:pick={!!pickTeam}
     class:disabled
 >
     <span class="input-icon"><Fa icon={faSearch} /></span>
@@ -179,9 +214,10 @@
         bind:value={searchText}
         on:focusin={loadData}
         on:keydown={key}
+        on:input={onInput}
         use:watchForFocus={{ store: focusNum, myNum: -1 }}
-        id="searchbar"
-        placeholder="Search for teams and events"
+        id={inputId}
+        placeholder={pickTeam ? "Search for a team" : "Search for teams and events"}
         type="search"
         autocomplete="off"
         {disabled}
@@ -196,9 +232,9 @@
     </button>
 
     <div class="results">
-        {#if searchText != "" && $results == null}
+        {#if showResults && $results == null}
             <SkeletonRow rows={7} card={false} header={false} />
-        {:else if searchResults.length && searchText != ""}
+        {:else if searchResults.length && showResults}
             <ul>
                 {#each searchResults as res, index}
                     <li>
@@ -208,25 +244,27 @@
                             {focusNum}
                             {index}
                             on:keydown={key}
-                            on:click={() => (searchText = "")}
+                            on:click={(e) => onResultClick(e, res)}
                         />
                     </li>
                 {/each}
             </ul>
-        {:else if searchText != ""}
+        {:else if showResults}
             <b>No Results</b>
         {/if}
     </div>
 </form>
 
-<button
-    class="search-btn"
-    on:click={show}
-    on:pointerenter={() => prefetch("pointer")}
-    on:touchstart|passive={() => prefetch("touch")}
->
-    <Fa icon={faSearch} size="1.5x" />
-</button>
+{#if !pickTeam}
+    <button
+        class="search-btn"
+        on:click={show}
+        on:pointerenter={() => prefetch("pointer")}
+        on:touchstart|passive={() => prefetch("touch")}
+    >
+        <Fa icon={faSearch} size="1.5x" />
+    </button>
+{/if}
 
 <style>
     form {
@@ -404,6 +442,23 @@
         cursor: pointer;
 
         margin-right: var(--sm-gap);
+    }
+
+    form.pick,
+    form.pick:not(.shown) {
+        display: flex;
+        position: relative;
+        left: auto;
+        right: auto;
+        width: 100%;
+    }
+
+    form.pick input,
+    form.pick:focus-within input {
+        width: 100%;
+        flex: 1;
+        min-width: 0;
+        --expanded-width: 100%;
     }
 
     @media (max-width: 860px) {

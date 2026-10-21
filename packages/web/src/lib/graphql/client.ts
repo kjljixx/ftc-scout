@@ -1,5 +1,6 @@
 import { PUBLIC_SERVER_ORIGIN, PUBLIC_FRONTEND_CODE } from "$env/static/public";
 import {
+    ApolloLink,
     HttpLink,
     ApolloClient,
     type HttpOptions,
@@ -7,16 +8,37 @@ import {
     InMemoryCache,
     split,
 } from "@apollo/client/core";
+import { setContext } from "@apollo/client/link/context";
+import { onError } from "@apollo/client/link/error";
+import { forgetTeam, getTeamToken } from "$lib/team/team-store";
 import { IS_DEV } from "../constants";
 import { browser } from "$app/environment";
 import { DESCRIPTORS_LIST } from "@ftc-scout/common";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { createPersistedQueryLink } from "@apollo/client/link/persisted-queries";
-import { createClient } from "graphql-ws";
+import { createClient, type Client } from "graphql-ws";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { sha256 } from "crypto-hash";
 
 let client: ApolloClient<NormalizedCacheObject> | null = null;
+let wsClient: Client | null = null;
+
+const TEAM_TOKEN_HEADER = "x-team-token";
+
+const teamHeaderLink = setContext((_, { headers }) => {
+    let token = getTeamToken();
+    return token ? { headers: { ...headers, [TEAM_TOKEN_HEADER]: token } } : {};
+});
+
+const unknownTeamLink = onError(({ graphQLErrors }) => {
+    if (graphQLErrors?.some((e) => e.extensions?.code == "UNKNOWN_TEAM")) {
+        forgetTeam("server does not know this team link");
+    }
+});
+
+export function resetSubscriptionConnection() {
+    wsClient?.terminate();
+}
 
 const SPARSELY_FETCHED_TYPES = DESCRIPTORS_LIST.flatMap((d) => {
     let variants = d.hasRemote ? ["Trad", "Remote"] : [""];
@@ -49,7 +71,21 @@ export function getClient(
         fetch,
     });
 
-    let link = browser
+    if (browser) {
+        wsClient = createClient({
+            url: `${
+                PUBLIC_SERVER_ORIGIN.startsWith("http")
+                    ? `wss://${PUBLIC_SERVER_ORIGIN.split("://")[1]}`
+                    : `ws${s}://${PUBLIC_SERVER_ORIGIN}`
+            }/graphql`,
+            connectionParams: () => {
+                let token = getTeamToken();
+                return token ? { teamToken: token } : {};
+            },
+        });
+    }
+
+    let link = wsClient
         ? split(
               ({ query }) => {
                   let definition = getMainDefinition(query);
@@ -58,22 +94,17 @@ export function getClient(
                       definition.operation == "subscription"
                   );
               },
-              new GraphQLWsLink(
-                  createClient({
-                      url: `${
-                          PUBLIC_SERVER_ORIGIN.startsWith("http")
-                              ? `wss://${PUBLIC_SERVER_ORIGIN.split("://")[1]}`
-                              : `ws${s}://${PUBLIC_SERVER_ORIGIN}`
-                      }/graphql`,
-                  })
-              ),
+              new GraphQLWsLink(wsClient),
               httpLink
           )
         : httpLink;
 
-    const linkChain = createPersistedQueryLink({ sha256, useGETForHashedQueries: true }).concat(
-        link
-    );
+    const linkChain = ApolloLink.from([
+        unknownTeamLink,
+        teamHeaderLink,
+        createPersistedQueryLink({ sha256, useGETForHashedQueries: true }),
+        link,
+    ]);
 
     let cache = new InMemoryCache({
         possibleTypes: {

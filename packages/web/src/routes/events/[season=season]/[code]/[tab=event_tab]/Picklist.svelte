@@ -22,6 +22,9 @@
     import StatCell from "$lib/components/stats/StatCell.svelte";
     import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
+    import Card from "$lib/components/Card.svelte";
+    import WidthProvider from "$lib/components/WidthProvider.svelte";
+    import { team } from "$lib/team/team-store";
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -334,6 +337,8 @@
     }
 </script>
 
+<div class="gate">
+<div class="gated" class:locked={!$team} inert={!$team}>
 {#if !$picklistState.loaded}
     <Skeleton />
 {:else}
@@ -440,6 +445,19 @@
     </table>
 </div>
 {/if}
+</div>
+
+{#if !$team}
+    <div class="cover">
+        <WidthProvider width="520px">
+            <Card vis>
+                <div class="gate-title">Create / Join a team to use the picklist</div>
+                <div class="gate-sub">Look in the sidebar</div>
+            </Card>
+        </WidthProvider>
+    </div>
+{/if}
+</div>
 
 <ConfirmModal
     shown={fieldToRemove != null}
@@ -451,6 +469,37 @@
 </ConfirmModal>
 
 <style>
+    .gate {
+        position: relative;
+    }
+
+    .gated.locked {
+        filter: blur(4px);
+        user-select: none;
+    }
+
+    .cover {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 80px;
+        z-index: var(--hovered-row-zi);
+    }
+
+    .gate-title {
+        font-size: var(--vl-font-size);
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: var(--md-gap);
+    }
+
+    .gate-sub {
+        color: var(--secondary-text-color);
+        text-align: center;
+    }
+
     .table-scroll-container {
         flex-grow: 1;
         overflow-y: auto;

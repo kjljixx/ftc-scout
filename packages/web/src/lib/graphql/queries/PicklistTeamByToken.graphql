@@ -1,0 +1,6 @@
+query PicklistTeamByToken($token: String!) {
+    picklistTeamByToken(token: $token) {
+        teamNumber
+        name
+    }
+}

@@ -6,26 +6,35 @@
 
     export let icon: IconDefinition;
     export let name: string;
-    export let link: string;
+    export let link: string | null;
     export let strict = false;
     export let internal = true;
     export let newTab: boolean | null = null;
 
-    $: activePath = "/" + link.split("/")[1];
-    $: active = strict
-        ? $page.url.pathname == activePath && internal
-        : $page.url.pathname.startsWith(activePath) && internal;
+    $: activePath = link ? "/" + link.split("/")[1] : null;
+    $: active =
+        activePath == null
+            ? false
+            : strict
+            ? $page.url.pathname == activePath && internal
+            : $page.url.pathname.startsWith(activePath) && internal;
+
+    function click(e: MouseEvent) {
+        if (!link) e.preventDefault();
+        $sidebarOpen = false;
+    }
 </script>
 
 <a
-    href={link}
+    href={link ?? "#"}
     class:active
     target={newTab ? "_blank" : null}
     rel={newTab ? "noreferrer" : null}
-    on:click={() => ($sidebarOpen = false)}
+    on:click
+    on:click={click}
 >
     <Fa {icon} fw size="1.25x" />
-    {name}
+    <slot>{name}</slot>
 </a>
 
 <style>

@@ -4,6 +4,9 @@
     import Sidebar from "$lib/components/nav/Sidebar.svelte";
     import TimestampToast from "$lib/components/TimestampToast.svelte";
     import TimestampModal from "$lib/components/TimestampModal.svelte";
+    import CreateTeamModal from "$lib/components/team/CreateTeamModal.svelte";
+    import TeamModal from "$lib/components/team/TeamModal.svelte";
+    import { refreshTeam } from "$lib/team/team-actions";
     import { afterNavigate, beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/stores";
     import { onMount } from "svelte";
@@ -52,6 +55,7 @@
     });
 
     onMount(() => {
+        refreshTeam();
         if ($gameActive && !isAllowedPath(location.pathname, $game) && $game.currentUrl) {
             goto($game.currentUrl);
         }
@@ -87,6 +91,8 @@
 <GameToast />
 <TimestampToast />
 <TimestampModal />
+<CreateTeamModal />
+<TeamModal />
 
 <!-- Autofocus allows the document to be scrolled immediately without having to click. -->
 <!-- svelte-ignore a11y-autofocus -->

@@ -3,6 +3,6 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ cookies }) => {
     let homeTeamStr = cookies.get(HOME_TEAM_COOKIE_NAME);
-    let homeTeam = homeTeamStr ? +homeTeamStr : 10098;
+    let homeTeam = homeTeamStr ? +homeTeamStr : null;
     return { homeTeam };
 };

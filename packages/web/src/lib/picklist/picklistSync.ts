@@ -1,10 +1,11 @@
 import { writable } from "svelte/store";
 import type { Season } from "@ftc-scout/common";
-import { getClient } from "$lib/graphql/client";
+import { getClient, resetSubscriptionConnection } from "$lib/graphql/client";
 import {
     EventPicklistDocument,
     PicklistUpdatedDocument,
 } from "$lib/graphql/generated/graphql-operations";
+import { getTeamToken, team } from "$lib/team/team-store";
 
 export type CustomFieldTy = { id: string; name: string; type: string };
 export type CustomValueTy = {
@@ -29,14 +30,21 @@ const EMPTY_STATE: PicklistState = {
 
 export const picklistState = writable<PicklistState>(EMPTY_STATE);
 
-type Session = { key: string; refs: number; stop: () => void };
+type Run = { stop: () => void };
+type Session = { key: string; season: Season; eventCode: string; refs: number; run: Run };
 
 let activeSession: Session | null = null;
 
-function startSession(season: Season, eventCode: string): Session {
+function startRun(season: Season, eventCode: string): Run {
     let key = `${season}:${eventCode}`;
     let stopped = false;
     let subscription: { unsubscribe(): void } | null = null;
+
+    if (!getTeamToken()) {
+        console.info(`[picklist sync] no team, not loading ${key}`);
+        picklistState.set({ ...EMPTY_STATE, loaded: true });
+        return { stop() {} };
+    }
     console.info(`[picklist sync] start ${key}`);
 
     getClient()
@@ -78,8 +86,6 @@ function startSession(season: Season, eventCode: string): Session {
         });
 
     return {
-        key,
-        refs: 0,
         stop() {
             if (stopped) return;
             stopped = true;
@@ -89,12 +95,26 @@ function startSession(season: Season, eventCode: string): Session {
     };
 }
 
+let lastToken = getTeamToken();
+team.subscribe(() => {
+    let token = getTeamToken();
+    if (token == lastToken) return;
+    lastToken = token;
+    if (!activeSession) return;
+
+    console.info(`[picklist sync] team changed, restarting ${activeSession.key}`);
+    activeSession.run.stop();
+    resetSubscriptionConnection();
+    picklistState.set(EMPTY_STATE);
+    activeSession.run = startRun(activeSession.season, activeSession.eventCode);
+});
+
 function acquirePicklistSync(season: Season, eventCode: string): () => void {
     let key = `${season}:${eventCode}`;
     if (activeSession?.key !== key) {
-        activeSession?.stop();
+        activeSession?.run.stop();
         picklistState.set(EMPTY_STATE);
-        activeSession = startSession(season, eventCode);
+        activeSession = { key, season, eventCode, refs: 0, run: startRun(season, eventCode) };
     }
 
     let session = activeSession;
@@ -103,7 +123,7 @@ function acquirePicklistSync(season: Season, eventCode: string): () => void {
     return () => {
         session.refs -= 1;
         if (session.refs > 0) return;
-        session.stop();
+        session.run.stop();
         if (activeSession === session) {
             activeSession = null;
             picklistState.set(EMPTY_STATE);

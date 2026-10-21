@@ -5,9 +5,10 @@
     import { clickOutside, quickFocus } from "../util/directives";
 
     export let shown = false;
-    export let titleText: string;
+    export let titleText = "";
     export let closeText = "Close";
     export let close: (() => void) | null = null;
+    export let overflowVisible = false;
 
     function _close() {
         if (close == null) {
@@ -30,10 +31,15 @@
     <div transition:fade={{ duration: 100 }} class="outer-wrapper">
         <div class="content-wrapper" use:clickOutside on:click_outside={_close}>
             <div class="title-wrapper">
-                <span>{titleText}</span>
+                <span class="title"><slot name="title">{titleText}</slot></span>
                 <button class="x" on:click={_close}> <Fa icon={faXmark} size="1.5x" /> </button>
             </div>
-            <div class="scroll-wrapper" tabindex="-1" use:quickFocus>
+            <div
+                class="scroll-wrapper"
+                class:overflow-visible={overflowVisible}
+                tabindex="-1"
+                use:quickFocus
+            >
                 <slot />
             </div>
             <slot name="footer">
@@ -100,6 +106,14 @@
         max-height: 100%;
         overflow-y: auto;
         overflow-x: auto;
+    }
+
+    .scroll-wrapper.overflow-visible {
+        overflow: visible;
+    }
+
+    .title {
+        min-width: 0;
     }
 
     .scroll-wrapper:focus-visible,

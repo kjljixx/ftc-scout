@@ -1,0 +1,6 @@
+query PicklistTeam {
+    picklistTeam {
+        teamNumber
+        name
+    }
+}
