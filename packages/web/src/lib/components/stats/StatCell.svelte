@@ -22,7 +22,7 @@
 {:else if val.ty == "event"}
     <StatEvent {val} color={stat.color} />
 {:else}
-    <td class="{stat.color} {val?.ty ?? 'na'}" title={stat.titleName}>
+    <td class="{stat.color} {val?.ty ?? 'na'}" class:location={stat.id == "location"} title={stat.titleName}>
         {#if val.ty == "rank" && val.val}
             {prettyPrintOrdinal(val.val)}
         {:else if val.ty == "float"}
@@ -51,6 +51,16 @@
 
     .rank {
         font-weight: bold;
+    }
+
+    .location {
+        min-width: 220px;
+    }
+
+    @media (max-width: 600px) {
+        .location {
+            min-width: 160px;
+        }
     }
 
     .na {
