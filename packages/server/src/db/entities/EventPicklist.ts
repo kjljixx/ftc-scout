@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { BaseEntity, Column, Entity, ManyToOne, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { PicklistTeam } from "./PicklistTeam";
 
 export type CustomFieldType = "string" | "float" | "boolean";
 
@@ -10,6 +11,12 @@ export type CustomField = {
 
 @Entity()
 export class EventPicklist extends BaseEntity {
+    @PrimaryColumn("char", { length: 64 })
+    teamTokenHash!: string;
+
+    @ManyToOne(() => PicklistTeam, { onDelete: "CASCADE" })
+    team!: PicklistTeam;
+
     @PrimaryColumn()
     season!: number;
 

@@ -13,6 +13,7 @@ import { ApiReq } from "./entities/ApiReq";
 import { Analytics } from "./entities/Analytics";
 import { BestName } from "./entities/BestName";
 import { EventPicklist } from "./entities/EventPicklist";
+import { PicklistTeam } from "./entities/PicklistTeam";
 import { TimestampJob } from "./entities/TimestampJob";
 import { EventVideo } from "./entities/EventVideo";
 
@@ -30,6 +31,7 @@ export const ENTITIES: MixedList<string | Function | EntitySchema<any>> = [
     BestName,
     ApiReq,
     Analytics,
+    PicklistTeam,
     EventPicklist,
     TimestampJob,
     EventVideo,

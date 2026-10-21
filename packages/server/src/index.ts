@@ -11,6 +11,7 @@ import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@apollo/server/express4";
 import { GQL_SCHEMA } from "./graphql/schema";
+import { GQLContext, buildContext } from "./graphql/context";
 import { fetchPriorSeasons, watchApi } from "./ftc-api/watch";
 import { setupBannerRoutes } from "./banner";
 import { handleAnalytics } from "./analytics";
@@ -49,7 +50,15 @@ async function main() {
         wsServer.handleUpgrade(req, socket, head, (ws) => wsServer.emit("connection", ws, req));
     });
 
-    const serverCleanup = useServer({ schema: GQL_SCHEMA }, wsServer);
+    const serverCleanup = useServer(
+        {
+            schema: GQL_SCHEMA,
+            context: (ctx) =>
+                buildContext(ctx.extra.request, (ctx.connectionParams as any)?.teamToken),
+        },
+        wsServer
+    );
+    console.info("[picklist] team tokens read from the x-team-token header / teamToken ws param");
 
     // Create shared cache for both APQ and response caching
     const serverCache = new InMemoryLRUCache({
@@ -57,7 +66,7 @@ async function main() {
         ttl: 120, // Default 2 minutes for APQ
     });
 
-    let apolloServer = new ApolloServer({
+    let apolloServer = new ApolloServer<GQLContext>({
         introspection: true,
         schema: GQL_SCHEMA,
         cache: serverCache,
@@ -87,7 +96,13 @@ async function main() {
 
     await apolloServer.start();
 
-    app.use("/graphql", apiLoggerMiddleware, expressMiddleware(apolloServer));
+    app.use(
+        "/graphql",
+        apiLoggerMiddleware,
+        expressMiddleware(apolloServer, {
+            context: ({ req }) => buildContext(req, req.headers["x-team-token"]),
+        })
+    );
 
     app.post("/analytics", text(), handleAnalytics);
 
