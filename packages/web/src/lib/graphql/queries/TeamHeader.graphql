@@ -1,0 +1,16 @@
+query TeamHeader($number: Int!) {
+    teamByNumber(number: $number) {
+        number
+        name
+        website
+        location {
+            city
+            state
+            country
+        }
+        schoolName
+        sponsors
+        rookieYear
+        activeSeasons
+    }
+}

@@ -1,0 +1,14 @@
+query EventHeader($season: Int!, $code: String!) {
+    eventByCode(season: $season, code: $code) {
+        ...BasicEventInfo
+        website
+        liveStreamURL
+        type
+        relatedEvents {
+            season
+            code
+            name
+            divisionCode
+        }
+    }
+}

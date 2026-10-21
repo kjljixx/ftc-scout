@@ -1,13 +1,10 @@
 <script lang="ts">
     import type { Season } from "@ftc-scout/common";
-    import type { EventPageQuery } from "$lib/graphql/generated/graphql-operations";
     import Card from "$lib/components/Card.svelte";
     import { sortString } from "$lib/util/sorters";
     import { divisionShortName } from "$lib/printers/division";
 
-    type RelatedEvent = NonNullable<EventPageQuery["eventByCode"]>["relatedEvents"][number];
-
-    export let relatedEvents: RelatedEvent[];
+    export let relatedEvents: { name: string; code: string }[];
     export let thisEventName: string;
     export let thisEventCode: string;
     export let season: Season;
