@@ -20,12 +20,7 @@
     import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
     import TeamEventStats from "./TeamEventStats.svelte";
     import TeamEventContents from "./TeamEventContents.svelte";
-    import {
-        CURRENT_SEASON,
-        DESCRIPTORS,
-        type Season,
-        isFinalsDivision,
-    } from "@ftc-scout/common";
+    import { CURRENT_SEASON, DESCRIPTORS, type Season, isFinalsDivision } from "@ftc-scout/common";
     import Award from "$lib/components/Award.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
     import { writable } from "svelte/store";
@@ -170,7 +165,6 @@
         ...(focusedEvent?.teams ?? []),
         ...(focusedEvent?.relatedEvents ?? []).flatMap((re) => re.teams ?? []),
     ].find((t) => t.teamNumber == focused?.number);
-
 </script>
 
 <Loading store={$teamStore} checkExists={(t) => !!t.teamByNumber}>
@@ -186,7 +180,7 @@
         {/if}
 
         {#if team.quickStats}
-            <QuickStats stats={team.quickStats} season={$season} />
+            <QuickStats stats={team.quickStats} events={team.events ?? []} season={$season} />
         {/if}
 
         <div class="team-events">
@@ -233,15 +227,12 @@
                     <div
                         class="event-head"
                         class:hinted
-                        id={hinted && crosshairHint
-                            ? `crosshair-${crosshairHint.code}`
-                            : undefined}
+                        id={hinted && crosshairHint ? `crosshair-${crosshairHint.code}` : undefined}
                     >
                         <h3 id={event.code} tabindex="-1"><a {href}>{event.name}</a></h3>
 
                         <div class="meta-line">
-                            <span>{prettyPrintDateRangeString(event.start, event.end)}</span
-                            >
+                            <span>{prettyPrintDateRangeString(event.start, event.end)}</span>
                             <span class="sep">&middot;</span>
                             <Location {...event.location} />
                         </div>
@@ -284,15 +275,11 @@
                     <div class="no-events">
                         <b>
                             {team.name}
-                            {$season == CURRENT_SEASON
-                                ? "has not yet played"
-                                : "did not compete"} in any
+                            {$season == CURRENT_SEASON ? "has not yet played" : "did not compete"} in
+                            any
                             {DESCRIPTORS[$season].seasonName} events.
                         </b>
-                        <p>
-                            Try choosing a different season from the menu at the top of the
-                            page.
-                        </p>
+                        <p>Try choosing a different season from the menu at the top of the page.</p>
                     </div>
                 </Card>
             {/each}
