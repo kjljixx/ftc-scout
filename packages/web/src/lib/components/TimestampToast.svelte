@@ -1,27 +1,26 @@
 <script lang="ts">
     import Fa from "svelte-fa";
     import { faChevronRight, faXmark } from "@fortawesome/free-solid-svg-icons";
-    import { fly } from "svelte/transition";
     import {
         dismissTimestampToast,
         setTimestampToastMinimized,
         timestampToast,
     } from "$lib/timestamps/timestampToast";
+    import Button from "./Button.svelte";
     import TimestampStatus from "./TimestampStatus.svelte";
+    import Toast from "./Toast.svelte";
 
     $: toast = $timestampToast;
     $: ready = toast?.readyUrl != null;
 </script>
 
 {#if toast?.minimized}
-    <svelte:element
-        this={ready ? "a" : "div"}
-        class="toast"
+    <Toast
+        position="top-right"
         href={toast.readyUrl}
         target={ready ? "_blank" : undefined}
         rel={ready ? "noreferrer" : undefined}
         role={ready ? undefined : "status"}
-        transition:fly={{ x: 100, duration: 300 }}
     >
         <button
             class="close"
@@ -39,40 +38,13 @@
         {:else}
             <TimestampStatus {toast} />
             {#if toast.failure}
-                <button class="details" on:click={() => setTimestampToastMinimized(false)}>
-                    Details
-                </button>
+                <Button on:click={() => setTimestampToastMinimized(false)}>Details</Button>
             {/if}
         {/if}
-    </svelte:element>
+    </Toast>
 {/if}
 
 <style>
-    .toast {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--md-gap) var(--vl-gap);
-        text-decoration: none;
-
-        position: fixed;
-        top: calc(var(--navbar-size) + var(--md-gap));
-        right: var(--md-gap);
-        width: min(340px, calc(100% - var(--md-gap) * 2));
-        box-sizing: border-box;
-
-        background: var(--raised-bg-color);
-        color: var(--text-color);
-
-        padding: var(--lg-pad) calc(var(--vl-gap) + var(--md-font-size)) var(--lg-pad)
-            var(--vl-gap);
-        border-radius: 12px;
-        box-shadow: inset 0 0 0 2px var(--focused-team-ring-color), 0 16px 32px rgba(0, 0, 0, 0.45),
-            0 2px 6px rgba(0, 0, 0, 0.4);
-
-        z-index: var(--focused-team-zi);
-    }
-
     .name {
         font-size: var(--lg-font-size);
         font-weight: 600;
@@ -108,22 +80,4 @@
         color: var(--text-color);
     }
 
-    .details {
-        padding: var(--md-pad) var(--lg-pad);
-        border: none;
-        border-radius: 8px;
-        background: var(--inline-theme-color);
-        color: var(--bg-color);
-        font: inherit;
-        font-size: var(--md-font-size);
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    @media (max-width: 600px) {
-        .toast {
-            padding: var(--lg-pad) calc(var(--lg-pad) + var(--md-font-size)) var(--lg-pad)
-                var(--lg-pad);
-        }
-    }
 </style>

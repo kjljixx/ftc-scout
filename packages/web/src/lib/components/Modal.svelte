@@ -3,12 +3,16 @@
     import Fa from "svelte-fa";
     import { fade } from "svelte/transition";
     import { clickOutside, quickFocus } from "../util/directives";
+    import Button from "./Button.svelte";
+
+    const WIDTHS = { sm: "28em", md: "460px", lg: "640px" };
 
     export let shown = false;
     export let titleText = "";
     export let closeText = "Close";
     export let close: (() => void) | null = null;
     export let overflowVisible = false;
+    export let width: keyof typeof WIDTHS | null = null;
 
     function _close() {
         if (close == null) {
@@ -29,7 +33,12 @@
 
 {#if shown}
     <div transition:fade={{ duration: 100 }} class="outer-wrapper">
-        <div class="content-wrapper" use:clickOutside on:click_outside={_close}>
+        <div
+            class="content-wrapper"
+            style:width={width && WIDTHS[width]}
+            use:clickOutside
+            on:click_outside={_close}
+        >
             <div class="title-wrapper">
                 <span class="title"><slot name="title">{titleText}</slot></span>
                 <button class="x" on:click={_close}> <Fa icon={faXmark} size="1.5x" /> </button>
@@ -42,9 +51,9 @@
             >
                 <slot />
             </div>
-            <slot name="footer">
-                <button class="close" on:click={_close}> {closeText} </button>
-            </slot>
+            <div class="footer">
+                <slot name="footer"><Button on:click={_close}>{closeText}</Button></slot>
+            </div>
         </div>
     </div>
 {/if}
@@ -121,16 +130,10 @@
         outline: none;
     }
 
-    .close {
-        background: var(--theme-color);
-        color: var(--theme-text-color);
-        font-weight: bold;
-
-        border: none;
-        border-radius: 0 0 8px 8px;
-
-        padding: var(--lg-pad);
-
-        cursor: pointer;
+    .footer {
+        display: flex;
+        gap: var(--md-gap);
+        justify-content: flex-end;
+        padding: 0 var(--lg-pad) var(--lg-pad);
     }
 </style>

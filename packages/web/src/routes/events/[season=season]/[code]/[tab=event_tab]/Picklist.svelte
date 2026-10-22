@@ -21,6 +21,7 @@
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
     import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
+    import Button from "$lib/components/Button.svelte";
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import Card from "$lib/components/Card.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
@@ -344,18 +345,18 @@
 {:else}
 <div class="custom-fields-manager">
     <input
-        class="new-field-name"
+        class="non-form"
         type="text"
         placeholder="New field name"
         bind:value={newFieldName}
         on:keydown={(e) => e.key === "Enter" && addCustomField()}
     />
-    <select bind:value={newFieldType}>
+    <select class="non-form" bind:value={newFieldType}>
         <option value="string">Text</option>
         <option value="float">Number</option>
         <option value="boolean">Checkbox</option>
     </select>
-    <button class="add-field-btn" on:click={addCustomField}>Add Field</button>
+    <Button variant="secondary" on:click={addCustomField}>Add Field</Button>
 </div>
 
 <div class="table-scroll-container">
@@ -659,45 +660,12 @@
     .custom-fields-manager {
         display: flex;
         align-items: center;
-        gap: var(--sm-gap);
+        gap: var(--md-gap);
         margin-bottom: var(--md-gap);
     }
 
-    .new-field-name {
-        padding: var(--sm-pad);
-        border: 1px solid var(--sep-color);
-        border-radius: 4px;
-        background: var(--fg-color);
-        color: var(--text-color);
+    .custom-fields-manager input {
         cursor: text;
-        font: inherit;
-    }
-
-    .custom-fields-manager select {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        padding: var(--sm-pad) 2rem var(--sm-pad) var(--sm-pad);
-        min-width: 6.5rem;
-        border: 1px solid var(--sep-color);
-        border-radius: 4px;
-        background: var(--fg-color)
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
-            no-repeat right 0.6rem center;
-        background-size: 0.7rem;
-        color: var(--text-color);
-        font: inherit;
-        cursor: pointer;
-    }
-
-    .add-field-btn {
-        padding: var(--sm-pad) var(--md-pad);
-        border: 1px solid var(--sep-color);
-        border-radius: 4px;
-        background: var(--fg-color);
-        color: var(--text-color);
-        cursor: pointer;
-        font: inherit;
     }
 
     .custom-field-header {

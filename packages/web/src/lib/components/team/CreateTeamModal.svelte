@@ -51,6 +51,7 @@
         {shown}
         {close}
         titleText="Create a team"
+        width="md"
         confirmText="Create team"
         variant="primary"
         confirmDisabled={!picked || creating}
@@ -58,7 +59,7 @@
         overflowVisible
         on:confirm={create}
     >
-        <div class="picker">
+        <div>
             <Searchbar pickTeam={(t) => (picked = t)} inputId="team-picker" />
             {#if error}<p class="error">{error}</p>{/if}
         </div>
@@ -66,11 +67,6 @@
 {/if}
 
 <style>
-    .picker {
-        width: 460px;
-        max-width: 100%;
-    }
-
     .error {
         margin-top: var(--md-gap);
         color: var(--red-team-text-color);

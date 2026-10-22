@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import TimestampStatus from "./TimestampStatus.svelte";
     import {
@@ -21,7 +22,12 @@
     }
 </script>
 
-<Modal {shown} titleText={searching ? "Timestamping matches" : "Match video"} {close}>
+<Modal
+    {shown}
+    titleText={searching ? "Timestamping matches" : "Match video"}
+    width="md"
+    {close}
+>
     {#if toast}
         <div class="content">
             <TimestampStatus {toast} />
@@ -34,7 +40,7 @@
                         placeholder="Paste a YouTube livestream link"
                         aria-label="YouTube livestream link"
                     />
-                    <button type="submit">Try</button>
+                    <Button type="submit">Try</Button>
                 </form>
             {/if}
         </div>
@@ -42,14 +48,13 @@
 
     <svelte:fragment slot="footer">
         {#if toast?.readyUrl}
-            <a class="footer" href={toast.readyUrl} target="_blank" rel="noreferrer">Open video</a>
+            <Button variant="secondary" on:click={close}>Close</Button>
+            <Button href={toast.readyUrl} target="_blank" rel="noreferrer">Open video</Button>
         {:else if searching}
-            <div class="footer-buttons">
-                <button class="secondary" on:click={dismissTimestampToast}>Cancel search</button>
-                <button class="primary" on:click={close}>Hide</button>
-            </div>
+            <Button variant="secondary" on:click={dismissTimestampToast}>Cancel search</Button>
+            <Button on:click={close}>Hide</Button>
         {:else}
-            <button class="footer" on:click={close}>Close</button>
+            <Button variant="secondary" on:click={close}>Close</Button>
         {/if}
     </svelte:fragment>
 </Modal>
@@ -60,9 +65,6 @@
         flex-direction: column;
         gap: var(--vl-gap);
 
-        box-sizing: border-box;
-        width: 460px;
-        max-width: 100%;
         padding: var(--md-pad) var(--md-pad) var(--lg-pad);
     }
 
@@ -74,76 +76,11 @@
 
     .link {
         display: flex;
-        gap: var(--lg-gap);
+        gap: var(--md-gap);
     }
 
     .link input {
         flex: 1;
         min-width: 0;
-        box-sizing: border-box;
-        padding: var(--md-pad);
-        border: none;
-        border-radius: 8px;
-        background: var(--form-bg-color);
-        color: var(--text-color);
-        font: inherit;
-        font-size: var(--md-font-size);
-    }
-
-    .link input:focus {
-        outline: 2px solid var(--neutral-team-color);
-    }
-
-    .link button {
-        padding: var(--md-pad) var(--lg-pad);
-        border: none;
-        border-radius: 8px;
-        background: var(--inline-theme-color);
-        color: var(--bg-color);
-        font: inherit;
-        font-size: var(--md-font-size);
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .footer {
-        display: block;
-        box-sizing: border-box;
-        background: var(--theme-color);
-        color: var(--theme-text-color);
-        font: inherit;
-        font-weight: bold;
-        text-align: center;
-        text-decoration: none;
-
-        border: none;
-        border-radius: 0 0 8px 8px;
-        padding: var(--lg-pad);
-        cursor: pointer;
-    }
-
-    .footer-buttons {
-        display: flex;
-    }
-
-    .footer-buttons button {
-        flex: 1;
-        border: none;
-        padding: var(--lg-pad);
-        font: inherit;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .secondary {
-        background: var(--raised-bg-color);
-        color: var(--text-color);
-        border-radius: 0 0 0 8px;
-    }
-
-    .primary {
-        background: var(--theme-color);
-        color: var(--theme-text-color);
-        border-radius: 0 0 8px 0;
     }
 </style>
