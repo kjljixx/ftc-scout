@@ -37,6 +37,11 @@ module.exports = {
       }
     },
     {
+      name: "efficiency-optout",
+      script: "pm2-efficiency-optout.cjs",
+      autorestart: true
+    },
+    {
       name: "timestamper",
       script: "worker.py",
       cwd: "packages/timestamper",
