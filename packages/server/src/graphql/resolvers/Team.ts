@@ -30,6 +30,7 @@ import { TeamEventParticipationGQL } from "./TeamEventParticipation";
 import { RegionOptionGQL } from "./enums";
 import { DATA_SOURCE } from "../../db/data-source";
 import { Event } from "../../db/entities/Event";
+import { findTepsForRequest } from "../dyn/tep";
 
 const QuickStatGQL = new GraphQLObjectType({
     name: "QuickStat",
@@ -251,10 +252,10 @@ export const TeamGQL: GraphQLObjectType = new GraphQLObjectType({
                 { season: Season }
             >(
                 (t, { season }) => ({ season, teamNumber: t.number }),
-                async (keys) => {
+                async (keys, infos) => {
                     let groups = groupBy(keys, (k) => k.season);
                     let qs = Object.entries(groups).map(([season, k]) =>
-                        TeamEventParticipation[+season as Season].find({ where: k })
+                        findTepsForRequest(+season as Season, k, infos)
                     );
                     return (await Promise.all(qs)).flat();
                 }

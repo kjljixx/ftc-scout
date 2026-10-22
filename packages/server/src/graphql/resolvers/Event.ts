@@ -37,7 +37,7 @@ import { DATA_SOURCE } from "../../db/data-source";
 import { In } from "typeorm";
 import { newMatchesKey, pubsub } from "./pubsub";
 import { TepStatsUnionGQL } from "../dyn/dyn-types-schema";
-import { addTypename } from "../dyn/tep";
+import { addTypename, findTepsForRequest } from "../dyn/tep";
 
 export const EventGQL: GraphQLObjectType = new GraphQLObjectType({
     name: "Event",
@@ -139,10 +139,10 @@ export const EventGQL: GraphQLObjectType = new GraphQLObjectType({
                 { season: Season; eventCode: string }
             >(
                 (event) => ({ season: event.season, eventCode: event.code }),
-                async (keys) => {
+                async (keys, infos) => {
                     let groups = groupBy(keys, (k) => k.season);
                     let qs = Object.entries(groups).map(([season, k]) =>
-                        TeamEventParticipation[+season as Season].find({ where: k })
+                        findTepsForRequest(+season as Season, k, infos)
                     );
                     return (await Promise.all(qs)).flat();
                 }

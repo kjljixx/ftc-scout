@@ -1,6 +1,66 @@
-import { DESCRIPTORS, Descriptor, FloatTy, IntTy, nn, notEmpty, nullTy } from "@ftc-scout/common";
-import { GraphQLFieldConfig, GraphQLObjectType } from "graphql";
+import {
+    DESCRIPTORS,
+    Descriptor,
+    FloatTy,
+    IntTy,
+    Season,
+    nn,
+    notEmpty,
+    nullTy,
+} from "@ftc-scout/common";
+import { GraphQLFieldConfig, GraphQLObjectType, GraphQLResolveInfo } from "graphql";
+import graphqlFields from "graphql-fields";
+import { FindOptionsSelect, FindOptionsWhere } from "typeorm";
 import { TeamEventParticipation } from "../../db/entities/dyn/team-event-participation";
+
+const TEP_KEY_COLUMNS = ["season", "eventCode", "teamNumber", "isRemote", "hasStats"];
+const TEP_SCALAR_STATS = [
+    "rank",
+    "rp",
+    "tb1",
+    "tb2",
+    "wins",
+    "losses",
+    "ties",
+    "dqs",
+    "qualMatchesPlayed",
+];
+const TEP_STAT_GROUPS = ["tot", "avg", "min", "max", "dev", "opr", "oprSe"];
+
+export function tepSelectFromInfos(season: Season, infos: GraphQLResolveInfo[]) {
+    let dbNameByApiName = new Map(
+        DESCRIPTORS[season].tepColumns().map((c) => [c.apiName, c.dbName])
+    );
+    let select: Record<string, any> = Object.fromEntries(TEP_KEY_COLUMNS.map((c) => [c, true]));
+
+    for (let info of infos) {
+        let stats = graphqlFields(info).stats ?? {};
+        for (let [field, subFields] of Object.entries<any>(stats)) {
+            if (TEP_SCALAR_STATS.includes(field)) {
+                select[field] = true;
+            } else if (TEP_STAT_GROUPS.includes(field)) {
+                select[field] ??= {};
+                for (let apiName of Object.keys(subFields)) {
+                    let dbName = dbNameByApiName.get(apiName);
+                    if (dbName) select[field][dbName] = true;
+                }
+            }
+        }
+    }
+
+    return select as FindOptionsSelect<TeamEventParticipation>;
+}
+
+export function findTepsForRequest(
+    season: Season,
+    where: FindOptionsWhere<TeamEventParticipation>[],
+    infos: GraphQLResolveInfo[]
+) {
+    return TeamEventParticipation[season].find({
+        where,
+        select: tepSelectFromInfos(season, infos),
+    });
+}
 
 export function makeTepTypes(descriptor: Descriptor): GraphQLObjectType[] {
     let l = [make(descriptor, false), descriptor.hasRemote ? make(descriptor, true) : null];
