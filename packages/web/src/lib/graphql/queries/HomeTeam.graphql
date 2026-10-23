@@ -12,6 +12,12 @@ query HomeTeam($number: Int!, $season: Int!) {
                 code
                 name
                 start
+                remote
+                allianceCount
+                started
+                published
+                timezone
+                type
                 relatedEvents {
                     season
                     code

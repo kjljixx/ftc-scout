@@ -4,16 +4,52 @@ import {
     HomePageDocument,
     HomeTeamDocument,
     HomeTeamMatchesDocument,
+    type HomeEventQuery,
+    type HomeEventQueryVariables,
 } from "$lib/graphql/generated/graphql-operations";
 import { getData } from "$lib/graphql/getData";
 import { eventSorter } from "$lib/util/sorters";
 import { type Season, longestCommonPrefix } from "@ftc-scout/common";
-import { get } from "svelte/store";
+import { browser } from "$app/environment";
+import type { ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import { get, readable, type Readable } from "svelte/store";
 import { globalSeason, HOME_SEASON_DEPENDENCY } from "$lib/season-store";
 import type { PageLoad } from "./$types";
 
+export type HomeEventDetails = { data: HomeEventQuery | null } | null;
+
 function logStep(step: string) {
     console.log(`[home load] ${Math.round(performance.now())}ms ${step}`);
+}
+
+function loadEventDetails(
+    client: ApolloClient<NormalizedCacheObject>,
+    variables: HomeEventQueryVariables
+): Readable<HomeEventDetails> {
+    const cachedData = browser
+        ? client.readQuery<HomeEventQuery>({ query: HomeEventDocument, variables })
+        : null;
+    if (cachedData) return readable<HomeEventDetails>({ data: cachedData });
+
+    let startMs = performance.now();
+    logStep(`HomeEvent details start event=${variables.code}`);
+    const details = client
+        .query({ query: HomeEventDocument, variables })
+        .then((res): HomeEventDetails => {
+            logStep(
+                `HomeEvent details loaded teams=${res.data.eventByCode?.teams.length ?? 0} matches=${
+                    res.data.eventByCode?.matches.length ?? 0
+                } ms=${Math.round(performance.now() - startMs)}`
+            );
+            return { data: res.data };
+        })
+        .catch((cause): HomeEventDetails => {
+            console.error("[home load] HomeEvent details failed, only team matches shown", cause);
+            return { data: null };
+        });
+    return readable<HomeEventDetails>(null, (set) => {
+        details.then(set);
+    });
 }
 
 export const load: PageLoad = async ({ fetch, data, depends }) => {
@@ -32,6 +68,7 @@ export const load: PageLoad = async ({ fetch, data, depends }) => {
             homeTeam: null,
             latestSeason: null,
             latestEvent: null,
+            eventDetails: readable<HomeEventDetails>(null),
             teamMatches: null,
         };
     }
@@ -53,6 +90,7 @@ export const load: PageLoad = async ({ fetch, data, depends }) => {
             homeTeam,
             latestSeason: null,
             latestEvent: null,
+            eventDetails: readable<HomeEventDetails>(null),
             teamMatches: null,
         };
     }
@@ -83,6 +121,7 @@ export const load: PageLoad = async ({ fetch, data, depends }) => {
             homeTeam,
             latestSeason,
             latestEvent: null,
+            eventDetails: readable<HomeEventDetails>(null),
             teamMatches: null,
         };
     }
@@ -106,24 +145,24 @@ export const load: PageLoad = async ({ fetch, data, depends }) => {
     ].sort(eventSorter)[0];
     let { event } = latestTep;
 
-    logStep(`HomeEvent query start (${team.events.length} team events)`);
-    let [latestEvent, teamMatchesResult] = await Promise.all([
-        getData(getClient(fetch), HomeEventDocument, {
-            season: event.season,
-            code: event.code,
-        }),
-        getClient(fetch).query({
-            query: HomeTeamMatchesDocument,
-            variables: { season: event.season, code: event.code, teamNumber: homeTeam },
-        }),
-    ]);
+    let eventDetails = loadEventDetails(getClient(fetch), {
+        season: event.season,
+        code: event.code,
+    });
 
-    logStep("HomeEvent done");
+    logStep(`HomeTeamMatches query start (${team.events.length} team events)`);
+    let teamMatchesResult = await getClient(fetch).query({
+        query: HomeTeamMatchesDocument,
+        variables: { season: event.season, code: event.code, teamNumber: homeTeam },
+    });
+
+    logStep("HomeTeamMatches done");
     return {
         home: null,
         homeTeam,
         latestSeason,
-        latestEvent,
+        latestEvent: event,
+        eventDetails,
         teamMatches: teamMatchesResult.data.eventByCode?.teamMatches.map((m) => m.match) ?? [],
         teamName: team.name,
     };

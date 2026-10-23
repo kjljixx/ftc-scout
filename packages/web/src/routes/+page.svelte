@@ -22,10 +22,11 @@
     import { createTippy } from "svelte-tippy";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
     import Select from "$lib/components/ui/form/Select.svelte";
-    import Loading from "$lib/components/Loading.svelte";
     import TabbedCard from "$lib/components/tabs/TabbedCard.svelte";
     import TabContent from "$lib/components/tabs/TabContent.svelte";
     import { onDestroy, setContext } from "svelte";
+    import { writable } from "svelte/store";
+    import { PRED_PENDING_CTX } from "$lib/components/matches/MatchScore.svelte";
     import { createPicklistSyncHandle } from "$lib/picklist/picklistSync";
     import { TEAM_CLICK_ACTION_CTX } from "$lib/components/matches/MatchTeam.svelte";
     import FocusedTeam from "$lib/components/stats/FocusedTeam.svelte";
@@ -39,7 +40,7 @@
 
     export let data;
     $: homeStore = data.home;
-    $: latestEventStore = data.latestEvent;
+    $: detailsStore = data.eventDetails;
 
     $: activeTeamsCount = $homeStore?.data?.activeTeamsCount;
     $: matchesPlayedCount = $homeStore?.data?.matchesPlayedCount;
@@ -50,7 +51,19 @@
 
     $: showHomeTeamView = !!data.homeTeam && !!data.latestEvent;
 
-    $: event = $latestEventStore?.data?.eventByCode!;
+    $: details = $detailsStore?.data?.eventByCode ?? null;
+    $: detailsPending = $detailsStore === null;
+    $: event = {
+        ...data.latestEvent!,
+        end: details?.end ?? null,
+        matches: details?.matches ?? [],
+        teams: details?.teams ?? [],
+        previewStats: details?.previewStats ?? [],
+    };
+
+    const predPending = writable(false);
+    setContext(PRED_PENDING_CTX, predPending);
+    $: $predPending = showHomeTeamView ? detailsPending : true;
     $: season = (data.latestSeason ?? $globalSeason) as Season;
 
     const picklistSync = createPicklistSyncHandle();
@@ -67,7 +80,7 @@
     type PreviewTeam = NonNullable<HomeEventQuery["eventByCode"]>["teams"][number] & {
         quickOpr: number | null;
     };
-    $: previewStats = ((event as any)?.previewStats ?? []) as PreviewStat[];
+    $: previewStats = event.previewStats as PreviewStat[];
     $: previewStatMap = new Map<number, PreviewStat>(previewStats.map((s) => [s.teamNumber, s]));
     $: previewTeams = (event?.teams ?? [])
         .map((team) => ({
@@ -116,108 +129,108 @@
     {#if $homeSeasonLoading}
         <Skeleton />
     {:else if showHomeTeamView}
-        <Loading store={$latestEventStore} checkExists={(e) => !!e.eventByCode}>
-            {#if focusedTeam && focusedTeamData}
-                <FocusedTeam
-                    team={focusedTeamData}
-                    remote={event.remote}
-                    on:close={() => (focusedTeam = null)}
-                />
-            {/if}
+        {#if focusedTeam && focusedTeamData}
+            <FocusedTeam
+                team={focusedTeamData}
+                remote={event.remote}
+                on:close={() => (focusedTeam = null)}
+            />
+        {/if}
 
-            <Card vis={false}>
-                <div class="latest">
-                    Latest event &middot;
-                    <a href="/teams/{data.homeTeam}">Team {data.homeTeam}</a>
+        <Card vis={false}>
+            <div class="latest">
+                Latest event &middot;
+                <a href="/teams/{data.homeTeam}">Team {data.homeTeam}</a>
+            </div>
+            <h1 class="event-title">
+                <a href="/events/{event.season}/{event.code}/matches">{event.name}</a>
+            </h1>
+        </Card>
+
+        <TabbedCard
+            tabs={[
+                [faChartLine, "Preview", "preview", shouldShowPreviewTab],
+                [
+                    faHouse,
+                    "Your Matches",
+                    "home_matches",
+                    (data?.teamMatches?.length ?? 0) > 0,
+                ],
+                [faTrophy, "Rankings", "rankings", !!stats.length],
+                [faList, "Picklist", "picklist", !!event.teams.length],
+                [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
+                [faBolt, "All Matches", "matches", (event?.matches?.length ?? 0) > 0],
+            ]}
+            bind:selectedTab
+        >
+            <Card slot="empty">
+                <div class="empty">
+                    {#if detailsPending}
+                        <SkeletonRow header={false} card={false} rows={5} />
+                    {:else if isNonCompetition(event.type)}
+                        <p>This event is not a competition; no matches will be played.</p>
+                    {:else}
+                        <b>No information has been published about this event.</b>
+                        <p>Please check back later.</p>
+                    {/if}
                 </div>
-                <h1 class="event-title">
-                    <a href="/events/{event.season}/{event.code}/matches">{event.name}</a>
-                </h1>
             </Card>
 
-            <TabbedCard
-                tabs={[
-                    [faChartLine, "Preview", "preview", shouldShowPreviewTab],
-                    [
-                        faHouse,
-                        "Your Matches",
-                        "home_matches",
-                        (data?.teamMatches?.length ?? 0) > 0 && (event?.matches?.length ?? 0) > 0,
-                    ],
-                    [faTrophy, "Rankings", "rankings", !!stats.length],
-                    [faList, "Picklist", "picklist", !!event.teams.length],
-                    [faHashtag, `Teams (${event.teams.length})`, "teams", !!event.teams.length],
-                    [faBolt, "All Matches", "matches", (event?.matches?.length ?? 0) > 0],
-                ]}
-                bind:selectedTab
-            >
-                <Card slot="empty">
-                    <div class="empty">
-                        {#if isNonCompetition(event.type)}
-                            <p>This event is not a competition; no matches will be played.</p>
-                        {:else}
-                            <b>No information has been published about this event.</b>
-                            <p>Please check back later.</p>
-                        {/if}
-                    </div>
-                </Card>
+            <TabContent name="home_matches">
+                <MatchTable
+                    matches={data.teamMatches ?? []}
+                    allMatches={event.matches ?? []}
+                    {event}
+                    focusedTeam={data.homeTeam}
+                    eventTeams={event.teams}
+                />
+            </TabContent>
 
-                <TabContent name="home_matches">
-                    <MatchTable
-                        matches={data.teamMatches ?? []}
-                        allMatches={event.matches ?? []}
-                        {event}
-                        focusedTeam={data.homeTeam}
-                        eventTeams={event.teams}
-                    />
-                </TabContent>
+            <TabContent name="matches">
+                <MatchTable
+                    matches={event.matches}
+                    allMatches={event.matches ?? []}
+                    {event}
+                    {focusedTeam}
+                    eventTeams={event.teams}
+                />
+            </TabContent>
 
-                <TabContent name="matches">
-                    <MatchTable
-                        matches={event.matches}
-                        allMatches={event.matches ?? []}
-                        {event}
-                        {focusedTeam}
-                        eventTeams={event.teams}
-                    />
-                </TabContent>
+            <TabContent name="preview">
+                <Preview
+                    teams={previewTeams}
+                    {focusedTeam}
+                    eventName={event.name}
+                    eventCode={event.code}
+                    {season}
+                    remote={event.remote}
+                />
+            </TabContent>
 
-                <TabContent name="preview">
-                    <Preview
-                        teams={previewTeams}
-                        {focusedTeam}
-                        eventName={event.name}
-                        eventCode={event.code}
-                        {season}
-                        remote={event.remote}
-                    />
-                </TabContent>
+            <TabContent name="rankings">
+                <Rankings
+                    {season}
+                    remote={event.remote}
+                    eventName={event.name}
+                    data={stats}
+                    {focusedTeam}
+                />
+            </TabContent>
 
-                <TabContent name="rankings">
-                    <Rankings
-                        {season}
-                        remote={event.remote}
-                        eventName={event.name}
-                        data={stats}
-                        {focusedTeam}
-                    />
-                </TabContent>
+            <TabContent name="picklist">
+                <Picklist
+                    {season}
+                    remote={event.remote}
+                    eventCode={event.code}
+                    data={previewTeams.filter((t) => t.teamNumber != data.homeTeam)}
+                    {focusedTeam}
+                />
+            </TabContent>
 
-                <TabContent name="picklist">
-                    <Picklist
-                        {season}
-                        remote={event.remote}
-                        eventCode={event.code}
-                        data={previewTeams.filter((t) => t.teamNumber != data.homeTeam)}
-                        {focusedTeam}
-                    />
-                </TabContent>
-
-                <TabContent name="teams">
-                    <Teams teams={event.teams} {focusedTeam} />
-                </TabContent>
-            </TabbedCard>
-        </Loading>
+            <TabContent name="teams">
+                <Teams teams={event.teams} {focusedTeam} />
+            </TabContent>
+        </TabbedCard>
     {:else}
         <Card vis={false}>
             <div class="title">
