@@ -15,19 +15,10 @@
         content.addEventListener("scroll", update, { passive: true });
         return () => content.removeEventListener("scroll", update);
     });
-
-    function scrollToTop() {
-        document.getElementById("content")?.scrollTo({ top: 0, behavior: "smooth" });
-    }
 </script>
 
 <thead bind:this={header} class:stuck class:hidden>
-    <tr
-        role="button"
-        tabindex="0"
-        on:click={scrollToTop}
-        on:keydown={(e) => e.key == "Enter" && scrollToTop()}
-    >
+    <tr>
         <th class="match">Match</th>
         <th class="red">Red Alliance</th>
         <th class="score">Score / Pred</th>
@@ -66,8 +57,6 @@
         align-items: center;
 
         min-height: 40px;
-
-        cursor: pointer;
     }
 
     th {
