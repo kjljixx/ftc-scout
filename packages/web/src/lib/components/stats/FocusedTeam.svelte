@@ -46,11 +46,23 @@
         if (e.key == "Escape") dispatch("close");
         if (e.key == "Enter" && !target?.closest("button, a")) goto(href);
     }
+
+    let cardElement: HTMLElement;
+
+    const CLICKABLE = "a, button, input, select, textarea, label, summary, [role='button'], [tabindex]:not([tabindex='-1'])";
+
+    function onWindowClick(e: MouseEvent) {
+        let target = e.target as HTMLElement | null;
+        if (!target?.isConnected || cardElement?.contains(target)) return;
+        if (target.closest(CLICKABLE) || getComputedStyle(target).cursor == "pointer") return;
+
+        dispatch("close");
+    }
 </script>
 
-<svelte:window on:keydown={onKeydown} />
+<svelte:window on:keydown={onKeydown} on:click={onWindowClick} />
 
-<div class="card" transition:fly={{ y: 100, duration: 300 }}>
+<div class="card" bind:this={cardElement} transition:fly={{ y: 100, duration: 300 }}>
     <a {href}>
         <div class="team">
             <span class="name">{name}</span>
