@@ -30,6 +30,28 @@ query Team($number: Int!, $season: Int!, $overall: Boolean!) {
             }
             count
         }
+        awards @include(if: $overall) {
+            season
+            eventCode
+            teamNumber
+            type
+            placement
+            personName
+            event {
+                season
+                code
+                name
+                type
+                start
+                end
+                location {
+                    venue
+                    city
+                    state
+                    country
+                }
+            }
+        }
         events(season: $season) @skip(if: $overall) {
             season
             eventCode

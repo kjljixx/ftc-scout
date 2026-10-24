@@ -34,6 +34,7 @@
     import { TEAM_SEASON_CTX, type TeamSeasonStore } from "./teamSeason";
     import QuickStats from "./QuickStats.svelte";
     import OverallStats from "./OverallStats.svelte";
+    import OrangeBanners from "./OrangeBanners.svelte";
     import { goto } from "$app/navigation";
     import { browser } from "$app/environment";
     import {
@@ -160,6 +161,20 @@
         document.getElementById(`crosshair-${code}`)?.scrollIntoView({ block: "start" });
     }
 
+    let scrolledToHash: string | null = null;
+    $: if (!$page.url.hash) scrolledToHash = null;
+    $: if (browser && sortedEvents.length && $page.url.hash && $page.url.hash != scrolledToHash) {
+        scrollToEventHash($page.url.hash);
+    }
+
+    async function scrollToEventHash(hash: string) {
+        let code = decodeURIComponent(hash.slice(1));
+        if (!sortedEvents.some((tep) => tep.event.code == code)) return;
+        scrolledToHash = hash;
+        await tick();
+        document.getElementById(code)?.scrollIntoView({ block: "start" });
+    }
+
     $: focusedEvent = sortedEvents.find((tep) => tep.event.code == focused?.eventCode)?.event;
     $: focusedTeamData = [
         ...(focusedEvent?.teams ?? []),
@@ -170,6 +185,7 @@
 <Loading store={$teamStore} checkExists={(t) => !!t.teamByNumber}>
     {#if $season == "overall"}
         <OverallStats history={team.quickStatsHistory ?? []} />
+        <OrangeBanners teamNumber={team.number} awards={team.awards ?? []} />
     {:else}
         {#if focusedEvent && focusedTeamData}
             <FocusedTeam
