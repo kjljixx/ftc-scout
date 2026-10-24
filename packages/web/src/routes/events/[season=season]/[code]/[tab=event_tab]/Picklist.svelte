@@ -40,6 +40,7 @@
     const HEADER_CHAR_WIDTH = 8;
     const HEADER_EXTRA_WIDTH = 56;
     const NUMBER_FIELD_WIDTH = 70;
+    const CUSTOM_FIELD_COLORS = [Color.Purple, Color.Blue];
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -111,6 +112,7 @@
     let customValues: Record<number, Record<string, string | number | boolean>> = {};
     let pendingValueKeys = new Set<string>();
     let valueSaveTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+    let editStartValues: Record<string, string> = {};
 
     let fieldToRemove: CustomFieldTy | null = null;
 
@@ -286,6 +288,36 @@
             () => saveCustomCellValue(teamNumber, field, rawValue),
             600
         );
+    }
+
+    function cellText(teamNumber: number, fieldId: string) {
+        return String(customValues[teamNumber]?.[fieldId] ?? "");
+    }
+
+    function onCustomCellFocus(teamNumber: number, field: CustomFieldTy, e: FocusEvent) {
+        editStartValues[valueKey(field.id, teamNumber)] = cellText(teamNumber, field.id);
+        (e.currentTarget as HTMLInputElement).select();
+    }
+
+    function onCustomCellKeydown(teamNumber: number, field: CustomFieldTy, e: KeyboardEvent) {
+        if (e.key !== "Enter" && e.key !== "Escape") return;
+        let input = e.currentTarget as HTMLInputElement;
+        let key = valueKey(field.id, teamNumber);
+        clearTimeout(valueSaveTimeouts[key]);
+
+        if (e.key === "Enter") {
+            if (pendingValueKeys.has(key)) saveCustomCellValue(teamNumber, field, input.value);
+        } else {
+            let original = editStartValues[key] ?? "";
+            let changed = input.value !== original;
+            customValues = {
+                ...customValues,
+                [teamNumber]: { ...(customValues[teamNumber] ?? {}), [field.id]: original },
+            };
+            if (changed) saveCustomCellValue(teamNumber, field, original);
+            else pendingValueKeys.delete(key);
+        }
+        input.blur();
     }
 
     async function saveCustomCellValue(teamNumber: number, field: CustomFieldTy, rawValue: string) {
@@ -468,22 +500,6 @@
 {#if !$picklistState.loaded}
     <Skeleton />
 {:else}
-<div class="custom-fields-manager">
-    <input
-        class="non-form"
-        type="text"
-        placeholder="New field name"
-        bind:value={newFieldName}
-        on:keydown={(e) => e.key === "Enter" && addCustomField()}
-    />
-    <select class="non-form" bind:value={newFieldType}>
-        <option value="string">Text</option>
-        <option value="float">Number</option>
-        <option value="boolean">Checkbox</option>
-    </select>
-    <Button variant="secondary" on:click={addCustomField}>Add Field</Button>
-</div>
-
 <div class="table-scroll-container" bind:clientWidth={containerWidth}>
     <table
         class="draggable-table"
@@ -518,8 +534,8 @@
                         {/if}
                     </th>
                 {/each}
-                {#each customFields as field (field.id)}
-                    <th class="custom-field-header">
+                {#each customFields as field, i (field.id)}
+                    <th class="custom-field-header {CUSTOM_FIELD_COLORS[i % CUSTOM_FIELD_COLORS.length]}">
                         <span class="custom-field-name" title={field.name}>{field.name}</span>
                         <button
                             class="remove-field-btn"
@@ -568,9 +584,13 @@
                     {#each defaultStats as statId}
                         <StatCell data={wrapped} stat={columnStats[statId]} {focusedTeam} />
                     {/each}
-                    {#each customFields as field (field.id)}
+                    {#each customFields as field, i (field.id)}
                         {@const teamNumber = wrapped.data.team?.number}
-                        <td class="custom-field-cell">
+                        <td
+                            class="custom-field-cell {CUSTOM_FIELD_COLORS[
+                                i % CUSTOM_FIELD_COLORS.length
+                            ]}"
+                        >
                             {#if teamNumber != null}
                                 {#if field.type === "boolean"}
                                     <input
@@ -584,7 +604,8 @@
                                         step={field.type === "float" ? "any" : undefined}
                                         value={customValues[teamNumber]?.[field.id] ?? ""}
                                         on:input={(e) => onCustomCellInput(teamNumber, field, e)}
-                                        on:focus={(e) => e.currentTarget.select()}
+                                        on:focus={(e) => onCustomCellFocus(teamNumber, field, e)}
+                                        on:keydown={(e) => onCustomCellKeydown(teamNumber, field, e)}
                                     />
                                 {/if}
                             {/if}
@@ -594,6 +615,22 @@
             {/each}
         </tbody>
     </table>
+</div>
+
+<div class="custom-fields-manager">
+    <input
+        class="non-form"
+        type="text"
+        placeholder="New field name"
+        bind:value={newFieldName}
+        on:keydown={(e) => e.key === "Enter" && addCustomField()}
+    />
+    <select class="non-form" bind:value={newFieldType}>
+        <option value="string">Text</option>
+        <option value="float">Number</option>
+        <option value="boolean">Checkbox</option>
+    </select>
+    <Button variant="secondary" on:click={addCustomField}>Add Field</Button>
 </div>
 {/if}
 </div>
@@ -622,6 +659,18 @@
 <style>
     .gate {
         position: relative;
+        --purple-stat-color: color-mix(in srgb, rgb(var(--purple-stat-color-vs)) 70%, gray);
+        --purple-stat-bg-color: color-mix(
+            in srgb,
+            rgba(var(--purple-stat-color-vs), var(--stat-transparency)) 70%,
+            transparent
+        );
+        --blue-stat-color: color-mix(in srgb, rgb(var(--blue-stat-color-vs)) 70%, gray);
+        --blue-stat-bg-color: color-mix(
+            in srgb,
+            rgba(var(--blue-stat-color-vs), var(--stat-transparency)) 70%,
+            transparent
+        );
     }
 
     .gated.locked {
@@ -676,10 +725,6 @@
         text-overflow: ellipsis;
     }
 
-    .draggable-table tbody :global(td.custom-field-cell) {
-        overflow: visible;
-    }
-
     .draggable-table :global(thead:not(.sticking) th:first-child) {
         border-top-left-radius: 7px;
     }
@@ -719,7 +764,7 @@
     .resize-handle {
         position: absolute;
         top: 0;
-        left: 100%;
+        left: calc(100% - 4px);
         z-index: 1;
         width: 8px;
         height: 100%;
@@ -730,22 +775,6 @@
     .draggable-table th:last-child .resize-handle {
         left: auto;
         right: -4px;
-    }
-
-    .resize-handle::after {
-        content: "";
-        position: absolute;
-        top: 25%;
-        left: 3px;
-        width: 2px;
-        height: 50%;
-        border-radius: 1px;
-        background: var(--secondary-text-color);
-        opacity: 0.5;
-    }
-
-    .resize-handle:hover::after {
-        opacity: 1;
     }
 
     .empty {
@@ -854,7 +883,7 @@
         display: flex;
         align-items: center;
         gap: var(--md-gap);
-        margin-bottom: var(--md-gap);
+        margin-top: var(--md-gap);
     }
 
     .custom-fields-manager input {
@@ -872,11 +901,22 @@
     .remove-field-btn {
         background: none;
         border: none;
-        color: var(--secondary-text-color);
+        color: inherit;
         cursor: pointer;
         margin-left: 0.4rem;
         font-size: 1rem;
         line-height: 1;
+    }
+
+    @media (hover: hover) {
+        .remove-field-btn {
+            opacity: 0;
+        }
+
+        .custom-field-header:hover .remove-field-btn,
+        .remove-field-btn:focus-visible {
+            opacity: 1;
+        }
     }
 
     .custom-field-cell {
@@ -885,32 +925,38 @@
         position: relative;
     }
 
+    .custom-field-cell.blue {
+        background: var(--blue-stat-bg-color);
+    }
+    .custom-field-cell.purple {
+        background: var(--purple-stat-bg-color);
+    }
+
     .custom-field-cell input {
         width: 100%;
         box-sizing: border-box;
         padding: var(--sm-pad);
-        border: 1px solid var(--sep-color);
+        border: 1px solid transparent;
         border-radius: 4px;
-        background: var(--fg-color);
+        background: transparent;
         color: var(--text-color);
         text-align: center;
         font: inherit;
+    }
+
+    .custom-field-cell input[type="text"]:focus,
+    .custom-field-cell input[type="number"]:focus {
+        border-color: var(--sep-color);
+        background: var(--fg-color);
+    }
+
+    .custom-field-cell input[type="number"]:not(:focus)::-webkit-inner-spin-button {
+        opacity: 0;
     }
 
     .custom-field-cell input[type="checkbox"] {
         width: 20px;
         height: 20px;
         cursor: pointer;
-    }
-
-    .custom-field-cell input[type="text"]:focus {
-        position: absolute;
-        z-index: 20;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 180px;
-        min-width: 100%;
-        max-width: 400px;
     }
 </style>
