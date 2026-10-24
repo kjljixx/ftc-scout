@@ -13,7 +13,7 @@
     import { get } from "svelte/store";
     import { globalSeason, parseSeason, teamInactiveSeasons } from "$lib/season-store";
     import { queryParam } from "$lib/util/search-params/search-params";
-    import { TEAM_SEASON_CTX, type TeamSeasonStore } from "./teamSeason";
+    import { TEAM_SEASON_CTX, teamViewMemory, type TeamSeasonStore } from "./teamSeason";
 
     export let data;
 
@@ -24,15 +24,16 @@
         : [];
     onDestroy(() => teamInactiveSeasons.set([]));
 
-    let lastDecoded: Season | "overall" | null = null;
+    onDestroy(() => (teamViewMemory.overall = false));
+
     const season: TeamSeasonStore = queryParam("season", {
         encode: (val) => "" + val,
         decode: (val) => {
             let decoded: Season | "overall" =
-                val == "overall"
-                    ? val
-                    : parseSeason(val) ?? (val == null && lastDecoded == "overall" ? "overall" : get(globalSeason));
-            lastDecoded = decoded;
+                val == "overall" || (val == null && teamViewMemory.overall)
+                    ? "overall"
+                    : parseSeason(val) ?? get(globalSeason);
+            teamViewMemory.overall = decoded == "overall";
             return decoded;
         },
         pushState: true,

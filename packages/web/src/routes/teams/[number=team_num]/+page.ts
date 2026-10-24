@@ -14,6 +14,7 @@ import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { overallFromUrl, seasonFromUrl } from "./+page.svelte";
 import { gameActive } from "$lib/game/game-store";
+import { teamViewMemory } from "./teamSeason";
 
 export type TeamEventDetails = { data: TeamEventDetailsQuery | null } | null;
 
@@ -64,7 +65,9 @@ export const load: PageLoad = async ({ url, params, fetch }) => {
     let client = getClient(fetch);
     let number = +params.number;
     let season = seasonFromUrl(url);
-    let overall = overallFromUrl(url);
+    let overall =
+        overallFromUrl(url) ||
+        (browser && !url.searchParams.has("season") && teamViewMemory.overall);
 
     let teamData = await getData(client, TeamDocument, { number, season, overall });
 
