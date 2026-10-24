@@ -346,16 +346,18 @@ export function visitTeam(number: number, name: string, url: string) {
     });
 }
 
-export function disorientTo(number: number, name: string): boolean {
+export function forceMoveTo(number: number, name: string, reason: string): boolean {
     let moved = false;
     game.update((g) => {
         if (g.status != "playing" || g.path[g.path.length - 1]?.number == number) return g;
         moved = true;
-        console.info(`[game] disoriented ${g.path[g.path.length - 1]?.number} -> ${number}, hops=${g.path.length}`);
+        console.info(`[game] ${reason} ${g.path[g.path.length - 1]?.number} -> ${number}, hops=${g.path.length}`);
         return { ...g, path: [...g.path, { number, name }], currentUrl: teamUrl(number), radarVisit: null, pendingHop: null };
     });
     return moved;
 }
+
+export const disorientTo = (number: number, name: string) => forceMoveTo(number, name, "disoriented");
 
 export function winAt(stop: PathStop) {
     game.update((g) => {

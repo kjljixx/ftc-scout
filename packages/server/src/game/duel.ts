@@ -188,6 +188,7 @@ function mineOf(duel: Duel, index: number) {
   const effects = activeEffects(duel);
   const frozenUntil = duel.players[index].frozenUntil;
   return {
+    position: positionOf(duel.players[index]),
     used: duel.players[index].used,
     frozenUntil: frozenUntil > Date.now() ? frozenUntil : null,
     outgoing: effects
@@ -210,6 +211,11 @@ function newCode(): string {
     if (!duels.has(code)) return code;
   }
   throw new Error("Could not allocate a duel code.");
+}
+
+function positionOf(player: Player): { number: number; name: string } {
+  const { number, name } = player.path[player.path.length - 1];
+  return { number, name };
 }
 
 function pathOf(player: Player): Stop[] {
@@ -414,6 +420,11 @@ export function setupDuels(httpServer: HttpServer) {
       const last = player.path[player.path.length - 1].number;
       if (number === null || player.gaveUp || player.finishedAt !== null) return ack?.({ ok: false, error: "Invalid hop." });
       if (number === last) return ack?.({ ok: true });
+      const from = positiveInt(rawStop?.from);
+      if (from !== null && from !== last) {
+        console.warn(`[duel] ${duel.code} player=${index} hop ${from}>${number} rejected: stale, server position is ${last}`);
+        return ack?.({ ok: false, error: "Position changed", stale: true, position: positionOf(player) });
+      }
       const frozenMs = player.frozenUntil - Date.now();
       if (frozenMs > 0) {
         console.info(`[duel] ${duel.code} player=${index} hop ${last}>${number} rejected: frozen for ${frozenMs} more ms`);

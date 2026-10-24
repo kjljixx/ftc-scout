@@ -10,10 +10,13 @@ import {
   giveUp,
   resetGame,
   disorientTo,
+  forceMoveTo,
+  setPendingHop,
   showToast,
   startGame,
   startUrl,
   teamUrl,
+  visitTeam,
   winAt,
   type GamePair,
   type GameState,
@@ -33,7 +36,7 @@ export type DuelPlayer = {
 export type SabotageId = "sniper" | "disorient" | "spy";
 export type OutgoingEffect = { id: number; kind: "sniper"; team?: number; expiresAt: number; hits: number };
 export type IncomingEffect = { id: number; kind: SabotageId; expiresAt: number; spent: boolean; team?: number; teamName?: string };
-export type DuelMine = { used: Record<SabotageId, boolean>; frozenUntil: number | null; outgoing: OutgoingEffect[]; incoming: IncomingEffect[] };
+export type DuelMine = { position: { number: number; name: string }; used: Record<SabotageId, boolean>; frozenUntil: number | null; outgoing: OutgoingEffect[]; incoming: IncomingEffect[] };
 export type DuelView = {
   code: string;
   status: DuelStatus;
@@ -49,6 +52,7 @@ export type DuelView = {
   mine: DuelMine;
 };
 type ServerView = Omit<DuelView, "receivedAt">;
+type HopAttempt = { from: number; number: number; name: string; hop: Hop | undefined; acked: boolean };
 type Session = { code: string; token: string; you: number };
 type Ack = { ok: true; [key: string]: any } | { ok: false; error: string; [key: string]: any };
 
@@ -105,6 +109,7 @@ let duelRunId: string | null = null;
 let sentStops = 1;
 let sentGiveUp = false;
 let sentMarks = "[]";
+let attemptedHop: HopAttempt | null = null;
 const expiryTimers = new Map<number, ReturnType<typeof setTimeout>>();
 const hitEffects = new Set<number>();
 
@@ -116,7 +121,7 @@ function credentials() {
 function request(event: string, ...args: unknown[]): Promise<Ack> {
   return getSocket().timeout(ACK_TIMEOUT_MS).emitWithAck(event, ...args).catch((e) => {
     console.error(`[duel] ${event} got no response:`, e);
-    return { ok: false, error: "Could not reach the server. Try again." } as Ack;
+    return { ok: false, error: "Could not reach the server. Try again.", offline: true } as Ack;
   });
 }
 
@@ -153,6 +158,7 @@ async function rejoin() {
     const local = get(game);
     if (local.status === "playing" && local.pair?.start.number === view.pair.start.number) {
       duelRunId = local.runId;
+      reconcilePosition(view.mine.position);
       sentStops = Math.min(sentStops, me.hops + 1);
       sentMarks = "[]";
       syncRun(local);
@@ -172,6 +178,7 @@ function applyView(server: ServerView, quiet = false) {
   if (!quiet && prev) announceSabotages(prev, view);
   if (quiet) return;
   if (view.status === "racing" && prev && prev.status !== "racing" && prev.status !== "done") beginRace(view);
+  if (view.status === "racing") reconcilePosition(view.mine.position);
   if (view.status === "done" && prev?.status !== "done") endRace(view);
   if (view.status === "lobby" && prev?.status === "done") startRematchLobby();
 }
@@ -181,6 +188,7 @@ function announceSabotages(prev: DuelView, view: DuelView) {
   for (const effect of view.mine.incoming) {
     if (seenIncoming.has(effect.id)) continue;
     console.info(`[duel] incoming ${effect.kind} id=${effect.id}`);
+    if (effect.kind === "disorient" && effect.team !== undefined) applyAckedHop();
     if (effect.kind === "disorient" && effect.team !== undefined && disorientTo(effect.team, effect.teamName ?? `${effect.team}`)) {
       sentStops = get(game).path.length;
       goto(teamUrl(effect.team));
@@ -201,10 +209,36 @@ function announceSabotages(prev: DuelView, view: DuelView) {
   }
 }
 
+function applyAckedHop() {
+  const attempt = attemptedHop;
+  attemptedHop = null;
+  if (!attempt?.acked || get(game).path.at(-1)?.number !== attempt.from) return;
+  console.info(`[duel] applying acknowledged hop ${attempt.from}>${attempt.number} before Disorient`);
+  if (attempt.hop && attempt.hop.kind !== "radar") setPendingHop(attempt.number, attempt.hop);
+  visitTeam(attempt.number, attempt.name, teamUrl(attempt.number));
+}
+
+function reconcilePosition(position: DuelMine["position"]) {
+  const g = get(game);
+  if (get(duelView)?.status !== "racing" || g.status !== "playing" || g.runId !== duelRunId) return;
+  const local = g.path.at(-1)?.number;
+  if (local === position.number) {
+    if (attemptedHop?.number === position.number) attemptedHop = null;
+    return;
+  }
+  if (attemptedHop?.number === position.number) return;
+  console.warn(`[duel] desync local=${local} server=${position.number}; moving to the server position`);
+  if (forceMoveTo(position.number, position.name, "resynced")) {
+    sentStops = get(game).path.length;
+    goto(teamUrl(position.number));
+  }
+}
+
 function startRematchLobby() {
   console.info("[duel] rematch accepted; back to the lobby");
   resetGame();
   duelRunId = null;
+  attemptedHop = null;
   sentStops = 1;
   sentGiveUp = false;
   sentMarks = "[]";
@@ -213,6 +247,7 @@ function startRematchLobby() {
 function beginRace(view: DuelView) {
   startGame(view.pair);
   duelRunId = get(game).runId;
+  attemptedHop = null;
   sentStops = 1;
   sentGiveUp = false;
   sentMarks = "[]";
@@ -248,6 +283,8 @@ function syncRun(g: GameState) {
         showToast(`Frozen · ${FREEZE_SECONDS}s`);
       } else if (!res.ok && res.error === "Frozen") {
         showToast(`Frozen · ${Math.ceil(res.frozenMs / 1000)}s`);
+      } else if (!res.ok && res.stale) {
+        console.warn(`[duel] hop to ${stop.number} was stale; server position is ${res.position.number}`);
       } else if (!res.ok) {
         console.error(`[duel] hop to ${stop.number} rejected: ${res.error}`);
         showToast("The server did not accept that hop.");
@@ -274,6 +311,7 @@ function clearDuel() {
   duelSession.set(null);
   duelView.set(null);
   duelRunId = null;
+  attemptedHop = null;
   sentStops = 1;
   sentGiveUp = false;
   sentMarks = "[]";
@@ -345,8 +383,15 @@ export async function tryHop(number: number, name: string, hop: Hop | undefined)
     showToast(`Frozen · ${frozen}s`);
     return false;
   }
-  const res = await request("hop", creds, { number, name, hop });
-  if (res.ok) return true;
+  const attempt: HopAttempt = { from: get(game).path.at(-1)!.number, number, name, hop, acked: false };
+  attemptedHop = attempt;
+  const res = await request("hop", creds, { number, name, hop, from: attempt.from });
+  if (res.ok) {
+    attempt.acked = true;
+    return true;
+  }
+  if (attemptedHop === attempt) attemptedHop = null;
+  if (res.offline) return true;
   if (res.blocked) {
     console.info(`[duel] hop to ${number} triggered ${res.blocked.kind}; frozen ${FREEZE_SECONDS}s`);
     showToast(`Frozen · ${FREEZE_SECONDS}s`);
@@ -356,7 +401,18 @@ export async function tryHop(number: number, name: string, hop: Hop | undefined)
     showToast(`Frozen · ${Math.ceil(res.frozenMs / 1000)}s`);
     return false;
   }
-  return true;
+  if (res.stale) {
+    console.warn(`[duel] hop ${attempt.from}>${number} was stale; server position is ${res.position.number}`);
+    reconcilePosition(res.position);
+    return false;
+  }
+  if (res.error === "No active race.") {
+    console.info(`[duel] hop to ${number} ignored: the race is over`);
+    return false;
+  }
+  console.warn(`[duel] hop to ${number} rejected: ${res.error}`);
+  showToast(res.error);
+  return false;
 }
 
 export async function requestRematch() {
