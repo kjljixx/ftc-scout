@@ -56,44 +56,57 @@ export function queryParam<T>(
     let valStore = writable<T>(decode(null));
 
     let setRef = { set: (_: T) => {} };
-    let pageUnsub = page.subscribe(($page) => {
-        setRef.set = (val: T) => {
-            let str = encode(val);
-            let newQuery = new URLSearchParams(batchUrl ?? $page.url.searchParams);
+    let subscriberCount = 0;
+    let pageUnsub: (() => void) | null = null;
+    const attachToPage = () =>
+        page.subscribe(($page) => {
+            setRef.set = (val: T) => {
+                let str = encode(val);
+                let newQuery = new URLSearchParams(batchUrl ?? $page.url.searchParams);
 
-            if (str == null) {
-                newQuery.delete(name);
-            } else {
-                newQuery.set(name, str);
-            }
+                if (str == null) {
+                    newQuery.delete(name);
+                } else {
+                    newQuery.set(name, str);
+                }
 
-            let url = `?${newQuery}${killHash ? "" : $page.url.hash}`;
-            if (browser && !batching && newQuery.toString() != $page.url.searchParams.toString()) {
-                goto(url, {
-                    keepFocus: true,
-                    noScroll: true,
-                    replaceState: !pushState,
-                });
-            } else if (batching) {
-                batchUrl = url;
-            }
+                let url = `?${newQuery}${killHash ? "" : $page.url.hash}`;
+                if (
+                    browser &&
+                    !batching &&
+                    newQuery.toString() != $page.url.searchParams.toString()
+                ) {
+                    goto(url, {
+                        keepFocus: true,
+                        noScroll: true,
+                        replaceState: !pushState,
+                    });
+                } else if (batching) {
+                    batchUrl = url;
+                }
 
-            valStore.set(val);
-        };
+                valStore.set(val);
+            };
 
-        let param = $page.url.searchParams.get(name) ?? null;
-        let decoded = decode(param);
-        valStore.set(decoded);
-        setRef.set(decoded);
-    });
+            let param = $page.url.searchParams.get(name) ?? null;
+            let decoded = decode(param);
+            valStore.set(decoded);
+            setRef.set(decoded);
+        });
+    pageUnsub = attachToPage();
 
     return {
         set: (val) => setRef.set(val),
         subscribe: (run, invalidate) => {
+            subscriberCount++;
+            pageUnsub ??= attachToPage();
             let valUnsub = valStore.subscribe(run, invalidate);
             return () => {
                 valUnsub();
-                pageUnsub();
+                if (--subscriberCount == 0) {
+                    pageUnsub?.();
+                    pageUnsub = null;
+                }
             };
         },
         update: (updater: Updater<T>) => {
