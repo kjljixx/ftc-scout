@@ -9,6 +9,7 @@ const MAX_TEAM_ORDER = 500;
 const MAX_CUSTOM_FIELDS = 30;
 const MAX_FIELD_NAME_LENGTH = 60;
 const MAX_TEXT_VALUE_LENGTH = 500;
+const DEFAULT_FIELD_NAMES = ["Auto", "Consistency", "Scoring Potential", "Endgame"];
 
 function picklistKey(teamTokenHash: string, season: number, eventCode: string) {
     return `PICKLIST-${teamTokenHash}-${season}-${eventCode}`;
@@ -78,6 +79,39 @@ const EventPicklistGQL = new GraphQLObjectType({
     },
 });
 
+function newPicklist(teamTokenHash: string, season: number, eventCode: string) {
+    return EventPicklist.create({
+        teamTokenHash,
+        season,
+        eventCode,
+        teamOrder: [],
+        customFields: DEFAULT_FIELD_NAMES.map(
+            (name): CustomField => ({ id: randomUUID(), name, type: "string" })
+        ),
+        customValues: {},
+    });
+}
+
+async function findOrSeedPicklist(
+    teamTokenHash: string,
+    season: number,
+    eventCode: string
+): Promise<EventPicklist> {
+    let existing = await EventPicklist.findOneBy({ teamTokenHash, season, eventCode });
+    if (existing) return existing;
+
+    try {
+        let seeded = await newPicklist(teamTokenHash, season, eventCode).save();
+        console.info(
+            `[picklist] seeded ${season}:${eventCode} with ${DEFAULT_FIELD_NAMES.length} default fields`
+        );
+        return seeded;
+    } catch (error) {
+        console.warn(`[picklist] seeding ${season}:${eventCode} failed, re-reading:`, error);
+        return await EventPicklist.findOneByOrFail({ teamTokenHash, season, eventCode });
+    }
+}
+
 async function getOrCreatePicklist(
     teamTokenHash: string,
     season: number,
@@ -85,14 +119,7 @@ async function getOrCreatePicklist(
 ): Promise<EventPicklist> {
     let picklist = await EventPicklist.findOneBy({ teamTokenHash, season, eventCode });
     if (!picklist) {
-        picklist = EventPicklist.create({
-            teamTokenHash,
-            season,
-            eventCode,
-            teamOrder: [],
-            customFields: [],
-            customValues: {},
-        });
+        picklist = newPicklist(teamTokenHash, season, eventCode);
     }
     if (!picklist.customFields) picklist.customFields = [];
     if (!picklist.customValues) picklist.customValues = {};
@@ -111,11 +138,7 @@ export const EventPicklistQueries: Record<string, GraphQLFieldConfig<any, GQLCon
         type: EventPicklistGQL,
         args: { season: IntTy, eventCode: StrTy },
         resolve: (_, { season, eventCode }, ctx) =>
-            EventPicklist.findOneBy({
-                teamTokenHash: requirePicklistTeam(ctx).tokenHash,
-                season,
-                eventCode,
-            }),
+            findOrSeedPicklist(requirePicklistTeam(ctx).tokenHash, season, eventCode),
     },
 };
 

@@ -6,8 +6,8 @@
         SetCustomFieldValueDocument,
         type EventPageQuery,
     } from "$lib/graphql/generated/graphql-operations";
-    import { DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
-    import { faGripLines } from "@fortawesome/free-solid-svg-icons";
+    import { Color, DESCRIPTORS, getTepStatSet, type Season } from "@ftc-scout/common";
+    import { faGripVertical } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
     import { onDestroy } from "svelte";
     import { getClient } from "$lib/graphql/client";
@@ -26,6 +26,20 @@
     import Card from "$lib/components/Card.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
     import { team } from "$lib/team/team-store";
+    import { browser } from "$app/environment";
+
+    const WIDTHS_STORAGE_KEY = "picklist-column-widths";
+    const MIN_COLUMN_WIDTH = 50;
+    const MAX_COLUMN_WIDTH = 600;
+    const RANK_COLUMN_WIDTH = 32;
+    const HANDLE_COLUMN_WIDTH = 24;
+    const TEAM_COLUMN_WIDTH = 200;
+    const STAT_COLUMN_WIDTH = 100;
+    const TABLE_BORDER_WIDTH = 2;
+    const TEXT_FIELD_WIDTH = 150;
+    const HEADER_CHAR_WIDTH = 8;
+    const HEADER_EXTRA_WIDTH = 56;
+    const NUMBER_FIELD_WIDTH = 70;
 
     type DataTy = NonNullable<EventPageQuery["eventByCode"]>["teams"][number];
 
@@ -40,13 +54,51 @@
     $: totalPoints = descriptor.pensSubtract || remote ? "totalPoints" : "totalPointsNp";
     $: defaultStats = ["team", ...(remote ? [] : [totalPoints + "Opr"]), "eventRank"];
 
+    let containerWidth = 0;
+
+    function sumWidths(cols: { width: number }[]) {
+        return RANK_COLUMN_WIDTH + HANDLE_COLUMN_WIDTH + cols.reduce((sum, c) => sum + c.width, 0);
+    }
+
+    function withColor(stat: ReturnType<typeof stats.getStat>, color: Color) {
+        return stat && Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { color });
+    }
+
+    $: if ($picklistState.loaded) customFields = $picklistState.customFields;
+    $: applyPicklistState($picklistState);
+
+    $: columnStats = Object.fromEntries(
+        defaultStats.map((id) => {
+            let stat = stats.getStat(id);
+            return [id, id === "eventRank" ? withColor(stat, Color.Blue) : stat];
+        })
+    );
+
+    $: baseColumns = [
+        ...defaultStats.map((key) => ({
+            key,
+            width: (!isColoredStat(key) && columnWidths[key]) || defaultStatWidth(key),
+        })),
+        ...customFields.map((field) => ({
+            key: field.id,
+            width: columnWidths[field.id] ?? defaultFieldWidth(field),
+        })),
+    ];
+    $: teamSlack =
+        columnWidths["team"] == null
+            ? Math.max(0, containerWidth - TABLE_BORDER_WIDTH - sumWidths(baseColumns))
+            : 0;
+    $: columns = baseColumns.map((c) =>
+        c.key === "team" ? { ...c, width: c.width + teamSlack } : c
+    );
+    $: totalWidth = sumWidths(columns);
+
     let draggedIndex: number | null = null;
-    let hoveredIndex: number | null = null;
+    let dropGap: number | null = null;
 
     let teamOrder: number[] = [];
 
     let touchStartIdx: number | null = null;
-    let touchTargetIdx: number | null = null;
     let lastTouchX = 0;
     let lastTouchY = 0;
 
@@ -62,8 +114,84 @@
 
     let fieldToRemove: CustomFieldTy | null = null;
 
+    let columnWidths: Record<string, number> = loadColumnWidths();
+    let resizingKey: string | null = null;
+
     let newFieldName = "";
     let newFieldType: string = "string";
+
+    function loadColumnWidths(): Record<string, number> {
+        if (!browser) return {};
+        try {
+            let parsed = JSON.parse(localStorage.getItem(WIDTHS_STORAGE_KEY) ?? "{}");
+            let widths: Record<string, number> = {};
+            for (let [key, value] of Object.entries(parsed)) {
+                if (typeof value === "number" && Number.isFinite(value)) widths[key] = value;
+            }
+            console.info(`[picklist widths] loaded ${Object.keys(widths).length} saved widths`);
+            return widths;
+        } catch (error) {
+            console.warn("[picklist widths] saved widths are malformed, using defaults:", error);
+            return {};
+        }
+    }
+
+    function saveColumnWidths() {
+        localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(columnWidths));
+        console.info(`[picklist widths] saved ${Object.keys(columnWidths).length} widths`);
+    }
+
+    function defaultStatWidth(statId: string) {
+        return statId === "team" ? TEAM_COLUMN_WIDTH : STAT_COLUMN_WIDTH;
+    }
+
+    function isColoredStat(statId: string | undefined) {
+        let color = statId ? columnStats[statId]?.color : null;
+        return !!color && color !== Color.White;
+    }
+
+    function defaultFieldWidth(field: CustomFieldTy) {
+        let minWidth = field.type === "string" ? TEXT_FIELD_WIDTH : NUMBER_FIELD_WIDTH;
+        let headerWidth = field.name.length * HEADER_CHAR_WIDTH + HEADER_EXTRA_WIDTH;
+        return Math.min(MAX_COLUMN_WIDTH, Math.max(minWidth, headerWidth));
+    }
+
+    function resetColumnWidth(key: string) {
+        let { [key]: _removed, ...rest } = columnWidths;
+        columnWidths = rest;
+        saveColumnWidths();
+        console.info(`[picklist widths] reset ${key}`);
+    }
+
+    function startResize(e: PointerEvent, key: string) {
+        e.preventDefault();
+        e.stopPropagation();
+        let handle = e.currentTarget as HTMLElement;
+        handle.setPointerCapture(e.pointerId);
+        let startX = e.clientX;
+        let startWidth = columns.find((c) => c.key === key)?.width ?? MIN_COLUMN_WIDTH;
+        resizingKey = key;
+
+        function onMove(move: PointerEvent) {
+            let width = startWidth + move.clientX - startX;
+            columnWidths = {
+                ...columnWidths,
+                [key]: Math.round(Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, width))),
+            };
+        }
+
+        function onEnd() {
+            handle.removeEventListener("pointermove", onMove);
+            handle.removeEventListener("pointerup", onEnd);
+            handle.removeEventListener("pointercancel", onEnd);
+            resizingKey = null;
+            saveColumnWidths();
+        }
+
+        handle.addEventListener("pointermove", onMove);
+        handle.addEventListener("pointerup", onEnd);
+        handle.addEventListener("pointercancel", onEnd);
+    }
 
     function valueKey(fieldId: string, teamNumber: number) {
         return `${fieldId}:${teamNumber}`;
@@ -90,11 +218,8 @@
             lastSyncedOrder = state.teamOrder;
             teamOrder = state.teamOrder;
         }
-        customFields = state.customFields;
         applyRemoteValues(state.customValues);
     }
-
-    $: applyPicklistState($picklistState);
 
     onDestroy(() => {
         picklistSync.stop();
@@ -143,6 +268,8 @@
             newValues[+teamNumber] = rest;
         }
         customValues = newValues;
+
+        if (fieldId in columnWidths) resetColumnWidth(fieldId);
     }
 
     function onCustomCellInput(teamNumber: number, field: CustomFieldTy, e: Event) {
@@ -249,27 +376,36 @@
         }
     }
 
-    function handleDragOver(event: DragEvent, index: number) {
-        event.preventDefault();
-        hoveredIndex = index;
+    function gapAtPointer(row: HTMLElement, index: number, clientY: number): number | null {
+        const rect = row.getBoundingClientRect();
+        const gap = clientY < rect.top + rect.height / 2 ? index : index + 1;
+        const isNoop = draggedIndex === null || gap === draggedIndex || gap === draggedIndex + 1;
+        return isNoop ? null : gap;
     }
 
-    function handleDrop(event: DragEvent, index: number) {
-        event.preventDefault();
-        if (draggedIndex === null || draggedIndex === index) return;
-
+    function moveTeam(from: number, gap: number) {
         const updatedOrder = [...teamOrder];
-        const [movedItem] = updatedOrder.splice(draggedIndex, 1);
-        updatedOrder.splice(index, 0, movedItem);
+        const [movedItem] = updatedOrder.splice(from, 1);
+        updatedOrder.splice(gap > from ? gap - 1 : gap, 0, movedItem);
 
         teamOrder = updatedOrder;
         queuePicklistSave(updatedOrder);
+    }
+
+    function handleDragOver(event: DragEvent, index: number) {
+        event.preventDefault();
+        dropGap = gapAtPointer(event.currentTarget as HTMLElement, index, event.clientY);
+    }
+
+    function handleDrop(event: DragEvent) {
+        event.preventDefault();
+        if (draggedIndex !== null && dropGap !== null) moveTeam(draggedIndex, dropGap);
         resetDragState();
     }
 
     function resetDragState() {
         draggedIndex = null;
-        hoveredIndex = null;
+        dropGap = null;
     }
 
     function handleTouchStart(event: TouchEvent, index: number) {
@@ -286,12 +422,9 @@
         const row = element?.closest(".team-row") as HTMLElement | null;
 
         if (row && row.dataset.index !== undefined) {
-            const index = parseInt(row.dataset.index, 10);
-            hoveredIndex = index;
-            touchTargetIdx = index;
+            dropGap = gapAtPointer(row, parseInt(row.dataset.index, 10), lastTouchY);
         } else {
-            hoveredIndex = null;
-            touchTargetIdx = null;
+            dropGap = null;
         }
     }
 
@@ -324,16 +457,8 @@
     }
 
     function handleTouchEnd() {
-        if (touchStartIdx !== null && touchTargetIdx !== null && touchStartIdx !== touchTargetIdx) {
-            const updatedOrder = [...teamOrder];
-            const [movedItem] = updatedOrder.splice(touchStartIdx, 1);
-            updatedOrder.splice(touchTargetIdx, 0, movedItem);
-
-            teamOrder = updatedOrder;
-            queuePicklistSave(updatedOrder);
-        }
+        if (touchStartIdx !== null && dropGap !== null) moveTeam(touchStartIdx, dropGap);
         touchStartIdx = null;
-        touchTargetIdx = null;
         resetDragState();
     }
 </script>
@@ -359,24 +484,43 @@
     <Button variant="secondary" on:click={addCustomField}>Add Field</Button>
 </div>
 
-<div class="table-scroll-container">
-    <table class="draggable-table">
+<div class="table-scroll-container" bind:clientWidth={containerWidth}>
+    <table
+        class="draggable-table"
+        class:resizing={resizingKey != null}
+        style:width="{totalWidth}px"
+    >
+        <colgroup>
+            <col style:width="{RANK_COLUMN_WIDTH}px" />
+            <col style:width="{HANDLE_COLUMN_WIDTH}px" />
+            {#each columns as column (column.key)}
+                <col style:width="{column.width}px" />
+            {/each}
+        </colgroup>
         <thead>
             <tr>
                 <th class="rank-header">#</th>
                 <th class="drag-handle-header empty" />
-                {#each defaultStats as statId}
-                    {@const stat = stats.getStat(statId)}
-                    <th class={stat?.color ?? ""} class:expand={stat?.shouldExpand()}>
-                        {stat?.columnName ?? statId}
+                {#each defaultStats as statId, i}
+                    {@const stat = columnStats[statId]}
+                    <th class={stat?.color ?? ""}>
+                        <span class="header-label" title={stat?.titleName ?? statId}>
+                            {stat?.columnName ?? statId}
+                        </span>
+                        {#if !isColoredStat(statId) && !isColoredStat(defaultStats[i + 1])}
+                            <span
+                                class="resize-handle"
+                                role="separator"
+                                title="Drag to resize, double-click to reset"
+                                on:pointerdown={(e) => startResize(e, statId)}
+                                on:dblclick={() => resetColumnWidth(statId)}
+                            />
+                        {/if}
                     </th>
                 {/each}
                 {#each customFields as field (field.id)}
-                    <th
-                        class="custom-field-header"
-                        class:number-header={field.type === "float" || field.type === "boolean"}
-                    >
-                        <span class="custom-field-name">{field.name}</span>
+                    <th class="custom-field-header">
+                        <span class="custom-field-name" title={field.name}>{field.name}</span>
                         <button
                             class="remove-field-btn"
                             title="Remove field"
@@ -384,6 +528,13 @@
                         >
                             ×
                         </button>
+                        <span
+                            class="resize-handle"
+                            role="separator"
+                            title="Drag to resize, double-click to reset"
+                            on:pointerdown={(e) => startResize(e, field.id)}
+                            on:dblclick={() => resetColumnWidth(field.id)}
+                        />
                     </th>
                 {/each}
             </tr>
@@ -393,12 +544,14 @@
                 <tr
                     class="team-row"
                     class:dragging={draggedIndex === index}
-                    class:hovered={hoveredIndex === index}
+                    class:drop-before={dropGap === index}
+                    class:drop-after={dropGap === index + 1 &&
+                        index === wrappedOrderedData.length - 1}
                     data-index={index}
                     draggable="true"
                     on:dragstart={(e) => handleDragStart(e, index)}
                     on:dragover={(e) => handleDragOver(e, index)}
-                    on:drop={(e) => handleDrop(e, index)}
+                    on:drop={handleDrop}
                     on:dragend={resetDragState}
                     on:touchstart|nonpassive={(e) => handleTouchStart(e, index)}
                     on:touchmove|nonpassive={handleTouchMove}
@@ -409,18 +562,15 @@
                     </td>
                     <td class="drag-handle-cell">
                         <span class="drag-handle">
-                            <Fa icon={faGripLines} scale="1.0x" />
+                            <Fa icon={faGripVertical} scale="1.0x" />
                         </span>
                     </td>
                     {#each defaultStats as statId}
-                        <StatCell data={wrapped} stat={stats.getStat(statId)} {focusedTeam} />
+                        <StatCell data={wrapped} stat={columnStats[statId]} {focusedTeam} />
                     {/each}
                     {#each customFields as field (field.id)}
                         {@const teamNumber = wrapped.data.team?.number}
-                        <td
-                            class="custom-field-cell"
-                            class:number-cell={field.type === "float" || field.type === "boolean"}
-                        >
+                        <td class="custom-field-cell">
                             {#if teamNumber != null}
                                 {#if field.type === "boolean"}
                                     <input
@@ -511,11 +661,23 @@
         border: 1px solid var(--sep-color);
         border-radius: 8px;
 
-        min-width: 100%;
-        width: min-content;
-        max-width: 100%;
+        table-layout: fixed;
         position: relative;
         background-color: var(--fg-color);
+    }
+
+    .draggable-table.resizing {
+        cursor: col-resize;
+        user-select: none;
+    }
+
+    .draggable-table tbody :global(td) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .draggable-table tbody :global(td.custom-field-cell) {
+        overflow: visible;
     }
 
     .draggable-table :global(thead:not(.sticking) th:first-child) {
@@ -532,6 +694,7 @@
     }
 
     .draggable-table th {
+        position: relative;
         padding: var(--lg-pad);
         font-weight: bold;
         text-align: center;
@@ -546,8 +709,43 @@
         }
     }
 
-    .expand {
-        width: 100%;
+    .header-label {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+    }
+
+    .resize-handle {
+        position: absolute;
+        top: 0;
+        left: 100%;
+        z-index: 1;
+        width: 8px;
+        height: 100%;
+        cursor: col-resize;
+        touch-action: none;
+    }
+
+    .draggable-table th:last-child .resize-handle {
+        left: auto;
+        right: -4px;
+    }
+
+    .resize-handle::after {
+        content: "";
+        position: absolute;
+        top: 25%;
+        left: 3px;
+        width: 2px;
+        height: 50%;
+        border-radius: 1px;
+        background: var(--secondary-text-color);
+        opacity: 0.5;
+    }
+
+    .resize-handle:hover::after {
+        opacity: 1;
     }
 
     .empty {
@@ -575,14 +773,13 @@
         background: var(--green-stat-color);
     }
 
-    .rank-header {
-        width: 20px;
-        min-width: 20px;
+    .rank-header,
+    .drag-handle-header {
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .rank-cell {
-        width: 20px;
-        min-width: 20px;
         text-align: center;
         vertical-align: middle;
         font-weight: bold;
@@ -612,19 +809,15 @@
         opacity: 0.3;
     }
 
-    .team-row.hovered {
-        outline: 2px solid var(--blue-stat-color);
-        background-color: rgba(59, 130, 246, 0.12);
+    .team-row.drop-before :global(td) {
+        box-shadow: inset 0 3px 0 var(--blue-stat-color);
     }
 
-    .drag-handle-header {
-        width: 40px;
-        min-width: 40px;
+    .team-row.drop-after :global(td) {
+        box-shadow: inset 0 -3px 0 var(--blue-stat-color);
     }
 
     .drag-handle-cell {
-        width: 40px;
-        min-width: 40px;
         text-align: center;
         vertical-align: middle;
     }
@@ -668,13 +861,12 @@
         cursor: text;
     }
 
-    .custom-field-header {
-        position: relative;
-        min-width: 100px;
-    }
-
-    .custom-field-header.number-header {
-        min-width: 60px;
+    .custom-field-name {
+        display: inline-block;
+        max-width: calc(100% - 1.6rem);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: bottom;
     }
 
     .remove-field-btn {
@@ -693,14 +885,8 @@
         position: relative;
     }
 
-    .custom-field-cell.number-cell {
-        width: 60px;
-        max-width: 60px;
-    }
-
     .custom-field-cell input {
         width: 100%;
-        min-width: 70px;
         box-sizing: border-box;
         padding: var(--sm-pad);
         border: 1px solid var(--sep-color);
@@ -711,14 +897,9 @@
         font: inherit;
     }
 
-    .custom-field-cell input[type="number"] {
-        min-width: 50px;
-    }
-
     .custom-field-cell input[type="checkbox"] {
         width: 20px;
         height: 20px;
-        min-width: unset;
         cursor: pointer;
     }
 
