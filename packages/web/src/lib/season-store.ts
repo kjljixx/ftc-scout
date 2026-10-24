@@ -67,7 +67,6 @@ function seasonUrl(season: Season, $page: Page): string | null {
     }
 
     if (routeId == TEAM_ROUTE) {
-        if ($page.url.searchParams.get("season") == "overall") return null;
         let query = new URLSearchParams($page.url.searchParams);
         query.set("season", "" + season);
         return `${$page.url.pathname}?${query}`;

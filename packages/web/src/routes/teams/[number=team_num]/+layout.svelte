@@ -8,7 +8,7 @@
     import AdditionalInfo from "$lib/components/AdditionalInfo.svelte";
     import { page } from "$app/stores";
     import { prettyPrintURL } from "$lib/printers/url";
-    import { ALL_SEASONS } from "@ftc-scout/common";
+    import { ALL_SEASONS, type Season } from "@ftc-scout/common";
     import { onDestroy, setContext } from "svelte";
     import { get } from "svelte/store";
     import { globalSeason, parseSeason, teamInactiveSeasons } from "$lib/season-store";
@@ -24,9 +24,17 @@
         : [];
     onDestroy(() => teamInactiveSeasons.set([]));
 
+    let lastDecoded: Season | "overall" | null = null;
     const season: TeamSeasonStore = queryParam("season", {
         encode: (val) => "" + val,
-        decode: (val) => (val == "overall" ? val : parseSeason(val) ?? get(globalSeason)),
+        decode: (val) => {
+            let decoded: Season | "overall" =
+                val == "overall"
+                    ? val
+                    : parseSeason(val) ?? (val == null && lastDecoded == "overall" ? "overall" : get(globalSeason));
+            lastDecoded = decoded;
+            return decoded;
+        },
         pushState: true,
         killHash: true,
     });
