@@ -16,12 +16,12 @@
 
     <div class="right">
         <div class="search-group">
+            <Searchbar disabled={$gameActive} />
             <SeasonPicker
                 season={$globalSeason}
                 disabledValues={$teamInactiveSeasons}
                 on:select={(e) => changeSeason(e.detail)}
             />
-            <Searchbar disabled={$gameActive} />
         </div>
         <DarkModeToggle />
     </div>
