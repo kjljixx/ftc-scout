@@ -343,8 +343,6 @@
 
     .event-head :global(.meta-line a) {
         color: inherit;
-        text-decoration: underline;
-        text-decoration-color: color-mix(in srgb, currentColor 65%, transparent);
         text-underline-offset: 2px;
     }
 

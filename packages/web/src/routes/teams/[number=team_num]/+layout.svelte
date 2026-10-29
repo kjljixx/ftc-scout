@@ -266,14 +266,11 @@
 
     .meta :global(a) {
         color: inherit;
-        text-decoration: underline;
-        text-decoration-color: color-mix(in srgb, currentColor 65%, transparent);
         text-underline-offset: 2px;
     }
 
     .meta :global(a:hover) {
         color: var(--text-color);
-        text-decoration-color: currentColor;
     }
 
     .view-switch {
