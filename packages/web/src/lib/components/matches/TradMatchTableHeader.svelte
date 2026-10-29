@@ -20,9 +20,9 @@
 <thead bind:this={header} class:stuck class:hidden>
     <tr>
         <th class="match">Match</th>
-        <th class="red">Red<span class="alliance"> Alliance</span></th>
+        <th class="red">Red <span class="alliance">Alliance</span></th>
         <th class="score">Score / Pred</th>
-        <th class="blue">Blue<span class="alliance"> Alliance</span></th>
+        <th class="blue">Blue <span class="alliance">Alliance</span></th>
     </tr>
 </thead>
 

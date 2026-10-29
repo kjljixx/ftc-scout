@@ -20,9 +20,9 @@
 
 {#if stats}
     <div class="line">
-        <span><b>{prettyPrintOrdinal(stats.rank)}</b> place (quals)</span>
+        <span><b>{prettyPrintOrdinal(stats.rank)}</b> place</span>
         {#if "wins" in stats}
-            <span>W-L-T <b>{stats.wins}-{stats.losses}-{stats.ties}</b></span>
+            <span><b>{stats.wins}-{stats.losses}-{stats.ties}</b> W-L-T</span>
         {/if}
         {#if "rp" in stats}
             <span><b>{prettyPrintFloat(stats.rp)}</b> RP</span>

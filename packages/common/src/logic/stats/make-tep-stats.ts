@@ -87,7 +87,7 @@ export function getTepStatSet(season: Season, remote: boolean): StatSet<any> {
                 titleName: "Event Ranking",
                 sqlExpr: "rank",
                 ty: StatType.Rank,
-                getNonRankValue: (d: any) => ({ ty: "rank", val: d.stats.rank }),
+                getNonRankValue: (d: any) => (d.stats ? { ty: "rank", val: d.stats.rank } : null),
             }),
             new NonRankStatColumn({
                 color: Color.Red,

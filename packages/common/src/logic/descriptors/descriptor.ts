@@ -275,7 +275,7 @@ export class TepComponent {
     }
 
     private getStdErr(group: TepStatGroup, d: any): number | null {
-        return group == TepStatGroup.Opr ? d.stats.oprSe?.[this.apiName] ?? null : null;
+        return group == TepStatGroup.Opr ? d.stats?.oprSe?.[this.apiName] ?? null : null;
     }
 
     getStatColumn(group: TepStatGroup) {
@@ -290,18 +290,21 @@ export class TepComponent {
             ty: TEP_GROUP_DATA_TYS[group],
             getNonRankValue: this.tradOnly
                 ? (d: any) =>
-                      this.apiName in d.stats[group]
+                      d.stats && this.apiName in d.stats[group]
                           ? {
                                 ty: TEP_GROUP_DATA_TYS[group],
                                 val: d.stats[group][this.apiName],
                                 stdErr: this.getStdErr(group, d),
                             }
                           : null
-                : (d: any) => ({
-                      ty: TEP_GROUP_DATA_TYS[group],
-                      val: d.stats[group][this.apiName],
-                      stdErr: this.getStdErr(group, d),
-                  }),
+                : (d: any) =>
+                      d.stats
+                          ? {
+                                ty: TEP_GROUP_DATA_TYS[group],
+                                val: d.stats[group][this.apiName],
+                                stdErr: this.getStdErr(group, d),
+                            }
+                          : null,
         });
     }
 }

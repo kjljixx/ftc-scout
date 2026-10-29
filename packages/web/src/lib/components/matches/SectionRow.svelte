@@ -35,7 +35,7 @@
 
         font-size: 1em;
         font-weight: 600;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--text-color);
     }
