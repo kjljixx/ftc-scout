@@ -20,9 +20,9 @@
 <thead bind:this={header} class:stuck class:hidden>
     <tr>
         <th class="match">Match</th>
-        <th class="red">Red Alliance</th>
+        <th class="red">Red<span class="alliance"> Alliance</span></th>
         <th class="score">Score / Pred</th>
-        <th class="blue">Blue Alliance</th>
+        <th class="blue">Blue<span class="alliance"> Alliance</span></th>
     </tr>
 </thead>
 
@@ -65,6 +65,8 @@
         font-size: 1em;
         font-weight: 600;
         color: var(--secondary-text-color);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .match {
@@ -81,6 +83,10 @@
     @media (max-width: 640px) {
         th {
             font-size: 0.85em;
+        }
+
+        .alliance {
+            display: none;
         }
     }
 </style>

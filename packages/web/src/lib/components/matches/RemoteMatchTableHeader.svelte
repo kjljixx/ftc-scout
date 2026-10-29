@@ -54,6 +54,8 @@
         color: white;
 
         font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
 
         box-shadow: rgb(0 0 0 / 14%) 0px -4px 4px -2px inset;
     }
