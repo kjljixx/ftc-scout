@@ -466,6 +466,7 @@
             position: absolute;
             left: var(--md-gap);
             right: var(--md-gap);
+            z-index: 2;
         }
 
         .input-icon {
