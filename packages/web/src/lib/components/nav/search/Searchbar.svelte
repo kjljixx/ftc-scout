@@ -141,7 +141,8 @@
     function docKey(e: KeyboardEvent) {
         if (disabled || pickTeam || e.key !== "/" || e.ctrlKey || e.metaKey) return;
         let tagname = e?.target && "tagName" in e?.target ? e.target.tagName + "" : "";
-        if (/^(?:input|textarea|select|button)$/i.test(tagname)) return;
+        if (/^(?:input|textarea|select)$/i.test(tagname)) return;
+        if ((e.target as HTMLElement | null)?.isContentEditable) return;
 
         e.preventDefault();
         shown = true;
