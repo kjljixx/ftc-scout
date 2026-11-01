@@ -8,9 +8,10 @@
     import { STRING_EC_DC } from "../../lib/util/search-params/string";
     import RegionSelect from "../../lib/components/ui/form/RegionSelect.svelte";
     import Loading from "../../lib/components/Loading.svelte";
-    import SkeletonRow from "../../lib/components/skeleton/SkeletonRow.svelte";
-    import { fuzzySearch, highlight } from "@ftc-scout/common";
-    import Location from "../../lib/components/Location.svelte";
+    import SkulletReveal from "../../lib/components/skeleton/SkulletReveal.svelte";
+    import TeamsList from "./TeamsList.svelte";
+    import { SAMPLE_TEAM_ROWS } from "./sampleTeamRows";
+    import { fuzzySearch } from "@ftc-scout/common";
     import InfiniteScroll from "svelte-infinite-scroll";
     import { browser } from "$app/environment";
     import Head from "$lib/components/Head.svelte";
@@ -42,13 +43,6 @@
     }
 
     $: search = doSearch($searchText, teams);
-
-    function highlightNum(num: number): string {
-        let s = num + "";
-        return s.startsWith($searchText)
-            ? "<b>" + $searchText + "</b>" + s.slice($searchText.length)
-            : s;
-    }
 </script>
 
 <Head title="Teams | 2iLScout" description="Find and search for FTC teams." />
@@ -75,31 +69,13 @@
     </Card>
 
     <Loading store={$teamsStore} checkExists={() => true}>
-        <SkeletonRow rows={50} header={false} slot="loading" />
+        <SkulletReveal slot="loading" label="Loading teams">
+            <TeamsList rows={SAMPLE_TEAM_ROWS} />
+        </SkulletReveal>
 
-        <Card>
-            <ul>
-                {#each search.slice(0, take) as { document, highlights } (document.number)}
-                    {@const href = `/teams/${document.number}`}
-                    {@const team = document}
-
-                    <li>
-                        <a {href}>
-                            <span class="number"> {@html highlightNum(team.number)} </span>
-                            <span class="name">{@html highlight(team.name, highlights)} </span>
-                            <em class="location"> <Location {...team.location} link={false} /> </em>
-                        </a>
-                    </li>
-                {:else}
-                    <div class="no-teams">
-                        <b> No matching Teams. </b>
-                        <p>Try modifying your filters.</p>
-                    </div>
-                {/each}
-
-                <InfiniteScroll threshold={200} on:loadMore={() => (take += 100)} {elementScroll} />
-            </ul>
-        </Card>
+        <TeamsList rows={search.slice(0, take)} searchText={$searchText}>
+            <InfiniteScroll threshold={200} on:loadMore={() => (take += 100)} {elementScroll} />
+        </TeamsList>
     </Loading>
 </WidthProvider>
 
@@ -134,63 +110,5 @@
         display: flex;
         justify-content: right;
         margin-top: var(--md-gap);
-    }
-
-    ul {
-        list-style: none;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-
-    @media (max-width: 900px) {
-        ul {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    a {
-        color: inherit;
-
-        padding: var(--md-pad) 0;
-        border-radius: 8px;
-
-        display: grid;
-        grid-template-columns: 6ch 1fr;
-        grid-template-rows: auto auto;
-        gap: var(--sm-gap) var(--lg-gap);
-
-        font-size: var(--lg-font-size);
-    }
-
-    a:hover {
-        text-decoration: none;
-        background: var(--hover-color);
-    }
-
-    .number {
-        grid-row: span 2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--lg-font-size);
-    }
-
-    .name {
-        font-size: var(--md-font-size);
-    }
-
-    .location {
-        font-size: var(--md-font-size);
-        color: var(--secondary-text-color);
-    }
-
-    .no-teams {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: var(--md-gap);
-        grid-column: span 2;
-
-        width: 100%;
     }
 </style>

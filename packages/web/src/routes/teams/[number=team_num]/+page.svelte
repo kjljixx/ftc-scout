@@ -14,15 +14,14 @@
 <script lang="ts">
     import Card from "$lib/components/Card.svelte";
     import Loading from "$lib/components/Loading.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
     import { page } from "$app/stores";
-    import Location from "$lib/components/Location.svelte";
     import { eventSorter } from "$lib/util/sorters";
-    import { prettyPrintDateRangeString } from "$lib/printers/dateRange";
-    import TeamEventStats from "./TeamEventStats.svelte";
     import TeamEventContents from "./TeamEventContents.svelte";
-    import { CURRENT_SEASON, DESCRIPTORS, type Season, isFinalsDivision } from "@ftc-scout/common";
-    import Award from "$lib/components/Award.svelte";
-    import MatchTable from "$lib/components/matches/MatchTable.svelte";
+    import TeamEventCard from "./TeamEventCard.svelte";
+    import TeamEventsHeading from "./TeamEventsHeading.svelte";
+    import TeamBodySkeleton from "./TeamBodySkeleton.svelte";
+    import { CURRENT_SEASON, DESCRIPTORS, type Season } from "@ftc-scout/common";
     import { writable } from "svelte/store";
     import { PRED_PENDING_CTX } from "$lib/components/matches/MatchScore.svelte";
     import { getContext, onDestroy, setContext, tick } from "svelte";
@@ -48,7 +47,6 @@
     } from "$lib/game/game-store";
     import { tryHop } from "$lib/game/duel-store";
     import { Alliance, type FullMatchFragment } from "$lib/graphql/generated/graphql-operations";
-    const toSeason = (n: number) => n as Season;
 
     export let data;
 
@@ -183,6 +181,9 @@
 </script>
 
 <Loading store={$teamStore} checkExists={(t) => !!t.teamByNumber}>
+    <SkulletReveal slot="loading" label="Loading team stats">
+        <TeamBodySkeleton />
+    </SkulletReveal>
     {#if $season == "overall"}
         <OverallStats history={team.quickStatsHistory ?? []} />
         <OrangeBanners teamNumber={team.number} awards={team.awards ?? []} />
@@ -201,9 +202,7 @@
 
         <div class="team-events">
             {#if sortedEvents.length}
-                <Card vis={false} style="margin-bottom: 0">
-                    <h2 class="section-title">Events</h2>
-                </Card>
+                <TeamEventsHeading />
             {/if}
 
             {#each sortedEvents as tep}
@@ -215,77 +214,13 @@
                         event.relatedEvents?.some(
                             (related) => related.code === crosshairHint?.code
                         ))}
-                {@const href = `/events/${event.season}/${event.code}/matches`}
 
-                {@const isEventFinalsDivision = isFinalsDivision(
-                    event.name,
-                    (event.relatedEvents ?? []).map((re) => re.name)
-                )}
-
-                {@const matchTableTeams = isEventFinalsDivision
-                    ? (event.relatedEvents ?? []).flatMap((re) =>
-                          (re.teams ?? []).map((t) => ({
-                              ...t,
-                              teamNumber: t.team.number,
-                              season: re.season,
-                              eventCode: re.code,
-                          }))
-                      )
-                    : event.teams ?? []}
-                <Card
-                    panel
-                    style={`margin-top: var(--md-gap); ${
-                        hinted
-                            ? "outline: 2px solid var(--inline-theme-color); outline-offset: 3px;"
-                            : ""
-                    }`}
-                >
-                    <div
-                        class="event-head"
-                        class:hinted
-                        id={hinted && crosshairHint ? `crosshair-${crosshairHint.code}` : undefined}
-                    >
-                        <h3 id={event.code} tabindex="-1"><a {href}>{event.name}</a></h3>
-
-                        <div class="meta-line">
-                            <span>{prettyPrintDateRangeString(event.start, event.end)}</span>
-                            <span class="sep">&middot;</span>
-                            <Location {...event.location} />
-                        </div>
-
-                        {#if tep.stats || tep.awards.length}
-                            <div class="performance">
-                                <TeamEventStats
-                                    stats={tep.stats}
-                                    season={toSeason(event.season)}
-                                    remote={event.remote}
-                                />
-
-                                {#if tep.awards.length}
-                                    <div>
-                                        {#each tep.awards as award, i}
-                                            <Award
-                                                {award}
-                                                comma={i != tep.awards.length - 1}
-                                                season={event.season}
-                                            />
-                                        {/each}
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
-                    </div>
-
-                    <MatchTable
-                        matches={tep.matches.map((m) => m.match)}
-                        allMatches={event.matches ?? []}
-                        {event}
-                        focusedTeam={focused?.eventCode == event.code
-                            ? focused.number
-                            : team.number}
-                        eventTeams={matchTableTeams}
-                    />
-                </Card>
+                <TeamEventCard
+                    {tep}
+                    focusedTeam={focused?.eventCode == event.code ? focused.number : team.number}
+                    hinted={!!hinted}
+                    crosshairCode={crosshairHint?.code ?? null}
+                />
             {:else}
                 <Card>
                     <div class="no-events">
@@ -318,74 +253,8 @@
         display: flow-root;
     }
 
-    h3 {
-        scroll-margin-top: 24px;
-    }
-
-    :global(#content.game) h3 {
-        scroll-margin-top: calc(var(--hud-size) + 24px);
-    }
-
-    .event-head.hinted {
-        scroll-margin-top: calc(var(--hud-size) + 24px);
-    }
-
     :global(#content.game .pred) {
         display: none;
-    }
-
-    .meta-line {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        gap: 0 var(--md-gap);
-    }
-
-    .event-head :global(.meta-line a) {
-        color: inherit;
-        text-underline-offset: 2px;
-    }
-
-    @media (max-width: 550px) {
-        .section-title {
-            padding-left: var(--md-pad);
-        }
-    }
-
-    .section-title {
-        margin: var(--sm-gap) 0 0;
-        font-size: calc(var(--lg-font-size) * 1.4);
-        font-weight: 600;
-    }
-
-    .event-head {
-        display: flex;
-        flex-direction: column;
-        gap: var(--sm-gap);
-        margin-bottom: var(--md-gap);
-    }
-
-    .event-head .meta-line {
-        font-size: 0.9em;
-        color: var(--grayed-out-text-color);
-    }
-
-    .performance {
-        display: flex;
-        flex-direction: column;
-        gap: var(--sm-gap);
-        margin-top: var(--lg-gap);
-    }
-
-    h3 {
-        margin: 0;
-        font-size: calc(var(--lg-font-size) * 1.1);
-        font-weight: 600;
-        line-height: 1.3;
-    }
-
-    h3 a {
-        color: inherit;
     }
 
     .no-events {

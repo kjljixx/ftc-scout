@@ -3,6 +3,8 @@
 
     import { Season, notEmpty, isFinalsDivision } from "@ftc-scout/common";
     import Loading from "$lib/components/Loading.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
+    import EventBodySkeleton from "../EventBodySkeleton.svelte";
     import { page } from "$app/stores";
     import Card from "$lib/components/Card.svelte";
     import {
@@ -237,6 +239,9 @@
 {/if}
 
 <Loading store={$eventStore} checkExists={(e) => !!e.eventByCode}>
+    <SkulletReveal slot="loading" label="Loading event data">
+        <EventBodySkeleton tab={selectedTab} />
+    </SkulletReveal>
     {#if focusedTeam && focusedTeamData}
         <FocusedTeam
             team={focusedTeamData}

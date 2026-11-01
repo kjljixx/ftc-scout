@@ -3,7 +3,6 @@
     import Location from "$lib/components/Location.svelte";
     import WidthProvider from "$lib/components/WidthProvider.svelte";
     import MatchTable from "$lib/components/matches/MatchTable.svelte";
-    import SkeletonRow from "$lib/components/skeleton/SkeletonRow.svelte";
     import { prettyPrintDateRange } from "$lib/printers/dateRange";
     import {
         faBolt,
@@ -17,7 +16,11 @@
     import Fa from "svelte-fa";
     import { notEmpty, type Season } from "@ftc-scout/common";
     import { globalSeason, homeSeasonLoading } from "$lib/season-store";
-    import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
+    import SampleHome from "$lib/components/skeleton/samples/SampleHome.svelte";
+    import SampleHomeEvents from "$lib/components/skeleton/samples/SampleHomeEvents.svelte";
+    import SampleWorldRecord from "$lib/components/skeleton/samples/SampleWorldRecord.svelte";
+    import { SAMPLE_MATCH_EVENT, sampleMatches } from "$lib/components/skeleton/sampleMatches";
     import Head from "$lib/components/Head.svelte";
     import { createTippy } from "svelte-tippy";
     import { tippyTheme } from "$lib/components/nav/DarkModeToggle.svelte";
@@ -115,6 +118,7 @@
     setContext(TEAM_CLICK_ACTION_CTX, (t: number) => (focusedTeam = focusedTeam == t ? null : t));
 
     let tippy = createTippy({});
+    const SAMPLE_MATCHES = sampleMatches(5);
     let wrMode = "wo-penalties";
 </script>
 
@@ -127,7 +131,9 @@
 
 <WidthProvider>
     {#if $homeSeasonLoading}
-        <Skeleton />
+        <SkulletReveal label="Loading home page">
+            <SampleHome />
+        </SkulletReveal>
     {:else if showHomeTeamView}
         {#if focusedTeam && focusedTeamData}
             <FocusedTeam
@@ -166,7 +172,9 @@
             <Card slot="empty">
                 <div class="empty">
                     {#if detailsPending}
-                        <SkeletonRow header={false} card={false} rows={5} />
+                        <SkulletReveal label="Loading event details">
+                            <MatchTable matches={SAMPLE_MATCHES} allMatches={SAMPLE_MATCHES} event={SAMPLE_MATCH_EVENT} />
+                        </SkulletReveal>
                     {:else if isNonCompetition(event.type)}
                         <p>This event is not a competition; no matches will be played.</p>
                     {:else}
@@ -273,7 +281,9 @@
                 {:else if events}
                     <p class="no-events">There are no events scheduled for today.</p>
                 {:else}
-                    <SkeletonRow header={false} card={false} rows={10} />
+                    <SkulletReveal label="Loading today's events">
+                        <SampleHomeEvents />
+                    </SkulletReveal>
                 {/if}
             </div>
 
@@ -324,7 +334,9 @@
                             showHeartLegend={false}
                         />
                     {:else if !$homeStore}
-                        <SkeletonRow header card={false} rows={2} />
+                        <SkulletReveal label="Loading world record">
+                            <SampleWorldRecord />
+                        </SkulletReveal>
                     {:else}
                         <p class="no-events">No world record yet for this season.</p>
                     {/if}

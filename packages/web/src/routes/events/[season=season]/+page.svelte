@@ -11,12 +11,12 @@
     } from "@ftc-scout/common";
     import Card from "$lib/components/Card.svelte";
     import Loading from "$lib/components/Loading.svelte";
-    import SkeletonRow from "$lib/components/skeleton/SkeletonRow.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
     import { mod } from "$lib/util/number";
     import { addDays, dateToStr, daysBetween } from "$lib/util/date";
     import { sortString } from "$lib/util/sorters";
-    import { prettyPrintDateRange } from "$lib/printers/dateRange";
-    import SingleEvent from "./SingleEvent.svelte";
+    import EventWeek from "./EventWeek.svelte";
+    import { SAMPLE_WEEKS } from "./sampleWeeks";
     import Options from "./Options.svelte";
     import { queryParam } from "$lib/util/search-params/search-params";
     import { REGION_EC_DC } from "$lib/util/search-params/region";
@@ -132,31 +132,27 @@
 
 <WidthProvider>
     <Loading store={$eventsStore} checkExists={() => true}>
-        <div slot="loading">
-            <SkeletonRow rows={5} header={true} />
-            <SkeletonRow rows={6} header={true} />
-            <SkeletonRow rows={5} header={true} />
-            <SkeletonRow rows={5} header={true} />
-            <SkeletonRow rows={5} header={true} />
-        </div>
+        <SkulletReveal slot="loading" label="Loading events">
+            <Card>
+                {#each SAMPLE_WEEKS as { weekNum, events } (weekNum)}
+                    <EventWeek
+                        {weekNum}
+                        start={addDays(firstMonday, 7 * weekNum)}
+                        end={addDays(firstMonday, 7 * weekNum + 6)}
+                        {events}
+                    />
+                {/each}
+            </Card>
+        </SkulletReveal>
 
         <Card>
             {#each grouped.slice(0, take) as [week, es] (week)}
-                {@const start = addDays(firstMonday, 7 * week)}
-                {@const end = addDays(firstMonday, 7 * week + 6)}
-
-                <section>
-                    <h2>
-                        Week {week + 1}
-                        <span class="date-range">{prettyPrintDateRange(start, end)}</span>
-                    </h2>
-
-                    <ul>
-                        {#each es as event}
-                            <SingleEvent {event} />
-                        {/each}
-                    </ul>
-                </section>
+                <EventWeek
+                    weekNum={week}
+                    start={addDays(firstMonday, 7 * week)}
+                    end={addDays(firstMonday, 7 * week + 6)}
+                    events={es}
+                />
             {:else}
                 <div class="no-events">
                     <b> No matching events. </b>
@@ -173,40 +169,6 @@
     h1 {
         margin-top: var(--sm-gap);
         margin-bottom: var(--lg-gap);
-    }
-
-    section:not(:last-child) {
-        margin-bottom: var(--vl-gap);
-    }
-
-    h2 {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        font-size: var(--lg-font-size);
-        background: var(--hover-color);
-
-        padding: var(--md-gap);
-        margin-bottom: var(--md-gap);
-        border-radius: 8px;
-    }
-
-    .date-range {
-        font-style: italic;
-        font-weight: normal;
-        font-size: var(--md-font-size);
-    }
-
-    ul {
-        column-count: 2;
-        column-gap: var(--lg-gap);
-    }
-
-    @media (max-width: 900px) {
-        ul {
-            column-count: 1;
-        }
     }
 
     .no-events {

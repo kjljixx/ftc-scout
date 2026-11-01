@@ -3,11 +3,23 @@
     import { DESCRIPTORS, SortDir, type Season, getMatchStatSet } from "@ftc-scout/common";
     import ServerStatTableControls from "$lib/components/stats/ServerStatTableControls.svelte";
     import type { PageData } from "./$types";
-    import SkeletonRow from "$lib/components/skeleton/SkeletonRow.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
+    import SampleDataTable from "$lib/components/skeleton/samples/SampleDataTable.svelte";
     import { PAGE_SIZE } from "./+page.svelte";
     import { getMatchScoresForAlliance } from "../../../../lib/components/stats/getMatchScores";
 
     $: season = +$page.params.season as Season;
+
+    const SAMPLE_COLUMNS = [
+        { label: "#", samples: ["1", "2", "3", "10"] },
+        { label: "Score", samples: ["412", "398", "387"], align: "right" as const },
+        { label: "Alliance", samples: ["12345 Gear Gladiators, 8802 Circuit Breakers"] },
+        { label: "Match", samples: ["Q12", "SF2-1", "F-3"] },
+        {
+            label: "Event",
+            samples: ["Southeast Raleigh Qualifier", "Greater Pittsburgh Qualifier"],
+        },
+    ];
     export let matchData: PageData["matchData"];
     export let focusedTeam: number | null;
 
@@ -54,5 +66,7 @@
         includeSkipRankTys={false}
     />
 {:else}
-    <SkeletonRow card={false} rows={PAGE_SIZE} />
+    <SkulletReveal label="Loading match records">
+        <SampleDataTable columns={SAMPLE_COLUMNS} rows={PAGE_SIZE} />
+    </SkulletReveal>
 {/if}

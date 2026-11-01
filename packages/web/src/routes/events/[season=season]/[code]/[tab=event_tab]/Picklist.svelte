@@ -20,7 +20,8 @@
     } from "$lib/picklist/picklistSync";
 
     import StatCell from "$lib/components/stats/StatCell.svelte";
-    import Skeleton from "$lib/components/skeleton/Skeleton.svelte";
+    import SkulletReveal from "$lib/components/skeleton/SkulletReveal.svelte";
+    import SampleDataTable from "$lib/components/skeleton/samples/SampleDataTable.svelte";
     import Button from "$lib/components/Button.svelte";
     import ConfirmModal from "$lib/components/ConfirmModal.svelte";
     import Card from "$lib/components/Card.svelte";
@@ -498,7 +499,20 @@
 <div class="gate">
 <div class="gated" class:locked={!$team} inert={!$team}>
 {#if !$picklistState.loaded}
-    <Skeleton />
+    <SkulletReveal label="Loading picklist">
+        <SampleDataTable
+            columns={[
+                { label: "#", samples: ["1", "2", "3", "10"] },
+                {
+                    label: "Team",
+                    samples: ["12345 Gear Gladiators", "8802 Circuit Breakers", "6001 The Hexagons"],
+                },
+                { label: "NP OPR", samples: ["312.4", "298.1", "287.7"], align: "right" },
+                { label: "Notes", samples: ["Strong auto", "Fast cycles", "Unreliable endgame"] },
+            ]}
+            rows={14}
+        />
+    </SkulletReveal>
 {:else}
 <div class="table-scroll-container" bind:clientWidth={containerWidth}>
     <table
